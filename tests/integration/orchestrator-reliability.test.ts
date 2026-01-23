@@ -119,7 +119,7 @@ async function mockReliableOrchestratorHandler(
     });
 
     const existingStepsMap = new Map(
-      existingSteps.map((s) => [s.stepNumber, s])
+      existingSteps.map((s: any) => [s.stepNumber, s])
     );
 
     // Run steps sequentially
@@ -374,7 +374,7 @@ All 6 analysis steps completed successfully.
 ### Steps Completed
 ${steps
   .map(
-    (s) =>
+    (s: any) =>
       `- Step ${s.stepNumber}: ${s.status === 'completed' ? '✓' : s.status === 'skipped' ? '⊘' : '✗'}`
   )
   .join('\n')}
@@ -550,7 +550,7 @@ describe('Orchestrator Reliability', () => {
       });
 
       expect(stepsAfterFirstRun).toHaveLength(6);
-      stepsAfterFirstRun.forEach((step) => {
+      stepsAfterFirstRun.forEach((step: any) => {
         expect(step.status).toBe('completed');
       });
 
@@ -569,7 +569,7 @@ describe('Orchestrator Reliability', () => {
       });
 
       expect(stepsAfterSecondRun).toHaveLength(6); // No duplicates
-      stepsAfterSecondRun.forEach((step) => {
+      stepsAfterSecondRun.forEach((step: any) => {
         expect(step.status).toBe('completed'); // Status remains completed
       });
 
@@ -704,7 +704,7 @@ describe('Orchestrator Reliability', () => {
       });
 
       expect(stepsAfterResume).toHaveLength(6);
-      stepsAfterResume.forEach((step) => {
+      stepsAfterResume.forEach((step: any) => {
         expect(step.status).toBe('completed');
       });
 
@@ -849,7 +849,7 @@ describe('Orchestrator Reliability', () => {
       });
 
       expect(allSteps).toHaveLength(6);
-      allSteps.forEach((step) => {
+      allSteps.forEach((step: any) => {
         expect(step.status).toBe('completed');
       });
 
