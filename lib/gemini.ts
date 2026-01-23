@@ -283,7 +283,7 @@ async function callRealGeminiAPI(
     throw new Error(`Gemini API error: ${response.status} - ${error}`);
   }
   
-  return await response.json();
+  return await response.json() as GeminiResponse;
 }
 
 /**
@@ -361,9 +361,16 @@ async function uploadFileToGeminiLive(
     throw new Error(`Gemini Files API error: ${response.status} - ${error}`);
   }
   
-  const result = await response.json();
+  const result = await response.json() as {
+    file?: {
+      uri?: string;
+      mimeType?: string;
+      displayName?: string;
+    };
+    name?: string;
+  };
   return {
-    uri: result.file?.uri || `gs://gemini-files/${result.name}`,
+    uri: result.file?.uri || `gs://gemini-files/${result.name || fileName}`,
     mimeType: result.file?.mimeType || mimeType,
     name: result.file?.displayName || fileName,
   };

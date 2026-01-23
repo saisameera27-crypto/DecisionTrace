@@ -7,8 +7,14 @@ import { test as base, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Define custom fixture types
+type CustomFixtures = {
+  mockAPI: {};
+  testDocument: { path: string; content: string };
+};
+
 // Test fixtures
-export const test = base.extend({
+export const test = base.extend<CustomFixtures>({
   // Mock API responses
   mockAPI: async ({ page }, use) => {
     // Setup API route mocking
