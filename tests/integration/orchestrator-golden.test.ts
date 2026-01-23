@@ -393,7 +393,7 @@ describe('Orchestrator Golden Path', () => {
     });
 
     expect(steps).toHaveLength(6);
-    steps.forEach((step, index) => {
+    steps.forEach((step: any, index: number) => {
       expect(step.stepNumber).toBe(index + 1);
       expect(step.status).toBe('completed');
       expect(step.startedAt).toBeDefined();
@@ -444,8 +444,8 @@ describe('Orchestrator Golden Path', () => {
 
     // Should have 12 events: 6 step_started + 6 step_completed
     expect(events.length).toBeGreaterThanOrEqual(12);
-    expect(events.some((e) => e.eventType === 'step_started')).toBe(true);
-    expect(events.some((e) => e.eventType === 'step_completed')).toBe(true);
+    expect(events.some((e: any) => e.eventType === 'step_started')).toBe(true);
+    expect(events.some((e: any) => e.eventType === 'step_completed')).toBe(true);
   });
 
   it('should handle case with no documents gracefully', async () => {

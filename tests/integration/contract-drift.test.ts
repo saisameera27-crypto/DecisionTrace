@@ -10,12 +10,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { z } from 'zod';
 import {
-  Step1Schema,
-  Step2Schema,
-  Step3Schema,
-  Step4Schema,
-  Step5Schema,
-  Step6Schema,
+  step1Schema,
+  step2Schema,
+  step3Schema,
+  step4Schema,
+  step5Schema,
+  step6Schema,
   validateWithSchema,
 } from '../../lib/schema-validators';
 
@@ -94,8 +94,8 @@ describe('Contract Drift Tests', () => {
   });
 
   describe('Recorded Response Validation', () => {
-    it('should validate step1 recorded response against Step1Schema', () => {
-      const result = validateRecordedResponse('step1', Step1Schema);
+    it('should validate step1 recorded response against step1Schema', () => {
+      const result = validateRecordedResponse('step1', step1Schema);
       
       expect(result.valid).toBe(true);
       if (!result.valid && result.errors) {
@@ -103,8 +103,8 @@ describe('Contract Drift Tests', () => {
       }
     });
 
-    it('should validate step2 recorded response against Step2Schema', () => {
-      const result = validateRecordedResponse('step2', Step2Schema);
+    it('should validate step2 recorded response against step2Schema', () => {
+      const result = validateRecordedResponse('step2', step2Schema);
       
       expect(result.valid).toBe(true);
       if (!result.valid && result.errors) {
@@ -112,8 +112,8 @@ describe('Contract Drift Tests', () => {
       }
     });
 
-    it('should validate step3 recorded response against Step3Schema', () => {
-      const result = validateRecordedResponse('step3', Step3Schema);
+    it('should validate step3 recorded response against step3Schema', () => {
+      const result = validateRecordedResponse('step3', step3Schema);
       
       expect(result.valid).toBe(true);
       if (!result.valid && result.errors) {
@@ -121,8 +121,8 @@ describe('Contract Drift Tests', () => {
       }
     });
 
-    it('should validate step4 recorded response against Step4Schema', () => {
-      const result = validateRecordedResponse('step4', Step4Schema);
+    it('should validate step4 recorded response against step4Schema', () => {
+      const result = validateRecordedResponse('step4', step4Schema);
       
       expect(result.valid).toBe(true);
       if (!result.valid && result.errors) {
@@ -130,8 +130,8 @@ describe('Contract Drift Tests', () => {
       }
     });
 
-    it('should validate step5 recorded response against Step5Schema', () => {
-      const result = validateRecordedResponse('step5', Step5Schema);
+    it('should validate step5 recorded response against step5Schema', () => {
+      const result = validateRecordedResponse('step5', step5Schema);
       
       expect(result.valid).toBe(true);
       if (!result.valid && result.errors) {
@@ -139,8 +139,8 @@ describe('Contract Drift Tests', () => {
       }
     });
 
-    it('should validate step6 recorded response against Step6Schema', () => {
-      const result = validateRecordedResponse('step6', Step6Schema);
+    it('should validate step6 recorded response against step6Schema', () => {
+      const result = validateRecordedResponse('step6', step6Schema);
       
       expect(result.valid).toBe(true);
       if (!result.valid && result.errors) {
@@ -189,7 +189,7 @@ describe('Contract Drift Tests', () => {
   describe('Contract Breaking Changes', () => {
     it('should detect missing required fields in recorded responses', () => {
       const step2Response = loadRecordedResponse('step2');
-      const result = validateWithSchema(Step2Schema, step2Response);
+      const result = validateWithSchema(step2Schema, step2Response);
 
       if (!result.success) {
         // If validation fails, check for missing required fields
@@ -211,7 +211,7 @@ describe('Contract Drift Tests', () => {
 
     it('should detect type mismatches in recorded responses', () => {
       const step2Response = loadRecordedResponse('step2');
-      const result = validateWithSchema(Step2Schema, step2Response);
+      const result = validateWithSchema(step2Schema, step2Response);
 
       if (!result.success) {
         const errors = result.errors || [];
@@ -234,7 +234,7 @@ describe('Contract Drift Tests', () => {
       // This would require strict schema validation
       // For now, we'll just verify the response structure
       const step2Response = loadRecordedResponse('step2');
-      const result = validateWithSchema(Step2Schema, step2Response);
+      const result = validateWithSchema(step2Schema, step2Response);
 
       expect(result.success).toBe(true);
     });
@@ -271,7 +271,7 @@ describe('Contract Drift Tests', () => {
     it('should handle minor version updates gracefully', () => {
       // Minor version updates (1.0.0 -> 1.1.0) should be backward compatible
       const step1Response = loadRecordedResponse('step1');
-      const result = validateWithSchema(Step1Schema, step1Response);
+      const result = validateWithSchema(step1Schema, step1Response);
 
       // Should still validate even if minor version differs
       expect(result.success).toBe(true);

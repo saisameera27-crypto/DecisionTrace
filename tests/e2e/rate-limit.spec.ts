@@ -73,7 +73,7 @@ test.describe('Rate Limiting', () => {
 
     // Wait a bit and retry (should succeed on third attempt)
     await page.waitForTimeout(1000);
-    await page.click('text=Retry').or(page.click('text=Run Analysis'));
+    await page.locator('text=Retry').or(page.locator('text=Run Analysis')).click();
 
     // Wait for success
     await page.waitForSelector('text=Analysis Complete', { timeout: 30000 });
