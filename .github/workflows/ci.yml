@@ -48,7 +48,7 @@ jobs:
           NODE_ENV: test
           GEMINI_API_KEY: mock-api-key-for-testing
           GEMINI_TEST_MODE: mock
-          TEST_DATABASE_URL: file:/tmp/test-decision-autopsy.db
+          TEST_DATABASE_URL: file:/tmp/test-decision-trace.db
         run: npm run test:integration
 
       - name: Install Playwright browsers
@@ -68,20 +68,24 @@ jobs:
       - name: Upload Playwright traces
         uses: actions/upload-artifact@v4
         if: failure() && matrix.node-version == '20.x'
+        continue-on-error: true
         with:
           name: playwright-traces-${{ matrix.node-version }}-${{ github.run_number }}
           path: |
             test-results/
             playwright-report/
           retention-days: 30
+          if-no-files-found: ignore
 
       - name: Upload test coverage
         uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: coverage-${{ matrix.node-version }}
           path: coverage/
           retention-days: 7
+          if-no-files-found: ignore
 
   e2e-only:
     name: E2E Tests (Full Browser Matrix)
@@ -116,20 +120,24 @@ jobs:
       - name: Upload Playwright traces
         uses: actions/upload-artifact@v4
         if: failure()
+        continue-on-error: true
         with:
           name: playwright-traces-full-${{ github.run_number }}
           path: |
             test-results/
             playwright-report/
           retention-days: 30
+          if-no-files-found: ignore
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
+        continue-on-error: true
         with:
           name: playwright-report-${{ github.run_number }}
           path: playwright-report/
           retention-days: 7
+          if-no-files-found: ignore
 
   postgres-migration:
     name: Postgres Migration Tests

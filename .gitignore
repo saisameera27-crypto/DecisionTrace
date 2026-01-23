@@ -31,7 +31,7 @@ lerna-debug.log*
 .pnpm-debug.log*
 
 # Package Manager Files
-package-lock.json
+# package-lock.json - KEEP THIS (required for CI)
 yarn.lock
 pnpm-lock.yaml
 
