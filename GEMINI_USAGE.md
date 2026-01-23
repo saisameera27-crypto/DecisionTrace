@@ -42,7 +42,7 @@ Each step makes a **separate Gemini API call** with a specific prompt designed t
 - Identifies document type (memo, email, report)
 - Extracts metadata (dates, authors, file info)
 
-**Gemini Response** (validated by `Step1Schema`):
+**Gemini Response** (validated by `step1Schema`):
 ```json
 {
   "step": 1,
@@ -74,7 +74,7 @@ Each step makes a **separate Gemini API call** with a specific prompt designed t
 - Identifies **rationale** (why the decision was made)
 - Lists **risks** and **mitigation strategies**
 
-**Gemini Response** (validated by `Step2Schema`):
+**Gemini Response** (validated by `step2Schema`):
 ```json
 {
   "step": 2,
@@ -109,7 +109,7 @@ Each step makes a **separate Gemini API call** with a specific prompt designed t
 - Lists **stakeholders** and their influence levels
 - Considers **organizational factors** (culture, resources, constraints)
 
-**Gemini Response** (validated by `Step3Schema`):
+**Gemini Response** (validated by `step3Schema`):
 ```json
 {
   "step": 3,
@@ -140,7 +140,7 @@ Each step makes a **separate Gemini API call** with a specific prompt designed t
 - Analyzes **deviations** from the plan
 - Assesses **impact** of the decision
 
-**Gemini Response** (validated by `Step4Schema`):
+**Gemini Response** (validated by `step4Schema`):
 ```json
 {
   "step": 4,
@@ -172,7 +172,7 @@ Each step makes a **separate Gemini API call** with a specific prompt designed t
 - Assesses **risk severity** and impact
 - Suggests **what could have been done differently**
 
-**Gemini Response** (validated by `Step5Schema`):
+**Gemini Response** (validated by `step5Schema`):
 ```json
 {
   "step": 5,
@@ -207,7 +207,7 @@ Each step makes a **separate Gemini API call** with a specific prompt designed t
 - Creates **recommendations** for future decisions
 - Produces **Mermaid diagram** code for visualization
 
-**Gemini Response** (validated by `Step6Schema`):
+**Gemini Response** (validated by `step6Schema`):
 ```json
 {
   "step": 6,
@@ -349,7 +349,7 @@ POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-prev
 ### 1. **Structured Output**
 - Gemini returns JSON that matches our Zod schemas
 - Enables reliable data extraction
-- Validates with `Step1Schema` through `Step6Schema`
+- Validates with `step1Schema` through `step6Schema`
 
 ### 2. **File Processing**
 - Uses **Gemini Files API** for PDFs
@@ -461,7 +461,7 @@ const response = await callGeminiAPI({
     - Risks identified
     - Expected outcomes
     
-    Return JSON matching Step2Schema.
+    Return JSON matching step2Schema.
   `,
   fileUri: 'gs://gemini-files/document.txt',
   model: 'gemini-3-flash-preview',
@@ -469,7 +469,7 @@ const response = await callGeminiAPI({
 });
 
 // Validate response
-const step2Data = Step2Schema.parse(response.candidates[0].content.parts[0].text);
+const step2Data = step2Schema.parse(response.candidates[0].content.parts[0].text);
 ```
 
 ### Uploading a File

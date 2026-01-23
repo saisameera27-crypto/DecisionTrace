@@ -59,7 +59,7 @@ const response = await callGeminiAPI({
 });
 
 // Response is validated with Zod schema
-const step2Data = Step2Schema.parse(
+const step2Data = step2Schema.parse(
   JSON.parse(response.candidates[0].content.parts[0].text)
 );
 
