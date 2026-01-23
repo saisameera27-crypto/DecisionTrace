@@ -1,0 +1,32 @@
+DECISION MEMO #1: Marketing Budget Allocation
+Date: March 1, 2024
+Decision: Allocate $1M to digital advertising campaigns
+Rationale: Digital channels show highest ROI (3:1)
+Approved by: CMO
+
+---
+
+DECISION MEMO #2: Marketing Budget Allocation  
+Date: March 5, 2024
+Decision: Allocate $1M to traditional media (TV, radio, print)
+Rationale: Brand awareness requires broad reach, traditional media more effective
+Approved by: CEO
+
+CONFLICT ANALYSIS:
+Both decisions allocate the same $1M budget but to completely different channels. Only one can be executed. This represents a clear conflict in decision-making authority and strategic direction.
+
+The first decision (March 1) was made by the CMO focusing on ROI metrics.
+The second decision (March 5) was made by the CEO focusing on brand awareness.
+
+This conflict suggests:
+1. Lack of coordination between C-level executives
+2. Unclear decision-making authority
+3. Conflicting strategic priorities
+4. Budget allocation process breakdown
+
+RESOLUTION NEEDED:
+- Clarify which decision takes precedence
+- Establish clear decision-making hierarchy
+- Review budget allocation process
+- Align on strategic priorities
+

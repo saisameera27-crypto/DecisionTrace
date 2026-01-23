@@ -1,0 +1,39 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"step\": 2,\n  \"status\": \"success\",\n  \"data\": {\n    \"case_id\": \"case_67890\",\n    \"document_id\": \"doc_12345\",\n    \"decision_title\": \"Q2 2024 Product Launch - Project Phoenix\",\n    \"decision_date\": \"2024-03-15\",\n    \"decision_maker\": \"Sarah Chen\",\n    \"decision_maker_role\": \"VP of Product\",\n    \"decision_status\": \"APPROVED\",\n    \"decision_summary\": \"Launch of Project Phoenix mobile application targeting healthcare sector in Q2 2024\",\n    \"context\": {\n      \"market_opportunity\": \"$50B addressable market\",\n      \"budget_allocated\": \"$2.5M\",\n      \"timeline\": \"Q2 2024 (April-June)\"\n    },\n    \"rationale\": [\n      \"Market opportunity: $50B addressable market\",\n      \"Competitive advantage: Proprietary AI technology\",\n      \"Team readiness: Engineering team has capacity\",\n      \"Customer validation: 15 pilot customers expressed strong interest\"\n    ],\n    \"risks_identified\": [\n      \"Regulatory compliance requirements (HIPAA)\",\n      \"Longer sales cycles than anticipated\",\n      \"Potential technical challenges with integration\",\n      \"Market saturation concerns\"\n    ],\n    \"mitigation_strategies\": [\n      \"Engage legal team early for compliance review\",\n      \"Extend runway by 3 months for sales cycle\",\n      \"Allocate 20% buffer for technical debt\",\n      \"Conduct additional market research\"\n    ],\n    \"expected_outcomes\": {\n      \"users_6_months\": 10000,\n      \"arr_by_q2\": 500000,\n      \"customer_satisfaction\": 85,\n      \"break_even_month\": 9\n    },\n    \"confidence_score\": 0.92,\n    \"extracted_at\": \"2024-03-15T10:35:00Z\"\n  },\n  \"errors\": [],\n  \"warnings\": []\n}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "safetyRatings": [
+        {
+          "category": "HARM_CATEGORY_HARASSMENT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_HATE_SPEECH",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "probability": "NEGLIGIBLE"
+        }
+      ]
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 100,
+    "candidatesTokenCount": 200,
+    "totalTokenCount": 300
+  }
+}

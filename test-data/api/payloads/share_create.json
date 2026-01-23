@@ -1,0 +1,43 @@
+{
+  "method": "POST",
+  "endpoint": "/api/cases/{case_id}/share",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer mock_token_12345"
+  },
+  "path_params": {
+    "case_id": "case_67890"
+  },
+  "body": {
+    "share_type": "public_link",
+    "expires_in_days": 30,
+    "permissions": {
+      "can_view": true,
+      "can_download": false,
+      "can_comment": true
+    },
+    "recipients": [
+      {
+        "email": "stakeholder@company.com",
+        "role": "viewer"
+      }
+    ]
+  },
+  "expected_response": {
+    "status": 201,
+    "body": {
+      "share_id": "share_abc123",
+      "case_id": "case_67890",
+      "share_url": "https://app.example.com/share/abc123",
+      "share_type": "public_link",
+      "expires_at": "2024-04-14T10:30:00Z",
+      "created_at": "2024-03-15T10:30:00Z",
+      "permissions": {
+        "can_view": true,
+        "can_download": false,
+        "can_comment": true
+      }
+    }
+  }
+}
+

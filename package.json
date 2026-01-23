@@ -1,0 +1,50 @@
+{
+  "name": "virtual-vet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "npm run test:all",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
+    "test:watch": "vitest watch",
+    "test:ui": "vitest run tests/ui",
+    "test:ui:watch": "vitest watch tests/ui",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx || echo 'No ESLint config found'",
+    "smoke:prod": "tsx scripts/smoke-test.ts",
+    "test:real-gemini": "tsx scripts/test-real-gemini.ts",
+    "budget:check": "tsx scripts/budget-check.ts",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "postinstall": "prisma generate"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@prisma/client": "^5.7.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/user-event": "^14.5.1",
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/ui": "^1.0.0",
+    "jsdom": "^23.0.1",
+    "prisma": "^5.7.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

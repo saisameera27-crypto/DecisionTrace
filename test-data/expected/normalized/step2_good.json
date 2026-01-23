@@ -1,0 +1,48 @@
+{
+  "step": 2,
+  "status": "success",
+  "data": {
+    "case_id": "case_67890",
+    "document_id": "doc_12345",
+    "decision_title": "Q2 2024 Product Launch - Project Phoenix",
+    "decision_date": "2024-03-15",
+    "decision_maker": "Sarah Chen",
+    "decision_maker_role": "VP of Product",
+    "decision_status": "APPROVED",
+    "decision_summary": "Launch of Project Phoenix mobile application targeting healthcare sector in Q2 2024",
+    "context": {
+      "market_opportunity": "$50B addressable market",
+      "budget_allocated": "$2.5M",
+      "timeline": "Q2 2024 (April-June)"
+    },
+    "rationale": [
+      "Market opportunity: $50B addressable market",
+      "Competitive advantage: Proprietary AI technology",
+      "Team readiness: Engineering team has capacity",
+      "Customer validation: 15 pilot customers expressed strong interest"
+    ],
+    "risks_identified": [
+      "Regulatory compliance requirements (HIPAA)",
+      "Longer sales cycles than anticipated",
+      "Potential technical challenges with integration",
+      "Market saturation concerns"
+    ],
+    "mitigation_strategies": [
+      "Engage legal team early for compliance review",
+      "Extend runway by 3 months for sales cycle",
+      "Allocate 20% buffer for technical debt",
+      "Conduct additional market research"
+    ],
+    "expected_outcomes": {
+      "users_6_months": 10000,
+      "arr_by_q2": 500000,
+      "customer_satisfaction": 85,
+      "break_even_month": 9
+    },
+    "confidence_score": 0.92,
+    "extracted_at": "2024-03-15T10:35:00Z"
+  },
+  "errors": [],
+  "warnings": []
+}
+

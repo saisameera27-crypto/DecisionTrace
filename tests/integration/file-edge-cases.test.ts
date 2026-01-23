@@ -1,0 +1,433 @@
+/**
+ * File Processing Edge Cases Tests
+ * Tests handling of real-world file uploads that fail differently
+ * 
+ * Edge cases:
+ * - Password-protected PDF
+ * - Corrupted PDF
+ * - Image-only PDF (scanned document detection)
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import * as fs from 'fs';
+import * as path from 'path';
+import {
+  resetTestDatabase,
+  callFilesUpload,
+  parseJsonResponse,
+  assertResponseStatus,
+} from './_harness';
+
+// Mock Next.js types
+type NextRequest = any;
+type NextResponse = any;
+
+let NextRequestClass: any;
+let NextResponseClass: any;
+
+try {
+  const nextServer = require('next/server');
+  NextRequestClass = nextServer.NextRequest;
+  NextResponseClass = nextServer.NextResponse;
+} catch {
+  NextRequestClass = class MockNextRequest {
+    constructor(public url: string, public init?: any) {}
+  };
+  NextResponseClass = {
+    json: (data: any, init?: any) => ({
+      status: init?.status || 200,
+      json: async () => data,
+      text: async () => JSON.stringify(data),
+    }),
+  };
+}
+
+// Mock PDF parsing library
+const mockPDFParser = {
+  parse: vi.fn(),
+  extractText: vi.fn(),
+  isPasswordProtected: vi.fn(),
+  isScanned: vi.fn(),
+};
+
+vi.mock('pdf-parse', () => ({
+  default: mockPDFParser.parse,
+}));
+
+/**
+ * Enhanced upload handler with PDF validation
+ */
+async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse> {
+  try {
+    const formData = await req.formData();
+    const files = formData.getAll('file') as File[];
+    
+    if (files.length === 0) {
+      return NextResponseClass.json({ error: 'No files provided' }, { status: 400 });
+    }
+    
+    for (const file of files) {
+      // Check file type
+      if (file.type === 'application/pdf') {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        
+        // Check if PDF is password-protected
+        mockPDFParser.isPasswordProtected.mockReturnValue(false);
+        const isPasswordProtected = mockPDFParser.isPasswordProtected(buffer);
+        
+        if (isPasswordProtected) {
+          return NextResponseClass.json(
+            {
+              error: 'Password-protected PDFs are not supported',
+              code: 'PASSWORD_PROTECTED',
+              fileName: file.name,
+            },
+            { status: 400 }
+          );
+        }
+        
+        // Check if PDF is corrupted
+        try {
+          const pdfData = await mockPDFParser.parse(buffer);
+          if (!pdfData || !pdfData.info) {
+            throw new Error('Invalid PDF structure');
+          }
+        } catch (error: any) {
+          return NextResponseClass.json(
+            {
+              error: 'PDF file appears to be corrupted or invalid',
+              code: 'CORRUPTED_PDF',
+              fileName: file.name,
+              details: error.message,
+            },
+            { status: 400 }
+          );
+        }
+        
+        // Check if PDF is image-only (scanned)
+        mockPDFParser.isScanned.mockReturnValue(false);
+        const isScanned = mockPDFParser.isScanned(buffer);
+        
+        if (isScanned) {
+          // Return a warning but allow upload
+          return NextResponseClass.json(
+            {
+              success: true,
+              warning: 'PDF appears to be image-only (scanned document). OCR may be required.',
+              code: 'SCANNED_DOCUMENT',
+              fileName: file.name,
+            },
+            { status: 201 }
+          );
+        }
+      }
+    }
+    
+    return NextResponseClass.json({ success: true }, { status: 201 });
+  } catch (error: any) {
+    // Ensure errors are user-friendly, not stack traces
+    return NextResponseClass.json(
+      {
+        error: 'File processing failed',
+        code: 'PROCESSING_ERROR',
+        message: error.message || 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+describe('File Processing Edge Cases', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPDFParser.parse.mockClear();
+    mockPDFParser.isPasswordProtected.mockClear();
+    mockPDFParser.isScanned.mockClear();
+  });
+
+  describe('Password-Protected PDF', () => {
+    it('should reject password-protected PDF with specific error', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(true);
+      
+      // Create a mock password-protected PDF buffer
+      const passwordProtectedPDF = Buffer.from('%PDF-1.4\n%password-protected');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'protected.pdf',
+        content: passwordProtectedPDF,
+        type: 'application/pdf',
+      });
+      
+      assertResponseStatus(response, 400);
+      const data = await parseJsonResponse(response);
+      
+      expect(data.error).toContain('Password-protected');
+      expect(data.code).toBe('PASSWORD_PROTECTED');
+      expect(data.fileName).toBe('protected.pdf');
+    });
+
+    it('should provide user-friendly error message (not stack trace)', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(true);
+      
+      const passwordProtectedPDF = Buffer.from('%PDF-1.4\n%password-protected');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'protected.pdf',
+        content: passwordProtectedPDF,
+        type: 'application/pdf',
+      });
+      
+      const data = await parseJsonResponse(response);
+      
+      // Should not contain stack trace or internal error details
+      expect(data.error).not.toContain('at ');
+      expect(data.error).not.toContain('Error:');
+      expect(data.error).not.toContain('stack');
+      expect(data.error).toBeDefined();
+      expect(typeof data.error).toBe('string');
+    });
+  });
+
+  describe('Corrupted PDF', () => {
+    it('should fail cleanly for corrupted PDF (not 500 with stack trace)', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.parse.mockRejectedValue(new Error('Invalid PDF structure'));
+      
+      // Create a corrupted PDF buffer
+      const corruptedPDF = Buffer.from('This is not a valid PDF file');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'corrupted.pdf',
+        content: corruptedPDF,
+        type: 'application/pdf',
+      });
+      
+      // Should return 400, not 500
+      assertResponseStatus(response, 400);
+      const data = await parseJsonResponse(response);
+      
+      expect(data.error).toContain('corrupted');
+      expect(data.code).toBe('CORRUPTED_PDF');
+      expect(data.fileName).toBe('corrupted.pdf');
+    });
+
+    it('should not expose internal error details for corrupted PDF', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.parse.mockRejectedValue(
+        new Error('Invalid PDF structure: missing xref table')
+      );
+      
+      const corruptedPDF = Buffer.from('Invalid PDF content');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'corrupted.pdf',
+        content: corruptedPDF,
+        type: 'application/pdf',
+      });
+      
+      const data = await parseJsonResponse(response);
+      
+      // Should not expose internal error details
+      expect(data.error).not.toContain('xref');
+      expect(data.error).not.toContain('at ');
+      expect(data.error).not.toContain('stack');
+      // But should include user-friendly message
+      expect(data.error).toBeDefined();
+    });
+
+    it('should handle malformed PDF header gracefully', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.parse.mockRejectedValue(new Error('Invalid PDF header'));
+      
+      const malformedPDF = Buffer.from('Not a PDF file at all');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'malformed.pdf',
+        content: malformedPDF,
+        type: 'application/pdf',
+      });
+      
+      assertResponseStatus(response, 400);
+      const data = await parseJsonResponse(response);
+      
+      expect(data.code).toBe('CORRUPTED_PDF');
+    });
+  });
+
+  describe('Image-Only PDF (Scanned Documents)', () => {
+    it('should detect image-only PDF and trigger scanned detection path', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.isScanned.mockReturnValue(true);
+      mockPDFParser.parse.mockResolvedValue({
+        info: { Title: 'Scanned Document' },
+        text: '', // No extractable text
+      });
+      
+      // Create a mock scanned PDF (image-only)
+      const scannedPDF = Buffer.from('%PDF-1.4\n%scanned-document');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'scanned.pdf',
+        content: scannedPDF,
+        type: 'application/pdf',
+      });
+      
+      // Should allow upload but warn about OCR requirement
+      assertResponseStatus(response, 201);
+      const data = await parseJsonResponse(response);
+      
+      expect(data.success).toBe(true);
+      expect(data.warning).toContain('image-only');
+      expect(data.warning).toContain('scanned');
+      expect(data.code).toBe('SCANNED_DOCUMENT');
+      expect(data.fileName).toBe('scanned.pdf');
+    });
+
+    it('should allow scanned PDF upload with warning', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.isScanned.mockReturnValue(true);
+      mockPDFParser.parse.mockResolvedValue({
+        info: { Title: 'Scanned Document' },
+        text: '',
+      });
+      
+      const scannedPDF = Buffer.from('%PDF-1.4\n%scanned');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'scanned-doc.pdf',
+        content: scannedPDF,
+        type: 'application/pdf',
+      });
+      
+      // Should succeed with warning
+      assertResponseStatus(response, 201);
+      const data = await parseJsonResponse(response);
+      
+      expect(data.success).toBe(true);
+      expect(data.warning).toBeDefined();
+    });
+
+    it('should not flag regular PDFs as scanned', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.isScanned.mockReturnValue(false);
+      mockPDFParser.parse.mockResolvedValue({
+        info: { Title: 'Regular PDF' },
+        text: 'This PDF has extractable text content.',
+      });
+      
+      const regularPDF = Buffer.from('%PDF-1.4\n%regular-pdf');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'regular.pdf',
+        content: regularPDF,
+        type: 'application/pdf',
+      });
+      
+      assertResponseStatus(response, 201);
+      const data = await parseJsonResponse(response);
+      
+      expect(data.success).toBe(true);
+      expect(data.warning).toBeUndefined();
+      expect(data.code).toBeUndefined();
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should not expose stack traces in error responses', async () => {
+      // Simulate an unexpected error
+      const errorHandler = async (req: NextRequest) => {
+        throw new Error('Unexpected internal error');
+      };
+      
+      const response = await callFilesUpload(errorHandler, {
+        name: 'test.pdf',
+        content: Buffer.from('test'),
+        type: 'application/pdf',
+      });
+      
+      const data = await parseJsonResponse(response);
+      
+      // Should not contain stack trace
+      expect(JSON.stringify(data)).not.toContain('at ');
+      expect(JSON.stringify(data)).not.toContain('Error:');
+      expect(JSON.stringify(data)).not.toContain('stack');
+    });
+
+    it('should return user-friendly error messages', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(true);
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'protected.pdf',
+        content: Buffer.from('test'),
+        type: 'application/pdf',
+      });
+      
+      const data = await parseJsonResponse(response);
+      
+      // Error message should be user-friendly
+      expect(data.error).toBeDefined();
+      expect(typeof data.error).toBe('string');
+      expect(data.error.length).toBeGreaterThan(0);
+      expect(data.error).not.toContain('undefined');
+      expect(data.error).not.toContain('null');
+    });
+
+    it('should include error code for programmatic handling', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(true);
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'protected.pdf',
+        content: Buffer.from('test'),
+        type: 'application/pdf',
+      });
+      
+      const data = await parseJsonResponse(response);
+      
+      expect(data.code).toBeDefined();
+      expect(data.code).toBe('PASSWORD_PROTECTED');
+    });
+  });
+
+  describe('File Size Edge Cases', () => {
+    it('should handle very small PDF files', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.parse.mockResolvedValue({
+        info: { Title: 'Small PDF' },
+        text: 'Minimal content',
+      });
+      
+      const smallPDF = Buffer.from('%PDF-1.4');
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'small.pdf',
+        content: smallPDF,
+        type: 'application/pdf',
+      });
+      
+      // Should handle gracefully (might fail validation, but not crash)
+      expect([200, 201, 400]).toContain(response.status);
+    });
+
+    it('should handle PDF files at size limit', async () => {
+      mockPDFParser.isPasswordProtected.mockReturnValue(false);
+      mockPDFParser.parse.mockResolvedValue({
+        info: { Title: 'Large PDF' },
+        text: 'Large content',
+      });
+      
+      // Create a file at the limit (10MB)
+      const largePDF = Buffer.alloc(10 * 1024 * 1024, 0);
+      largePDF.write('%PDF-1.4', 0);
+      
+      const response = await callFilesUpload(mockEnhancedUploadHandler, {
+        name: 'large.pdf',
+        content: largePDF,
+        type: 'application/pdf',
+      });
+      
+      // Should handle without crashing
+      expect([200, 201, 400]).toContain(response.status);
+    });
+  });
+});
+

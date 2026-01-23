@@ -1,0 +1,42 @@
+{
+  "step": 2,
+  "status": "success",
+  "data": {
+    "caseId": "case_67894",
+    "documentId": "doc_12349",
+    "decisionTitle": "LLM Training Data Usage Policy",
+    "decisionDate": "2024-03-01",
+    "decisionMaker": "Dr. Emily Chen",
+    "decisionMakerRole": "AI Ethics Committee Chair",
+    "decisionStatus": "APPROVED",
+    "decisionSummary": "Policy establishing guidelines for LLM training data usage",
+    "context": {
+      "documentId": "POL-2024-003",
+      "effectiveDate": "2024-03-01"
+    },
+    "rationale": [
+      "Legal risk: Using customer data without consent exposes regulatory risk",
+      "Trust: Customers expect data used only for stated purposes",
+      "Compliance: Proactive compliance reduces regulatory risk"
+    ],
+    "risksIdentified": [
+      "Regulatory fines and lawsuits",
+      "Customer trust damage",
+      "Brand reputation impact"
+    ],
+    "mitigationStrategies": [
+      "Prohibit customer data use without opt-in consent",
+      "Require legal team review of all training data",
+      "Mandate quarterly compliance audits"
+    ],
+    "expectedOutcomes": {
+      "complianceRate": 100,
+      "auditFrequency": "quarterly"
+    },
+    "confidenceScore": 0.95,
+    "extractedAt": "2024-02-15T16:30:00Z"
+  },
+  "errors": [],
+  "warnings": []
+}
+

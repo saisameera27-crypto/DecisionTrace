@@ -1,0 +1,31 @@
+{
+  "method": "POST",
+  "endpoint": "/api/cases/{case_id}/resume",
+  "headers": {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer mock_token_12345"
+  },
+  "path_params": {
+    "case_id": "case_67890"
+  },
+  "body": {
+    "resume_from_step": 4,
+    "options": {
+      "skip_validation": false,
+      "force_reprocess": false
+    }
+  },
+  "expected_response": {
+    "status": 200,
+    "body": {
+      "case_id": "case_67890",
+      "status": "processing",
+      "current_step": 4,
+      "steps_completed": [1, 2, 3],
+      "steps_remaining": [4, 5, 6],
+      "estimated_completion": "2024-03-15T10:45:00Z",
+      "progress_percent": 50
+    }
+  }
+}
+

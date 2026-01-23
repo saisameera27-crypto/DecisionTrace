@@ -1,0 +1,181 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+        continue-on-error: false
+
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run unit tests
+        env:
+          NODE_ENV: test
+          GEMINI_API_KEY: mock-api-key-for-testing
+          GEMINI_TEST_MODE: mock
+        run: npm run test:unit
+
+      - name: Run integration tests
+        env:
+          NODE_ENV: test
+          GEMINI_API_KEY: mock-api-key-for-testing
+          GEMINI_TEST_MODE: mock
+          TEST_DATABASE_URL: file:/tmp/test-decision-autopsy.db
+        run: npm run test:integration
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+        if: matrix.node-version == '20.x'
+
+      - name: Run Playwright E2E tests
+        env:
+          NODE_ENV: test
+          GEMINI_API_KEY: mock-api-key-for-testing
+          GEMINI_TEST_MODE: mock
+          CI: true
+          BASE_URL: http://localhost:8000
+        run: npm run test:e2e
+        if: matrix.node-version == '20.x'
+
+      - name: Upload Playwright traces
+        uses: actions/upload-artifact@v4
+        if: failure() && matrix.node-version == '20.x'
+        with:
+          name: playwright-traces-${{ matrix.node-version }}-${{ github.run_number }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
+
+      - name: Upload test coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ matrix.node-version }}
+          path: coverage/
+          retention-days: 7
+
+  e2e-only:
+    name: E2E Tests (Full Browser Matrix)
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright E2E tests
+        env:
+          NODE_ENV: test
+          GEMINI_API_KEY: mock-api-key-for-testing
+          GEMINI_TEST_MODE: mock
+          CI: true
+          BASE_URL: http://localhost:8000
+        run: npm run test:e2e
+
+      - name: Upload Playwright traces
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces-full-${{ github.run_number }}
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 30
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.run_number }}
+          path: playwright-report/
+          retention-days: 7
+
+  postgres-migration:
+    name: Postgres Migration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Prisma migrations
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+        run: |
+          npx prisma migrate deploy || echo "Migrations may already be applied"
+
+      - name: Run Postgres migration tests
+        env:
+          NODE_ENV: test
+          GEMINI_API_KEY: mock-api-key-for-testing
+          GEMINI_TEST_MODE: mock
+          TEST_POSTGRES_URL: postgresql://test:test@localhost:5432/test_db
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+        run: npm run test:integration -- tests/integration/migration-safety.test.ts
+

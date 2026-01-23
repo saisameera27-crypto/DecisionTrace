@@ -1,0 +1,47 @@
+{
+  "step": 2,
+  "status": "success",
+  "data": {
+    "case_id": "case_67893",
+    "document_id": "doc_12348",
+    "decision_title": "Production Database Incident Response",
+    "decision_date": "2024-01-22",
+    "decision_maker": "David Kim",
+    "decision_maker_role": "CTO",
+    "decision_status": "RESOLVED",
+    "decision_summary": "Response to production database outage incident",
+    "context": {
+      "incident_id": "INC-2024-0122",
+      "severity": "P1",
+      "duration_hours": 4.38,
+      "impact_users": 2300000
+    },
+    "rationale": [
+      "Root cause: Runaway query from analytics job",
+      "Need to prevent future incidents",
+      "Improve monitoring and failover procedures"
+    ],
+    "risks_identified": [
+      "Analytics job not reviewed by DBA team",
+      "No query timeout configured",
+      "Monitoring alerts set too high",
+      "Failover procedures not tested recently"
+    ],
+    "mitigation_strategies": [
+      "Review all database queries",
+      "Implement query timeout framework",
+      "Update monitoring thresholds",
+      "Reschedule analytics jobs to off-peak hours"
+    ],
+    "expected_outcomes": {
+      "mttr_target_minutes": 30,
+      "query_timeout_seconds": 300,
+      "monitoring_threshold_percent": 70
+    },
+    "confidence_score": 0.88,
+    "extracted_at": "2024-01-25T09:15:00Z"
+  },
+  "errors": [],
+  "warnings": []
+}
+

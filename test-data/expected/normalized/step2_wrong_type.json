@@ -1,0 +1,35 @@
+{
+  "step": 2,
+  "status": "error",
+  "data": {
+    "case_id": "case_67892",
+    "document_id": "doc_12347",
+    "decision_title": null,
+    "decision_date": "invalid-date-format",
+    "decision_maker": 12345,
+    "decision_maker_role": "VP",
+    "decision_status": "UNKNOWN_STATUS",
+    "decision_summary": null,
+    "context": {},
+    "rationale": "This should be an array but it's a string",
+    "risks_identified": "This should be an array but it's a string",
+    "mitigation_strategies": "This should be an array but it's a string",
+    "expected_outcomes": "This should be an object but it's a string",
+    "confidence_score": "high",
+    "extracted_at": "2024-01-22T15:00:00Z"
+  },
+  "errors": [
+    "decision_date has wrong type: expected ISO date string, got 'invalid-date-format'",
+    "decision_maker has wrong type: expected string, got number",
+    "rationale has wrong type: expected array, got string",
+    "risks_identified has wrong type: expected array, got string",
+    "mitigation_strategies has wrong type: expected array, got string",
+    "expected_outcomes has wrong type: expected object, got string",
+    "confidence_score has wrong type: expected number between 0-1, got string"
+  ],
+  "warnings": [
+    "decision_title is null",
+    "decision_summary is null"
+  ]
+}
+

@@ -1,0 +1,23 @@
+{
+  "step": 1,
+  "status": "success",
+  "data": {
+    "document_id": "doc_12345",
+    "document_type": "decision_memo",
+    "uploaded_at": "2024-03-15T10:30:00Z",
+    "file_name": "01_launch_decision_memo.txt",
+    "file_size": 2048,
+    "mime_type": "text/plain",
+    "extracted_text": "DECISION MEMO: Q2 2024 Product Launch\n\nDate: March 15, 2024\nDecision Maker: Sarah Chen, VP of Product\nStatus: APPROVED\n\nDECISION SUMMARY\nWe have decided to launch \"Project Phoenix\" - a new mobile application targeting the healthcare sector...",
+    "metadata": {
+      "language": "en",
+      "character_count": 1850,
+      "word_count": 320,
+      "line_count": 45
+    },
+    "processing_time_ms": 1250
+  },
+  "errors": [],
+  "warnings": []
+}
+

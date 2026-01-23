@@ -1,0 +1,68 @@
+INCIDENT POSTMORTEM: Production Database Outage
+Date: January 22, 2024
+Incident ID: INC-2024-0122
+Severity: P1 - Critical
+Duration: 4 hours 23 minutes
+Impact: 100% of users affected, $50K estimated revenue loss
+
+EXECUTIVE SUMMARY
+On January 22, 2024 at 14:32 UTC, our primary production database became unresponsive, causing a complete service outage. The incident lasted 4 hours and 23 minutes, affecting all 2.3M active users. Service was fully restored at 18:55 UTC.
+
+TIMELINE
+14:32 UTC - Database connection pool exhausted, first alerts triggered
+14:35 UTC - On-call engineer paged, begins investigation
+14:42 UTC - Database CPU at 100%, queries timing out
+14:50 UTC - Decision made to failover to secondary database
+15:15 UTC - Failover initiated, but secondary database also showing issues
+15:30 UTC - Root cause identified: runaway query from analytics job
+15:45 UTC - Analytics job killed, but database still recovering
+16:20 UTC - Database recovery in progress, slow queries being cleared
+17:00 UTC - Database performance improving, but not stable
+17:45 UTC - Full database recovery completed
+18:00 UTC - Service validation tests passing
+18:55 UTC - All systems operational, incident resolved
+
+ROOT CAUSE ANALYSIS
+The incident was caused by an analytics job that was scheduled to run during peak traffic hours. The job executed a complex query that:
+1. Scanned the entire user table (2.3M rows) without proper indexing
+2. Joined with 5 other large tables
+3. Lacked query timeout limits
+4. Was not properly tested in staging environment
+
+The query consumed all available database connections and CPU resources, causing a cascading failure.
+
+CONTRIBUTING FACTORS
+1. The analytics job was recently modified but not reviewed by database team
+2. No query timeout was configured for background jobs
+3. Monitoring alerts were set too high (didn't trigger until 100% CPU)
+4. Failover procedures were not tested recently
+5. Secondary database had similar performance issues (shared infrastructure)
+
+IMPACT ASSESSMENT
+- User Impact: 2.3M users unable to access service
+- Revenue Impact: $50K estimated loss
+- Reputation Impact: Social media complaints, news coverage
+- Team Impact: 15 engineers involved in incident response
+
+LESSONS LEARNED
+1. All database queries must be reviewed by DBA team
+2. Implement query timeouts for all background jobs (max 5 minutes)
+3. Lower monitoring alert thresholds (alert at 70% CPU)
+4. Schedule analytics jobs during off-peak hours only
+5. Test failover procedures quarterly
+6. Separate secondary database infrastructure
+
+ACTION ITEMS
+1. [DBA Team] Review and approve all new database queries - Due: Feb 1
+2. [Platform Team] Implement query timeout framework - Due: Feb 15
+3. [SRE Team] Update monitoring thresholds - Due: Jan 30
+4. [Analytics Team] Reschedule jobs to off-peak hours - Due: Jan 25
+5. [Infrastructure Team] Plan secondary database separation - Due: Mar 1
+
+SIGN-OFF
+Postmortem reviewed and approved by:
+- CTO: David Kim
+- VP Engineering: Lisa Wang
+- Head of SRE: James Park
+Date: January 25, 2024
+

@@ -1,0 +1,189 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Report Normalizer > camelCase normalization > should match snapshot for camelCase normalization 1`] = `
+{
+  "caseId": "case_67894",
+  "confidenceScore": 0.95,
+  "context": {
+    "documentId": "POL-2024-003",
+    "effectiveDate": "2024-03-01",
+  },
+  "decisionDate": "2024-03-01",
+  "decisionMaker": "Dr. Emily Chen",
+  "decisionMakerRole": "AI Ethics Committee Chair",
+  "decisionStatus": "APPROVED",
+  "decisionSummary": "Policy establishing guidelines for LLM training data usage",
+  "decisionTitle": "LLM Training Data Usage Policy",
+  "documentId": "doc_12349",
+  "expectedOutcomes": {
+    "auditFrequency": "quarterly",
+    "complianceRate": 100,
+  },
+  "extractedAt": "2024-02-15T16:30:00Z",
+  "mitigationStrategies": [
+    "Prohibit customer data use without opt-in consent",
+    "Require legal team review of all training data",
+    "Mandate quarterly compliance audits",
+  ],
+  "rationale": [
+    "Legal risk: Using customer data without consent exposes regulatory risk",
+    "Trust: Customers expect data used only for stated purposes",
+    "Compliance: Proactive compliance reduces regulatory risk",
+  ],
+  "risksIdentified": [
+    "Regulatory fines and lawsuits",
+    "Customer trust damage",
+    "Brand reputation impact",
+  ],
+}
+`;
+
+exports[`Report Normalizer > snake_case normalization > should match snapshot for snake_case normalization 1`] = `
+{
+  "caseId": "case_67893",
+  "confidenceScore": 0.88,
+  "context": {
+    "durationHours": 4.38,
+    "impactUsers": 2300000,
+    "incidentId": "INC-2024-0122",
+    "severity": "P1",
+  },
+  "decisionDate": "2024-01-22",
+  "decisionMaker": "David Kim",
+  "decisionMakerRole": "CTO",
+  "decisionStatus": "RESOLVED",
+  "decisionSummary": "Response to production database outage incident",
+  "decisionTitle": "Production Database Incident Response",
+  "documentId": "doc_12348",
+  "expectedOutcomes": {
+    "monitoringThresholdPercent": 70,
+    "mttrTargetMinutes": 30,
+    "queryTimeoutSeconds": 300,
+  },
+  "extractedAt": "2024-01-25T09:15:00Z",
+  "mitigationStrategies": [
+    "Review all database queries",
+    "Implement query timeout framework",
+    "Update monitoring thresholds",
+    "Reschedule analytics jobs to off-peak hours",
+  ],
+  "rationale": [
+    "Root cause: Runaway query from analytics job",
+    "Need to prevent future incidents",
+    "Improve monitoring and failover procedures",
+  ],
+  "risksIdentified": [
+    "Analytics job not reviewed by DBA team",
+    "No query timeout configured",
+    "Monitoring alerts set too high",
+    "Failover procedures not tested recently",
+  ],
+}
+`;
+
+exports[`Report Normalizer > snapshot tests > should match snapshot for normalized camelCase output > camelCase_normalized 1`] = `
+{
+  "caseId": "case_67894",
+  "confidenceScore": 0.95,
+  "context": {
+    "documentId": "POL-2024-003",
+    "effectiveDate": "2024-03-01",
+  },
+  "decisionDate": "2024-03-01",
+  "decisionMaker": "Dr. Emily Chen",
+  "decisionMakerRole": "AI Ethics Committee Chair",
+  "decisionStatus": "APPROVED",
+  "decisionSummary": "Policy establishing guidelines for LLM training data usage",
+  "decisionTitle": "LLM Training Data Usage Policy",
+  "documentId": "doc_12349",
+  "expectedOutcomes": {
+    "auditFrequency": "quarterly",
+    "complianceRate": 100,
+  },
+  "extractedAt": "2024-02-15T16:30:00Z",
+  "mitigationStrategies": [
+    "Prohibit customer data use without opt-in consent",
+    "Require legal team review of all training data",
+    "Mandate quarterly compliance audits",
+  ],
+  "rationale": [
+    "Legal risk: Using customer data without consent exposes regulatory risk",
+    "Trust: Customers expect data used only for stated purposes",
+    "Compliance: Proactive compliance reduces regulatory risk",
+  ],
+  "risksIdentified": [
+    "Regulatory fines and lawsuits",
+    "Customer trust damage",
+    "Brand reputation impact",
+  ],
+}
+`;
+
+exports[`Report Normalizer > snapshot tests > should match snapshot for normalized output with missing fields > missing_fields_normalized 1`] = `
+{
+  "caseId": "case_67891",
+  "confidenceScore": 0.65,
+  "context": {
+    "budgetAllocated": "$200K",
+    "urgency": "Need before Q2 planning cycle (March 1)",
+  },
+  "decisionDate": "2024-02-10",
+  "decisionMaker": "Michael Rodriguez",
+  "decisionMakerRole": null,
+  "decisionStatus": "APPROVED",
+  "decisionSummary": "Hiring decision for Senior Engineering Manager position",
+  "decisionTitle": "Hiring Decision - Senior Engineering Manager",
+  "documentId": "doc_12346",
+  "expectedOutcomes": null,
+  "extractedAt": "2024-02-10T14:20:00Z",
+  "mitigationStrategies": [],
+  "rationale": [
+    "Need someone who can scale team from 20 to 50 engineers",
+    "Experience scaling teams aligns with needs",
+  ],
+  "risksIdentified": [],
+}
+`;
+
+exports[`Report Normalizer > snapshot tests > should match snapshot for normalized snake_case output > snake_case_normalized 1`] = `
+{
+  "caseId": "case_67893",
+  "confidenceScore": 0.88,
+  "context": {
+    "durationHours": 4.38,
+    "impactUsers": 2300000,
+    "incidentId": "INC-2024-0122",
+    "severity": "P1",
+  },
+  "decisionDate": "2024-01-22",
+  "decisionMaker": "David Kim",
+  "decisionMakerRole": "CTO",
+  "decisionStatus": "RESOLVED",
+  "decisionSummary": "Response to production database outage incident",
+  "decisionTitle": "Production Database Incident Response",
+  "documentId": "doc_12348",
+  "expectedOutcomes": {
+    "monitoringThresholdPercent": 70,
+    "mttrTargetMinutes": 30,
+    "queryTimeoutSeconds": 300,
+  },
+  "extractedAt": "2024-01-25T09:15:00Z",
+  "mitigationStrategies": [
+    "Review all database queries",
+    "Implement query timeout framework",
+    "Update monitoring thresholds",
+    "Reschedule analytics jobs to off-peak hours",
+  ],
+  "rationale": [
+    "Root cause: Runaway query from analytics job",
+    "Need to prevent future incidents",
+    "Improve monitoring and failover procedures",
+  ],
+  "risksIdentified": [
+    "Analytics job not reviewed by DBA team",
+    "No query timeout configured",
+    "Monitoring alerts set too high",
+    "Failover procedures not tested recently",
+  ],
+}
+`;

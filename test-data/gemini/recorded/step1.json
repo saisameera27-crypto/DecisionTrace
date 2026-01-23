@@ -1,0 +1,39 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"step\": 1,\n  \"status\": \"success\",\n  \"data\": {\n    \"document_id\": \"doc_12345\",\n    \"document_type\": \"decision_memo\",\n    \"uploaded_at\": \"2024-03-15T10:30:00Z\",\n    \"file_name\": \"01_launch_decision_memo.txt\",\n    \"file_size\": 2048,\n    \"mime_type\": \"text/plain\",\n    \"extracted_text\": \"DECISION MEMO: Q2 2024 Product Launch\\n\\nDate: March 15, 2024\\nDecision Maker: Sarah Chen, VP of Product\\nStatus: APPROVED\\n\\nDECISION SUMMARY\\nWe have decided to launch \\\"Project Phoenix\\\" - a new mobile application targeting the healthcare sector...\",\n    \"metadata\": {\n      \"language\": \"en\",\n      \"character_count\": 1850,\n      \"word_count\": 320,\n      \"line_count\": 45\n    },\n    \"processing_time_ms\": 1250\n  },\n  \"errors\": [],\n  \"warnings\": []\n}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "safetyRatings": [
+        {
+          "category": "HARM_CATEGORY_HARASSMENT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_HATE_SPEECH",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "probability": "NEGLIGIBLE"
+        }
+      ]
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 100,
+    "candidatesTokenCount": 200,
+    "totalTokenCount": 300
+  }
+}

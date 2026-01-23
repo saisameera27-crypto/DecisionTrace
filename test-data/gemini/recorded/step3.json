@@ -1,0 +1,39 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"step\": 3,\n  \"status\": \"success\",\n  \"data\": {\n    \"case_id\": \"case_step3\",\n    \"context_analysis\": {\n      \"business_context\": \"Test business context for step 3\",\n      \"market_conditions\": \"Test market conditions\",\n      \"organizational_factors\": [\n        \"Factor 1\",\n        \"Factor 2\"\n      ],\n      \"external_factors\": [\n        \"External 1\"\n      ]\n    },\n    \"stakeholders\": [\n      {\n        \"name\": \"Test Stakeholder\",\n        \"role\": \"Manager\",\n        \"influence\": \"high\"\n      }\n    ],\n    \"analysis_date\": \"2024-03-15T10:40:00Z\"\n  },\n  \"errors\": [],\n  \"warnings\": []\n}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "safetyRatings": [
+        {
+          "category": "HARM_CATEGORY_HARASSMENT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_HATE_SPEECH",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "probability": "NEGLIGIBLE"
+        }
+      ]
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 100,
+    "candidatesTokenCount": 200,
+    "totalTokenCount": 300
+  }
+}

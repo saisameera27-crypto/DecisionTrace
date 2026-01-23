@@ -1,0 +1,35 @@
+{
+  "step": 2,
+  "status": "partial_success",
+  "data": {
+    "case_id": "case_67891",
+    "document_id": "doc_12346",
+    "decision_title": "Hiring Decision - Senior Engineering Manager",
+    "decision_date": "2024-02-10",
+    "decision_maker": "Michael Rodriguez",
+    "decision_maker_role": null,
+    "decision_status": "APPROVED",
+    "decision_summary": "Hiring decision for Senior Engineering Manager position",
+    "context": {
+      "budget_allocated": "$200K",
+      "urgency": "Need before Q2 planning cycle (March 1)"
+    },
+    "rationale": [
+      "Need someone who can scale team from 20 to 50 engineers",
+      "Experience scaling teams aligns with needs"
+    ],
+    "risks_identified": [],
+    "mitigation_strategies": [],
+    "expected_outcomes": null,
+    "confidence_score": 0.65,
+    "extracted_at": "2024-02-10T14:20:00Z"
+  },
+  "errors": [],
+  "warnings": [
+    "Missing required field: decision_maker_role",
+    "Missing required field: risks_identified",
+    "Missing required field: mitigation_strategies",
+    "Missing required field: expected_outcomes"
+  ]
+}
+

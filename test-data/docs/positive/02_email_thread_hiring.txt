@@ -1,0 +1,71 @@
+Subject: Re: Hiring Decision - Senior Engineering Manager Position
+
+From: Michael Rodriguez <mrodriguez@company.com>
+To: Hiring Committee <hiring@company.com>
+Date: February 8, 2024
+CC: HR Team <hr@company.com>
+
+---
+
+Hi Team,
+
+Following up on our discussion from yesterday's meeting. We need to make a decision on the Senior Engineering Manager role.
+
+CANDIDATE COMPARISON:
+
+Candidate A (John Smith):
+- 8 years experience at FAANG companies
+- Strong technical background in distributed systems
+- Leadership experience: Managed team of 15 engineers
+- Cultural fit: High (references were glowing)
+- Salary expectation: $180K base + equity
+- Start date: Available immediately
+
+Candidate B (Maria Garcia):
+- 12 years experience, mix of startups and enterprise
+- Strong in both technical and people management
+- Leadership experience: Built team from 5 to 50 engineers
+- Cultural fit: High (very collaborative style)
+- Salary expectation: $195K base + equity
+- Start date: 2 weeks notice period
+
+DECISION FACTORS:
+1. We need someone who can scale the team quickly (we're planning to grow from 20 to 50 engineers this year)
+2. Budget constraints: We have $200K allocated for this role
+3. Urgency: We need someone onboarded before Q2 planning cycle (starts March 1)
+
+MY RECOMMENDATION:
+I recommend Candidate B (Maria Garcia). While she's slightly more expensive, her experience scaling teams aligns perfectly with our needs. The 2-week notice period is acceptable given our timeline.
+
+What does everyone think? Can we get approval to move forward?
+
+Best,
+Michael
+
+---
+
+From: Hiring Committee <hiring@company.com>
+To: Michael Rodriguez <mrodriguez@company.com>
+Date: February 9, 2024
+
+Michael,
+
+The committee agrees with your recommendation. Let's proceed with Maria Garcia.
+
+Please coordinate with HR to extend the offer.
+
+Thanks,
+Hiring Committee
+
+---
+
+From: Michael Rodriguez <mrodriguez@company.com>
+To: Maria Garcia <maria.garcia@email.com>
+Date: February 10, 2024
+
+Hi Maria,
+
+We're excited to extend an offer for the Senior Engineering Manager position...
+
+[Offer details follow]
+

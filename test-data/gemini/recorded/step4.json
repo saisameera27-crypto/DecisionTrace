@@ -1,0 +1,39 @@
+{
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": "{\n  \"step\": 4,\n  \"status\": \"success\",\n  \"data\": {\n    \"case_id\": \"case_step4\",\n    \"outcome_analysis\": {\n      \"actual_outcomes\": {\n        \"metric1\": 100,\n        \"metric2\": 200\n      },\n      \"expected_vs_actual\": [\n        {\n          \"metric\": \"users\",\n          \"expected\": 10000,\n          \"actual\": 8500,\n          \"variance\": -0.15\n        }\n      ],\n      \"success_indicators\": [\n        \"Indicator 1\"\n      ],\n      \"failure_indicators\": [\n        \"Indicator 2\"\n      ]\n    },\n    \"impact_assessment\": {\n      \"financial_impact\": -50000,\n      \"operational_impact\": \"Moderate\"\n    },\n    \"analysis_date\": \"2024-06-30T10:45:00Z\"\n  },\n  \"errors\": [],\n  \"warnings\": []\n}"
+          }
+        ],
+        "role": "model"
+      },
+      "finishReason": "STOP",
+      "index": 0,
+      "safetyRatings": [
+        {
+          "category": "HARM_CATEGORY_HARASSMENT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_HATE_SPEECH",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          "probability": "NEGLIGIBLE"
+        },
+        {
+          "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+          "probability": "NEGLIGIBLE"
+        }
+      ]
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": 100,
+    "candidatesTokenCount": 200,
+    "totalTokenCount": 300
+  }
+}

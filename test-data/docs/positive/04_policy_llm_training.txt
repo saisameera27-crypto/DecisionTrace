@@ -1,0 +1,57 @@
+POLICY DECISION: LLM Training Data Usage
+Document ID: POL-2024-003
+Effective Date: March 1, 2024
+Status: APPROVED
+Decision Maker: AI Ethics Committee
+
+POLICY STATEMENT
+This policy establishes guidelines for the use of customer data in training Large Language Models (LLMs) and other AI systems.
+
+DECISION CONTEXT
+Our company is developing an AI-powered customer support system that requires training on customer interaction data. The legal and ethics teams raised concerns about data privacy, consent, and regulatory compliance.
+
+KEY CONSIDERATIONS
+1. Customer Privacy: Customers have not explicitly consented to their data being used for AI training
+2. Regulatory Compliance: GDPR, CCPA, and other regulations may restrict data usage
+3. Competitive Advantage: Training on our proprietary data could improve model performance
+4. Ethical Concerns: Using customer data without consent raises ethical questions
+5. Business Need: The AI system is critical for scaling customer support operations
+
+DECISION
+After extensive review, the AI Ethics Committee has decided to:
+- PROHIBIT the use of customer data in LLM training without explicit opt-in consent
+- ALLOW the use of anonymized, aggregated data for model fine-tuning
+- REQUIRE all AI training data to be reviewed by the legal team
+- MANDATE regular audits of AI training datasets
+
+RATIONALE
+1. Legal Risk: Using customer data without consent exposes us to regulatory fines and lawsuits
+2. Trust: Customers expect their data to be used only for stated purposes
+3. Reputation: Violating customer trust could damage brand reputation
+4. Compliance: Proactive compliance reduces regulatory risk
+
+EXCEPTIONS
+The following exceptions are permitted:
+- Publicly available data (with proper attribution)
+- Data explicitly licensed for AI training
+- Synthetic data generated from approved sources
+- Customer data with explicit written consent
+
+IMPLEMENTATION REQUIREMENTS
+1. All AI/ML teams must submit training data for review before use
+2. Legal team will maintain a registry of approved training datasets
+3. Quarterly audits will verify compliance
+4. Violations will result in immediate project suspension
+
+APPROVAL
+AI Ethics Committee:
+- Chair: Dr. Emily Chen
+- Legal Representative: Robert Martinez
+- Customer Advocacy: Jennifer Lee
+- Engineering: Alex Kumar
+
+Date: February 15, 2024
+
+REVIEW SCHEDULE
+This policy will be reviewed annually or when regulations change.
+
