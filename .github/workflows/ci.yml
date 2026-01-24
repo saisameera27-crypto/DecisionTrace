@@ -182,8 +182,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate Prisma clients
-        run: npm run prisma:generate
+      - name: Generate Postgres Prisma client
+        env:
+          PRISMA_SCHEMA_TARGET: postgres
+        run: npm run prisma:generate:pg
 
       - name: Run Prisma migrations (Postgres)
         env:
