@@ -183,7 +183,7 @@ async function mockRateLimitedHandler(req: NextRequest): Promise<NextResponse> {
         },
         {
           status: 429,
-          headers: Object.fromEntries(headers.entries()),
+          headers: Object.fromEntries((headers as any).entries ? (headers as any).entries() : []),
         }
       );
     }
@@ -198,7 +198,7 @@ async function mockRateLimitedHandler(req: NextRequest): Promise<NextResponse> {
       },
       {
         status: 200,
-        headers: Object.fromEntries(headers.entries()),
+        headers: Object.fromEntries((headers as any).entries ? (headers as any).entries() : []),
       }
     );
   } catch (error: any) {

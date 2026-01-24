@@ -77,7 +77,8 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
           });
         } else {
           // Fallback: iterate entries
-          for (const [key, value] of formData.entries()) {
+          const formDataEntries = (formData as any).entries ? (formData as any).entries() : [];
+          for (const [key, value] of formDataEntries) {
             if (key === 'file' && value instanceof File) {
               files.push(value);
             }
@@ -89,7 +90,8 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
       const body = (req as any).body;
       if (body instanceof FormData) {
         // Manual extraction from FormData
-        for (const [key, value] of body.entries()) {
+        const bodyEntries = (body as any).entries ? (body as any).entries() : [];
+        for (const [key, value] of bodyEntries) {
           if (key === 'file' && value instanceof File) {
             files.push(value);
           }

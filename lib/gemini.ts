@@ -349,7 +349,7 @@ async function uploadFileToGeminiLive(
   };
   
   formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-  formData.append('file', new Blob([file], { type: mimeType }), fileName);
+  formData.append('file', new Blob([new Uint8Array(file)], { type: mimeType }), fileName);
   
   const response = await fetch(url, {
     method: 'POST',
