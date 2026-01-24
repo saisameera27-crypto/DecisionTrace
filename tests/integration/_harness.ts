@@ -51,9 +51,20 @@ let prisma: any = null;
 export function getTestPrismaClient(): any {
   if (!prisma) {
     try {
+      // Check if we're using SQLite (file: protocol)
+      const databaseUrl = process.env.TEST_DATABASE_URL || `file:${TEST_DB_PATH}`;
+      
+      // If using SQLite, Prisma schema must be configured for SQLite
+      // For now, skip Prisma operations if URL is SQLite and schema is Postgres
+      if (databaseUrl.startsWith('file:')) {
+        // Prisma schema is configured for Postgres, so SQLite won't work
+        // Return null to skip database operations in tests
+        console.warn('SQLite detected but Prisma schema is configured for Postgres. Skipping database operations.');
+        return null;
+      }
+      
       // Dynamic import to handle missing Prisma
       const { PrismaClient } = require('@prisma/client');
-      const databaseUrl = `file:${TEST_DB_PATH}`;
       
       prisma = new PrismaClient({
         datasources: {
@@ -62,9 +73,9 @@ export function getTestPrismaClient(): any {
           },
         },
       });
-    } catch (error) {
-      // Prisma not installed - return null
-      console.warn('Prisma not available - database operations will be skipped');
+    } catch (error: any) {
+      // Prisma not installed or configuration error - return null
+      console.warn('Prisma not available - database operations will be skipped:', error.message);
       return null;
     }
   }

@@ -149,10 +149,20 @@ describe('SSE Reliability Tests', () => {
     it('should establish SSE connection', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       
-      eventSource.onopen = () => {
-        expect(eventSource?.readyState).toBe(1); // OPEN
+      // Set readyState immediately if connection is already established
+      // Otherwise wait for onopen callback
+      if (eventSource.readyState === 1) {
+        expect(eventSource.readyState).toBe(1); // OPEN
         done();
-      };
+      } else {
+        eventSource.onopen = () => {
+          // Ensure readyState is set before checking
+          setTimeout(() => {
+            expect(eventSource?.readyState).toBe(1); // OPEN
+            done();
+          }, 0);
+        };
+      }
     });
 
     it('should receive messages from SSE stream', (done: DoneCallback) => {
