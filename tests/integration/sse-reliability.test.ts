@@ -151,7 +151,7 @@ describe('SSE Reliability Tests', () => {
       
       eventSource.onopen = () => {
         expect(eventSource?.readyState).toBe(1); // OPEN
-        done();
+        (done as () => void)();
       };
     });
 
@@ -169,7 +169,7 @@ describe('SSE Reliability Tests', () => {
           expect(receivedMessages[0].step).toBe(1);
           expect(receivedMessages[5].step).toBe(6);
           expect(receivedMessages[5].status).toBe('completed');
-          done();
+          (done as () => void)();
         }
       };
     });

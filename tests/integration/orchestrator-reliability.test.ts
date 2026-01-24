@@ -134,7 +134,7 @@ async function mockReliableOrchestratorHandler(
       const existingStep = existingStepsMap.get(stepNumber);
 
       // Idempotency check: if step is already completed, skip it
-      if (existingStep && existingStep.status === 'completed') {
+      if (existingStep && (existingStep as any).status === 'completed') {
         skippedCount++;
         steps.push({
           stepNumber,
@@ -151,7 +151,7 @@ async function mockReliableOrchestratorHandler(
       if (existingStep) {
         // Update existing step
         step = await prisma.caseStep.update({
-          where: { id: existingStep.id },
+          where: { id: (existingStep as any).id },
           data: {
             status: 'processing',
             startedAt: new Date(),
@@ -831,7 +831,7 @@ describe('Orchestrator Reliability', () => {
         orderBy: { createdAt: 'asc' },
       });
 
-      const step2CompletedEvent = step2Events.find((e) => {
+      const step2CompletedEvent = step2Events.find((e: any) => {
         const data = JSON.parse(e.data || '{}');
         return data.stepNumber === 2;
       });

@@ -180,7 +180,9 @@ Rationale: The feature has been tested and is ready for production.`;
 async function runRealGeminiTest(): Promise<void> {
   console.log(`\n🚀 Real Gemini Test`);
   console.log(`Target: ${BASE_URL}`);
-  console.log(`API Key: ${GEMINI_API_KEY.substring(0, 10)}...${GEMINI_API_KEY.substring(GEMINI_API_KEY.length - 4)}\n`);
+  // GEMINI_API_KEY is guaranteed to be defined due to check above
+  const apiKey = GEMINI_API_KEY!;
+  console.log(`API Key: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 4)}\n`);
 
   let caseId: string | undefined;
   const testDocument = loadSmallTestDocument();

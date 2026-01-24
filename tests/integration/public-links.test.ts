@@ -100,7 +100,7 @@ async function mockReportLoaderHandler(
     }
 
     // Find step 2 data (decision extraction step)
-    const step2 = case_.steps.find((s) => s.stepNumber === 2);
+    const step2 = case_.steps.find((s: any) => s.stepNumber === 2);
     if (!step2 || !step2.data) {
       return NextResponseClass.json(
         { error: 'Decision data not found' },
@@ -293,7 +293,7 @@ async function mockPublicCaseHandler(
     }
 
     // Find step 2 data for decision view
-    const step2 = case_.steps.find((s) => s.stepNumber === 2);
+    const step2 = case_.steps.find((s: any) => s.stepNumber === 2);
     const decision = step2 && step2.data
       ? normalizeDecisionData(JSON.parse(step2.data))
       : null;
