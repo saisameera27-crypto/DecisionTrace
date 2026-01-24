@@ -71,8 +71,7 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
       if (file.type === 'application/pdf') {
         const buffer = Buffer.from(await file.arrayBuffer());
         
-        // Check if PDF is password-protected
-        mockPDFParser.isPasswordProtected.mockReturnValue(false);
+        // Check if PDF is password-protected (use mock return value)
         const isPasswordProtected = mockPDFParser.isPasswordProtected(buffer);
         
         if (isPasswordProtected) {
@@ -93,19 +92,22 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
             throw new Error('Invalid PDF structure');
           }
         } catch (error: any) {
-          return NextResponseClass.json(
-            {
-              error: 'PDF file appears to be corrupted or invalid',
-              code: 'CORRUPTED_PDF',
-              fileName: file.name,
-              details: error.message,
-            },
-            { status: 400 }
-          );
+          // Check if it's a mock rejection
+          if (error.message && error.message.includes('Invalid PDF')) {
+            return NextResponseClass.json(
+              {
+                error: 'PDF file appears to be corrupted or invalid',
+                code: 'CORRUPTED_PDF',
+                fileName: file.name,
+              },
+              { status: 400 }
+            );
+          }
+          // Re-throw if not a mock error
+          throw error;
         }
         
         // Check if PDF is image-only (scanned)
-        mockPDFParser.isScanned.mockReturnValue(false);
         const isScanned = mockPDFParser.isScanned(buffer);
         
         if (isScanned) {

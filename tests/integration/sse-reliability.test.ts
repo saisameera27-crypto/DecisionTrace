@@ -169,18 +169,22 @@ describe('SSE Reliability Tests', () => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let messageCount = 0;
       
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        receivedMessages.push(data);
-        messageCount++;
-        
-        if (messageCount === 6) {
-          expect(receivedMessages.length).toBe(6);
-          expect(receivedMessages[0].step).toBe(1);
-          expect(receivedMessages[5].step).toBe(6);
-          expect(receivedMessages[5].status).toBe('completed');
-          done();
-        }
+      // Wait for connection to open first
+      eventSource.onopen = () => {
+        // Now set up message handler
+        eventSource.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          receivedMessages.push(data);
+          messageCount++;
+          
+          if (messageCount === 6) {
+            expect(receivedMessages.length).toBe(6);
+            expect(receivedMessages[0].step).toBe(1);
+            expect(receivedMessages[5].step).toBe(6);
+            expect(receivedMessages[5].status).toBe('completed');
+            done();
+          }
+        };
       };
     });
   });
