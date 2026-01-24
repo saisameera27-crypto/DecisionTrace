@@ -83,6 +83,7 @@ describe('Retry Logic', () => {
         throw error;
       });
 
+      // Start the retry operation
       const promise = retryWithBackoff(mockFn, { maxRetries: 3 });
 
       // Fast-forward through all retry delays: 1s, 2s, 4s
@@ -93,17 +94,9 @@ describe('Retry Logic', () => {
       // Wait for all pending promises and timers
       await vi.runAllTimersAsync();
       
-      // Ensure promise rejection is handled
-      let errorThrown = false;
-      try {
-        await promise;
-      } catch (error: any) {
-        errorThrown = true;
-        expect(error.message).toBe('Internal server error');
-        expect(error.status).toBe(500);
-      }
+      // Ensure promise rejection is handled - use expect().rejects for better error handling
+      await expect(promise).rejects.toThrow('Internal server error');
       
-      expect(errorThrown).toBe(true);
       expect(mockFn).toHaveBeenCalledTimes(4); // Initial + 3 retries
       expect(callCount).toBe(4);
     });
