@@ -92,14 +92,15 @@ describe('Retry Logic', () => {
       
       // Wait for all pending promises and timers
       await vi.runAllTimersAsync();
-      await Promise.resolve(); // Allow microtasks to run
-
+      
+      // Ensure promise rejection is handled
       let errorThrown = false;
       try {
         await promise;
       } catch (error: any) {
         errorThrown = true;
         expect(error.message).toBe('Internal server error');
+        expect(error.status).toBe(500);
       }
       
       expect(errorThrown).toBe(true);
