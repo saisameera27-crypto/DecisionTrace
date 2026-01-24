@@ -46,8 +46,10 @@ jobs:
           GEMINI_TEST_MODE: mock
         run: npm run test:unit
 
-      - name: Generate Prisma clients
-        run: npm run prisma:generate
+      - name: Generate SQLite Prisma client for integration tests
+        env:
+          PRISMA_SCHEMA_TARGET: sqlite
+        run: npm run prisma:generate:sqlite
 
       - name: Run integration tests
         env:
