@@ -1,0 +1,124 @@
+// Prisma Schema for Decision Trace - SQLite Version
+// Used in SQLite-specific tests
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/sqlite-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Case {
+  id           String   @id @default(cuid())
+  title        String
+  status       String   @default("draft") // draft, processing, completed, failed
+  userId       String?
+  slug         String   @unique
+  currentRunId String?  // Tracks the current running orchestration run
+  metadata     String?  @default("{}") // JSON string
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  documents CaseDocument[]
+  steps      CaseStep[]
+  events     CaseEvent[]
+  report     Report?
+  shares     Share[]
+
+  @@index([userId])
+  @@index([slug])
+  @@index([status])
+  @@index([currentRunId])
+}
+
+model CaseDocument {
+  id          String   @id @default(cuid())
+  caseId      String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  uploadedAt  DateTime @default(now())
+  processedAt DateTime?
+  status      String   @default("pending") // pending, processing, completed, failed
+  metadata    String?  @default("{}") // JSON string
+  content     String?  // Store text content for text/plain files (free tier)
+  geminiFileUri String? // Store Gemini file URI if used (for cleanup)
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+model CaseStep {
+  id          String   @id @default(cuid())
+  caseId      String
+  stepNumber  Int      // 1-6
+  status      String   @default("pending") // pending, processing, completed, failed
+  data        String?  @default("{}") // JSON string
+  errors      String?  @default("[]") // JSON array
+  warnings    String?  @default("[]") // JSON array
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, stepNumber])
+  @@index([caseId])
+}
+
+model CaseEvent {
+  id        String   @id @default(cuid())
+  caseId    String
+  eventType String   // step_started, step_completed, step_failed, etc.
+  data      String?  @default("{}") // JSON string
+  createdAt DateTime @default(now())
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([createdAt])
+}
+
+model Report {
+  id                    String   @id @default(cuid())
+  caseId                String   @unique
+  finalNarrativeMarkdown String?
+  mermaidDiagram        String?
+  tokensUsed            Int?
+  durationMs            Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+}
+
+model Share {
+  id          String   @id @default(cuid())
+  caseId      String
+  slug        String   @unique
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  accessedAt  DateTime?
+
+  case Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([slug])
+  @@index([expiresAt])
+}
+
+model UsageTracking {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  realRunsToday Int    @default(0)
+  resetAt     DateTime @default(now())
+  
+  @@unique([date])
+  @@index([date])
+}
+

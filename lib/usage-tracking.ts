@@ -3,15 +3,9 @@
  * Tracks global daily usage of real Gemini API calls
  */
 
-import { PrismaClient } from '@prisma/client';
+import { getPrismaClient } from './prisma';
 
-let prisma: PrismaClient | null = null;
-
-try {
-  prisma = new PrismaClient();
-} catch {
-  // Prisma not available - use in-memory fallback
-}
+const prisma = getPrismaClient();
 
 interface UsageTracking {
   realRunsToday: number;

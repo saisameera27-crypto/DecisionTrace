@@ -169,10 +169,36 @@ See `prisma/schema.prisma` for full schema definition.
    npx prisma migrate dev --name init
    ```
 
-4. Set test database URL (optional):
+4. Set test database URL and schema target (optional):
    ```bash
+   # For SQLite tests
    export TEST_DATABASE_URL="file:/tmp/test-decision-trace.db"
+   export PRISMA_SCHEMA_TARGET="sqlite"
+   
+   # For Postgres tests
+   export DATABASE_URL="postgresql://user:pass@localhost:5432/test_db"
+   export PRISMA_SCHEMA_TARGET="postgres"
    ```
+
+**Database Configuration**:
+- Integration tests use a test database (SQLite by default)
+- Set `TEST_DATABASE_URL` environment variable to customize location
+- Set `PRISMA_SCHEMA_TARGET` to select the Prisma schema:
+  - `PRISMA_SCHEMA_TARGET=sqlite` - Use SQLite schema (for SQLite tests)
+  - `PRISMA_SCHEMA_TARGET=postgres` - Use Postgres schema (default, for production and Postgres tests)
+
+**Example**:
+```bash
+# Run integration tests with SQLite
+export TEST_DATABASE_URL="file:/tmp/test-decision-trace.db"
+export PRISMA_SCHEMA_TARGET="sqlite"
+npm run test:integration
+
+# Run integration tests with Postgres
+export DATABASE_URL="postgresql://user:pass@localhost:5432/test_db"
+export PRISMA_SCHEMA_TARGET="postgres"
+npm run test:integration
+```
 
 **Note**: The harness can work without Prisma installed, but database operations will fail until Prisma is set up. The route handler helpers work independently of Prisma.
 

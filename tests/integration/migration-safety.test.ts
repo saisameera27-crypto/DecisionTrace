@@ -130,6 +130,12 @@ describe('Database Migration Safety Tests', () => {
   const postgresUrl = process.env.TEST_POSTGRES_URL || process.env.DATABASE_URL;
 
   describe('SQLite Compatibility', () => {
+    beforeEach(() => {
+      // Set PRISMA_SCHEMA_TARGET for SQLite tests
+      process.env.PRISMA_SCHEMA_TARGET = 'sqlite';
+      process.env.DATABASE_URL = sqliteUrl;
+    });
+
     it('should connect to SQLite test database', async () => {
       const result = await testDatabaseConnection(sqliteUrl);
       
@@ -148,13 +154,9 @@ describe('Database Migration Safety Tests', () => {
         return;
       }
 
-      const prisma = new PrismaClient({
-        datasources: {
-          db: {
-            url: sqliteUrl,
-          },
-        },
-      });
+      // Use the Prisma client factory with SQLite schema
+      const { getPrismaClient } = require('../../lib/prisma');
+      const prisma = getPrismaClient();
 
       try {
         await prisma.$connect();

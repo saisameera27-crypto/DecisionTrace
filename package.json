@@ -18,8 +18,13 @@
     "smoke:prod": "tsx scripts/smoke-test.ts",
     "test:real-gemini": "tsx scripts/test-real-gemini.ts",
     "budget:check": "tsx scripts/budget-check.ts",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
-    "postinstall": "prisma generate"
+    "prisma:generate:pg": "prisma generate --schema=prisma/schema.postgres.prisma",
+    "prisma:generate:sqlite": "prisma generate --schema=prisma/schema.sqlite.prisma",
+    "prisma:generate": "npm run prisma:generate:pg && npm run prisma:generate:sqlite",
+    "prisma:migrate:pg": "prisma migrate deploy --schema=prisma/schema.postgres.prisma",
+    "prisma:migrate:sqlite": "prisma migrate deploy --schema=prisma/schema.sqlite.prisma",
+    "vercel-build": "npm run prisma:generate:pg && npm run prisma:migrate:pg && next build",
+    "postinstall": "npm run prisma:generate:pg"
   },
   "keywords": [],
   "author": "",
