@@ -274,6 +274,25 @@ export function createMultipartRequest(
   // Store file objects on request for test access (fallback)
   (request as any).__testFiles = fileObjects;
   
+  // Ensure formData() method works in test environment
+  // Override formData() if it doesn't work properly
+  if (!request.formData || typeof request.formData !== 'function') {
+    (request as any).formData = async () => {
+      return formData;
+    };
+  } else {
+    // Store formData for potential override
+    const originalFormData = request.formData.bind(request);
+    (request as any).formData = async () => {
+      try {
+        return await originalFormData();
+      } catch {
+        // Fallback to our FormData if original fails
+        return formData;
+      }
+    };
+  }
+  
   return request;
 }
 
