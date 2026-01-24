@@ -270,7 +270,8 @@ export function getRemainingRuns(ip: string): { remaining: number; resetAt: numb
  * Check if free mode is enabled
  */
 export function isFreeMode(): boolean {
-  return FREE_TIER_LIMITS.FREE_MODE;
+  // Read directly from env to allow runtime changes in tests
+  return process.env.FREE_MODE === 'true';
 }
 
 /**

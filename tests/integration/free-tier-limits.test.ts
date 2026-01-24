@@ -172,6 +172,9 @@ describe('Free Tier Limits', () => {
     it('should enforce daily run limit', () => {
       const ip = '127.0.0.1';
       
+      // Reset rate limits for this test
+      resetRateLimits(ip);
+      
       // Make 3 runs (at limit)
       for (let i = 0; i < 3; i++) {
         const result = checkRateLimit(ip, true);
