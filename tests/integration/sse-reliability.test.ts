@@ -151,7 +151,7 @@ describe('SSE Reliability Tests', () => {
       
       eventSource.onopen = () => {
         expect(eventSource?.readyState).toBe(1); // OPEN
-        (done as () => void)();
+        done();
       };
     });
 
@@ -169,7 +169,7 @@ describe('SSE Reliability Tests', () => {
           expect(receivedMessages[0].step).toBe(1);
           expect(receivedMessages[5].step).toBe(6);
           expect(receivedMessages[5].status).toBe('completed');
-          (done as () => void)();
+          done();
         }
       };
     });
@@ -188,7 +188,9 @@ describe('SSE Reliability Tests', () => {
         
         // Simulate refresh after step 3
         if (data.step === 3) {
-          eventSource.close();
+          if (eventSource) {
+            eventSource.close();
+          }
           
           // Simulate page refresh - new connection
           setTimeout(() => {
@@ -202,7 +204,7 @@ describe('SSE Reliability Tests', () => {
                 if (data2.step === 6 && data2.status === 'completed') {
                   expect(firstConnectionMessages).toBe(3);
                   expect(secondConnectionMessages).toBeGreaterThanOrEqual(3);
-                  (done as () => void)();
+                  done();
                 }
               }
             };
@@ -221,7 +223,9 @@ describe('SSE Reliability Tests', () => {
         // Simulate refresh at step 2
         if (data.step === 2 && !refreshHappened) {
           refreshHappened = true;
-          eventSource.close();
+          if (eventSource) {
+            eventSource.close();
+          }
           
           // Reconnect
           setTimeout(() => {
@@ -229,7 +233,7 @@ describe('SSE Reliability Tests', () => {
             eventSource.onmessage = (event2) => {
               const data2 = JSON.parse(event2.data);
               if (data2.step === 6 && data2.status === 'completed') {
-                (done as () => void)();
+                done();
               }
             };
           }, 50);
@@ -269,7 +273,7 @@ describe('SSE Reliability Tests', () => {
                 if (data2.step === 6 && data2.status === 'completed') {
                   expect(messagesBeforeDrop).toBeGreaterThan(0);
                   expect(messagesAfterReconnect).toBeGreaterThan(0);
-                  (done as () => void)();
+                  done();
                 }
               };
             }
@@ -291,16 +295,20 @@ describe('SSE Reliability Tests', () => {
         // Simulate drops at steps 2 and 4
         if ((data.step === 2 || data.step === 4) && dropCount < 2) {
           dropCount++;
-          eventSource.simulateNetworkDrop();
-          
-          setTimeout(() => {
-            eventSource.simulateReconnect();
-          }, 100);
+          if (eventSource) {
+            eventSource.simulateNetworkDrop();
+            
+            setTimeout(() => {
+              if (eventSource) {
+                eventSource.simulateReconnect();
+              }
+            }, 100);
+          }
         } else {
           finalStep = data.step;
           if (data.step === 6 && data.status === 'completed') {
             expect(dropCount).toBe(2);
-            (done as () => void)();
+            done();
           }
         }
       };
@@ -329,7 +337,7 @@ describe('SSE Reliability Tests', () => {
         
         if (data.step === 6 && data.status === 'completed') {
           expect(messagesAfterBackground).toBeGreaterThan(0);
-          (done as () => void)();
+          done();
         }
       };
     });
@@ -349,7 +357,7 @@ describe('SSE Reliability Tests', () => {
         
         if (data.step === 6 && data.status === 'completed') {
           expect(foregrounded).toBe(true);
-          (done as () => void)();
+          done();
         }
       };
     });
@@ -366,7 +374,7 @@ describe('SSE Reliability Tests', () => {
           // Connection should close automatically
           setTimeout(() => {
             expect(eventSource?.readyState).toBe(2); // CLOSED
-            (done as () => void)();
+            done();
           }, 50);
         }
       };
@@ -386,7 +394,7 @@ describe('SSE Reliability Tests', () => {
             expect(completed).toBe(true);
             expect(eventSource?.readyState).toBe(2); // CLOSED
             // Spinner should be hidden (tested in UI tests)
-            (done as () => void)();
+            done();
           }, 50);
         }
       };
@@ -409,7 +417,7 @@ describe('SSE Reliability Tests', () => {
       eventSource.onerror = () => {
         // Error handler should be called
         expect(eventSource?.readyState).not.toBe(1); // Not OPEN
-        (done as () => void)();
+        done();
       };
       
       // Simulate error
@@ -429,7 +437,7 @@ describe('SSE Reliability Tests', () => {
             // After reconnect, should continue
             setTimeout(() => {
               if (eventSource?.readyState === 1) {
-                (done as () => void)();
+                done();
               }
             }, 100);
           }, 50);
