@@ -1,16 +1,18 @@
 /**
  * Integration Test Harness
  * Provides helpers for testing Next.js API routes with a test database
+ * Uses real Fetch API Request/Response objects for framework-agnostic testing
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Mock Next.js types if not available
-type NextRequest = any;
-type NextResponse = any;
+// Use real Fetch API types
+type RouteHandler = (req: Request, context?: any) => Promise<Response>;
+type NextRequest = Request; // NextRequest extends Request, so Request works
+type NextResponse = Response; // NextResponse extends Response, so Response works
 
-// Try to import Next.js types, fallback to mocks if not available
+// Try to import Next.js types for route handler compatibility
 let NextRequestClass: any;
 let NextResponseClass: any;
 
@@ -19,21 +21,9 @@ try {
   NextRequestClass = nextServer.NextRequest;
   NextResponseClass = nextServer.NextResponse;
 } catch {
-  // Next.js not installed - use mock types
-  NextRequestClass = class MockNextRequest {
-    constructor(public url: string, public init?: any) {}
-    async formData() {
-      return new FormData();
-    }
-  };
-  NextResponseClass = {
-    json: (data: any, init?: any) => ({
-      status: init?.status || 200,
-      json: async () => data,
-      text: async () => JSON.stringify(data),
-      body: null,
-    }),
-  };
+  // Next.js not installed - use Request/Response as fallback
+  NextRequestClass = Request;
+  NextResponseClass = Response;
 }
 
 // Test database path (SQLite)
@@ -163,7 +153,7 @@ export async function createTestCase(
 }
 
 /**
- * Helper to create a NextRequest for testing
+ * Helper to create a real Fetch API Request for testing
  */
 export function createTestRequest(
   url: string,
@@ -173,7 +163,7 @@ export function createTestRequest(
     body?: any;
     searchParams?: Record<string, string>;
   } = {}
-): NextRequest {
+): Request {
   const { method = 'GET', headers = {}, body, searchParams = {} } = options;
   
   // Add search params to URL
@@ -182,53 +172,56 @@ export function createTestRequest(
     urlObj.searchParams.set(key, value);
   });
   
+  // Build headers object
+  const headersObj = new Headers({
+    'Content-Type': 'application/json',
+    ...headers,
+  });
+  
   const requestInit: RequestInit = {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
+    headers: headersObj,
   };
   
   if (body) {
     requestInit.body = JSON.stringify(body);
   }
   
-  const request = new NextRequestClass(urlObj.toString(), requestInit);
-  
-  // Ensure headers are accessible on the request object
-  // NextRequest should have headers, but ensure it's available for tests
-  if (!request.headers) {
-    (request as any).headers = new Headers(requestInit.headers);
-  }
+  // Create real Fetch API Request
+  const request = new Request(urlObj.toString(), requestInit);
   
   return request;
 }
 
 /**
- * Helper to call Next.js route handler with error handling and debugging
+ * Helper to call route handler with real Request/Response objects
+ * Route handlers receive (req: Request, context?: any) and return Promise<Response>
  */
 export async function callRouteHandler(
-  handler: (req: NextRequest, context?: any) => Promise<NextResponse>,
-  request: NextRequest,
+  handler: RouteHandler,
+  request: Request,
   context?: any
-): Promise<NextResponse> {
+): Promise<Response> {
   try {
+    // Call handler with real Request object
+    // Next.js handlers accept NextRequest which extends Request, so this works
     const response = await handler(request, context);
     
+    // Ensure we have a real Response object
+    if (!(response instanceof Response)) {
+      throw new Error('Route handler must return a Response object');
+    }
+    
     // If response indicates an error (status >= 400), log it for debugging
-    const status = response.status || (response as any).statusCode || 200;
-    if (status >= 400) {
+    if (response.status >= 400) {
       try {
         const json = await parseJsonResponse(response);
-        console.error(`Route handler returned error status ${status}:`, JSON.stringify(json, null, 2));
+        console.error(`Route handler returned error status ${response.status}:`, JSON.stringify(json, null, 2));
       } catch {
         // Failed to parse JSON, try text
         try {
-          if (typeof response.text === 'function') {
-            const text = await response.text();
-            console.error(`Route handler returned error status ${status}:`, text);
-          }
+          const text = await response.clone().text();
+          console.error(`Route handler returned error status ${response.status}:`, text);
         } catch {
           // Ignore parsing errors
         }
@@ -237,20 +230,22 @@ export async function callRouteHandler(
     
     return response;
   } catch (error) {
-    // Log the error before converting to NextResponse
+    // Log the error before converting to Response
     console.error('Route handler threw an error:', error);
     
-    // Convert errors to NextResponse
-    return NextResponseClass.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+    // Convert errors to real Response object
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
     );
   }
 }
 
 /**
- * Create a multipart/form-data request for file uploads
- * Note: In Node.js test environment, we simulate FormData using a custom approach
+ * Create a multipart/form-data request for file uploads using real Fetch API Request
  */
 export function createMultipartRequest(
   url: string,
@@ -261,7 +256,7 @@ export function createMultipartRequest(
     fieldName?: string;
   }>,
   additionalFields?: Record<string, string>
-): NextRequest {
+): Request {
   // Create FormData (works in Node.js 18+)
   const formData = new FormData();
   
@@ -289,14 +284,14 @@ export function createMultipartRequest(
     });
   }
   
-  // Create request with FormData
+  // Create URL
   const urlObj = new URL(url, 'http://localhost:3000');
   
-  // Create request - FormData will be handled by NextRequest
-  const request = new NextRequestClass(urlObj.toString(), {
+  // Create real Fetch API Request with FormData
+  // Don't set Content-Type header - FormData will set it with boundary
+  const request = new Request(urlObj.toString(), {
     method: 'POST',
     body: formData,
-    // Don't set Content-Type header - FormData will set it with boundary
   });
   
   // Store file objects on request for test access (fallback)
@@ -331,9 +326,10 @@ export function createMultipartRequest(
 
 /**
  * Call /api/files/upload route handler
+ * Returns real Response object
  */
 export async function callFilesUpload(
-  handler: (req: NextRequest) => Promise<NextResponse>,
+  handler: RouteHandler,
   fileData: {
     name: string;
     content: string | Buffer;
@@ -343,7 +339,7 @@ export async function callFilesUpload(
     content: string | Buffer;
     type?: string;
   }>
-): Promise<NextResponse> {
+): Promise<Response> {
   const files = Array.isArray(fileData) ? fileData : [fileData];
   const request = createMultipartRequest('/api/files/upload', files);
   
@@ -352,14 +348,15 @@ export async function callFilesUpload(
 
 /**
  * Call /api/case/[id]/run route handler
+ * Returns real Response object
  */
 export async function callCaseRun(
-  handler: (req: NextRequest, context: { params: { id: string } }) => Promise<NextResponse>,
+  handler: RouteHandler,
   caseId: string,
   options: {
     resumeFromStep?: number;
   } = {}
-): Promise<NextResponse> {
+): Promise<Response> {
   const request = createTestRequest(`/api/case/${caseId}/run`, {
     method: 'POST',
     body: {
@@ -374,11 +371,12 @@ export async function callCaseRun(
 
 /**
  * Call /api/case/[id]/report route handler
+ * Returns real Response object
  */
 export async function callCaseReport(
-  handler: (req: NextRequest, context: { params: { id: string } }) => Promise<NextResponse>,
+  handler: RouteHandler,
   caseId: string
-): Promise<NextResponse> {
+): Promise<Response> {
   const request = createTestRequest(`/api/case/${caseId}/report`, {
     method: 'GET',
   });
@@ -390,11 +388,12 @@ export async function callCaseReport(
 
 /**
  * Call /api/case/[id]/events route handler (stream validation)
+ * Returns real Response object with stream
  */
 export async function callCaseEvents(
-  handler: (req: NextRequest, context: { params: { id: string } }) => Promise<NextResponse>,
+  handler: RouteHandler,
   caseId: string
-): Promise<{ response: NextResponse; stream: ReadableStream | null }> {
+): Promise<{ response: Response; stream: ReadableStream | null }> {
   const request = createTestRequest(`/api/case/${caseId}/events`, {
     method: 'GET',
   });
@@ -414,11 +413,12 @@ export async function callCaseEvents(
 
 /**
  * Call /api/public/case/[slug] route handler
+ * Returns real Response object
  */
 export async function callPublicCase(
-  handler: (req: NextRequest, context: { params: { slug: string } }) => Promise<NextResponse>,
+  handler: RouteHandler,
   slug: string
-): Promise<NextResponse> {
+): Promise<Response> {
   const request = createTestRequest(`/api/public/case/${slug}`, {
     method: 'GET',
   });
@@ -456,55 +456,63 @@ export async function teardownIntegrationTests(): Promise<void> {
 }
 
 /**
- * Helper to parse JSON response
+ * Helper to parse JSON response from real Response object
+ * Clones the response to avoid consuming the body stream
  */
-export async function parseJsonResponse(response: NextResponse): Promise<any> {
-  if (typeof response.text === 'function') {
-    const text = await response.text();
+export async function parseJsonResponse(response: Response): Promise<any> {
+  // Clone response to avoid consuming the body
+  const cloned = response.clone();
+  
+  try {
+    return await cloned.json();
+  } catch {
+    // If JSON parsing fails, try text
     try {
-      return JSON.parse(text);
+      const text = await cloned.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return text;
+      }
     } catch {
-      return text;
+      return null;
     }
-  } else if (typeof response.json === 'function') {
-    return await response.json();
-  } else {
-    return response;
   }
 }
 
 /**
  * Helper to assert response status with detailed error output
+ * Works with real Response objects - prints response text/json on failures
+ * Never replaces the Response object
  */
 export function assertResponseStatus(
-  response: NextResponse,
+  response: Response,
   expectedStatus: number
 ): void {
-  const status = response.status || (response as any).statusCode || 200;
+  const status = response.status;
   if (status !== expectedStatus) {
-    // Print response JSON for debugging
-    parseJsonResponse(response).then((json: any) => {
+    // Print response JSON/text for debugging
+    // Clone response to avoid consuming the body
+    const cloned = response.clone();
+    
+    parseJsonResponse(cloned).then((json: any) => {
       console.error('Response status mismatch:');
       console.error(`  Expected: ${expectedStatus}`);
       console.error(`  Got: ${status}`);
       console.error('Response body:', JSON.stringify(json, null, 2));
-    }).catch(() => {
+    }).catch(async () => {
       // If JSON parsing fails, try to get text
-      if (typeof response.text === 'function') {
-        response.text().then((text: string) => {
-          console.error('Response status mismatch:');
-          console.error(`  Expected: ${expectedStatus}`);
-          console.error(`  Got: ${status}`);
-          console.error('Response body (text):', text);
-        }).catch(() => {
-          console.error('Response status mismatch:');
-          console.error(`  Expected: ${expectedStatus}`);
-          console.error(`  Got: ${status}`);
-        });
-      } else {
+      try {
+        const text = await cloned.text();
         console.error('Response status mismatch:');
         console.error(`  Expected: ${expectedStatus}`);
         console.error(`  Got: ${status}`);
+        console.error('Response body (text):', text);
+      } catch {
+        console.error('Response status mismatch:');
+        console.error(`  Expected: ${expectedStatus}`);
+        console.error(`  Got: ${status}`);
+        console.error('Response body: (unable to read)');
       }
     });
     

@@ -10,33 +10,9 @@ import { test as base } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-// Mock Next.js types
-type NextRequest = any;
-type NextResponse = any;
-
-let NextRequestClass: any;
-let NextResponseClass: any;
-
-try {
-  const nextServer = require('next/server');
-  NextRequestClass = nextServer.NextRequest;
-  NextResponseClass = nextServer.NextResponse;
-} catch {
-  NextRequestClass = class MockNextRequest {
-    constructor(public url: string, public init?: any) {}
-    async formData() {
-      return new FormData();
-    }
-  };
-  NextResponseClass = {
-    json: (data: any, init?: any) => ({
-      status: init?.status || 200,
-      json: async () => data,
-      text: async () => JSON.stringify(data),
-      headers: new Headers(init?.headers || {}),
-    }),
-  };
-}
+// Use real Fetch API Request/Response types
+// NextRequest extends Request, so Request works with Next.js handlers
+type RouteHandler = (req: Request, context?: any) => Promise<Response>;
 
 import {
   resetTestDatabase,
@@ -47,16 +23,23 @@ import {
 
 /**
  * Mock handler that should NOT expose API keys
+ * Uses real Request/Response objects
  */
-async function mockSecureHandler(req: NextRequest): Promise<NextResponse> {
+async function mockSecureHandler(req: Request): Promise<Response> {
   const apiKey = process.env.GEMINI_API_KEY || 'secret-key';
   
   // Simulate handler that uses API key but should not expose it
-  const response = NextResponseClass.json({
-    success: true,
-    message: 'Operation completed',
-    // Intentionally NOT including apiKey
-  });
+  const response = new Response(
+    JSON.stringify({
+      success: true,
+      message: 'Operation completed',
+      // Intentionally NOT including apiKey
+    }),
+    {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
   
   // Ensure API key is not in headers
   response.headers.delete('X-API-Key');
@@ -67,45 +50,55 @@ async function mockSecureHandler(req: NextRequest): Promise<NextResponse> {
 
 /**
  * Mock handler that simulates a public read-only endpoint
+ * Uses real Request/Response objects
  */
-async function mockPublicReadHandler(req: NextRequest): Promise<NextResponse> {
-  return NextResponseClass.json({
-    caseId: 'test-case-123',
-    report: {
-      title: 'Public Report',
-      narrative: 'This is a public report',
-    },
-  });
+async function mockPublicReadHandler(req: Request): Promise<Response> {
+  return new Response(
+    JSON.stringify({
+      caseId: 'test-case-123',
+      report: {
+        title: 'Public Report',
+        narrative: 'This is a public report',
+      },
+    }),
+    {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
 }
 
 /**
  * Mock handler that simulates a write endpoint (should be protected)
+ * Uses real Request/Response objects
  */
-async function mockWriteHandler(req: NextRequest): Promise<NextResponse> {
+async function mockWriteHandler(req: Request): Promise<Response> {
   // Check for authentication/authorization
-  // Ensure headers exists before accessing
-  const headers = req.headers || (req as any).headers || new Headers();
-  const authHeader = headers.get('authorization');
-  const csrfToken = headers.get('x-csrf-token');
+  // Request objects always have headers
+  const authHeader = req.headers.get('authorization');
+  const csrfToken = req.headers.get('x-csrf-token');
   
   // Public requests should not be able to write
   if (!authHeader && !csrfToken) {
-    return NextResponseClass.json(
-      { error: 'Unauthorized: Write operations require authentication' },
-      { status: 401 }
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized: Write operations require authentication' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
   
   // Check if request is from public page (should be blocked)
-  const referer = headers.get('referer') || '';
+  const referer = req.headers.get('referer') || '';
   if (referer.includes('/public/case/')) {
-    return NextResponseClass.json(
-      { error: 'Forbidden: Public pages cannot perform write operations' },
-      { status: 403 }
+    return new Response(
+      JSON.stringify({ error: 'Forbidden: Public pages cannot perform write operations' }),
+      { status: 403, headers: { 'Content-Type': 'application/json' } }
     );
   }
   
-  return NextResponseClass.json({ success: true });
+  return new Response(
+    JSON.stringify({ success: true }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } }
+  );
 }
 
 describe('Security Regression Tests', () => {
@@ -152,20 +145,21 @@ describe('Security Regression Tests', () => {
     });
 
     it('should NOT expose GEMINI_API_KEY in error messages', async () => {
-      const errorHandler = async (req: NextRequest) => {
+      const errorHandler = async (req: Request) => {
         const apiKey = process.env.GEMINI_API_KEY || 'secret-key';
         throw new Error(`API call failed with key: ${apiKey}`);
       };
       
       const req = createTestRequest('/api/test', { method: 'GET' });
       
-      try {
-        await callRouteHandler(errorHandler, req);
-      } catch (error: any) {
-        // Error should not contain API key
-        const errorMessage = error.message || String(error);
-        expect(errorMessage).not.toContain(process.env.GEMINI_API_KEY || 'secret-key');
-      }
+      // callRouteHandler catches errors and converts to Response
+      const response = await callRouteHandler(errorHandler, req);
+      
+      // Response should be 500 error, but should not contain API key
+      expect(response.status).toBe(500);
+      const text = await response.text();
+      const json = JSON.parse(text);
+      expect(json.error).not.toContain(process.env.GEMINI_API_KEY || 'secret-key');
     });
 
     it('should NOT expose GEMINI_API_KEY in HTML responses (E2E)', async () => {
@@ -349,8 +343,8 @@ describe('Security Regression Tests', () => {
       
       // In a real implementation, this would validate the token
       // For now, we just check that the header is read
-      const headers = req.headers || (req as any).headers || new Headers();
-      expect(headers.get('x-csrf-token')).toBe('invalid-token-format');
+      // Request objects always have headers
+      expect(req.headers.get('x-csrf-token')).toBe('invalid-token-format');
     });
   });
 });
