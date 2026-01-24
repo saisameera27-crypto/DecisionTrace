@@ -21,12 +21,41 @@ type PrismaClient = any;
 let prisma: PrismaClient | null = null;
 
 /**
- * Get Prisma client instance
+ * Database initialization error type
+ */
+export interface DBInitError {
+  code: 'DB_INIT_ERROR';
+  message: string;
+  hint: string;
+}
+
+/**
+ * Check if an error is a database initialization error
+ */
+export function isDBInitError(error: any): error is DBInitError {
+  return error && error.code === 'DB_INIT_ERROR';
+}
+
+/**
+ * Create a database initialization error response
+ */
+export function createDBInitError(message: string, hint: string): DBInitError {
+  return {
+    code: 'DB_INIT_ERROR',
+    message,
+    hint,
+  };
+}
+
+/**
+ * Get Prisma client instance with error handling
  * Uses @prisma/client which is configured for whichever schema was generated last
  * 
  * Note: You must generate the appropriate client before use:
  * - For SQLite: npm run prisma:generate:sqlite
  * - For Postgres: npm run prisma:generate:pg
+ * 
+ * @throws {DBInitError} If Prisma client initialization fails
  */
 export function getPrismaClient(): PrismaClient {
   if (prisma) {
@@ -36,7 +65,10 @@ export function getPrismaClient(): PrismaClient {
   const databaseUrl = process.env.DATABASE_URL;
 
   if (!databaseUrl) {
-    throw new Error('DATABASE_URL environment variable is required');
+    throw createDBInitError(
+      'DATABASE_URL environment variable is not set',
+      'Set DATABASE_URL to your database connection string (e.g., postgresql://user:pass@host:5432/db or file:/path/to/db.sqlite)'
+    );
   }
 
   try {
@@ -55,13 +87,73 @@ export function getPrismaClient(): PrismaClient {
     return prisma;
   } catch (error: any) {
     const schemaTarget = process.env.PRISMA_SCHEMA_TARGET || 'postgres';
-    throw new Error(
-      `Failed to initialize Prisma client: ${error.message}. ` +
-      `Make sure to run the appropriate generate command: ` +
-      (schemaTarget === 'sqlite' 
-        ? `'npm run prisma:generate:sqlite'`
-        : `'npm run prisma:generate:pg'`)
+    const errorMessage = error.message || 'Unknown error';
+    
+    // Determine hint based on error type
+    let hint = 'Check your DATABASE_URL and ensure the database is accessible';
+    
+    if (errorMessage.includes('Cannot find module') || errorMessage.includes('@prisma/client')) {
+      hint = `Run 'npm run prisma:generate${schemaTarget === 'sqlite' ? ':sqlite' : ':pg'}' to generate the Prisma client`;
+    } else if (errorMessage.includes('P1001') || errorMessage.includes('connection')) {
+      hint = 'Verify your database is running and DATABASE_URL is correct';
+    } else if (errorMessage.includes('P1003') || errorMessage.includes('database')) {
+      hint = 'Ensure the database exists and is accessible with the provided credentials';
+    } else if (errorMessage.includes('schema') || errorMessage.includes('migration')) {
+      hint = `Run 'npm run prisma:migrate${schemaTarget === 'sqlite' ? ':sqlite' : ':pg'}' to apply database migrations`;
+    }
+    
+    throw createDBInitError(
+      `Failed to initialize Prisma client: ${errorMessage}`,
+      hint
     );
+  }
+}
+
+/**
+ * Test database connection
+ * @throws {DBInitError} If connection test fails
+ */
+export async function testDBConnection(): Promise<void> {
+  const client = getPrismaClient();
+  
+  try {
+    await client.$connect();
+    await client.$disconnect();
+  } catch (error: any) {
+    const errorMessage = error.message || 'Unknown connection error';
+    let hint = 'Check your DATABASE_URL and ensure the database is accessible';
+    
+    if (errorMessage.includes('P1001') || errorMessage.includes('connection')) {
+      hint = 'Verify your database is running and DATABASE_URL is correct';
+    } else if (errorMessage.includes('P1003') || errorMessage.includes('database')) {
+      hint = 'Ensure the database exists and is accessible with the provided credentials';
+    } else if (errorMessage.includes('timeout')) {
+      hint = 'Database connection timed out. Check network connectivity and database status';
+    }
+    
+    throw createDBInitError(
+      `Database connection failed: ${errorMessage}`,
+      hint
+    );
+  }
+}
+
+/**
+ * Wrap a function that uses Prisma with error handling
+ * Catches DB initialization errors and converts them to proper error responses
+ */
+export async function withDBErrorHandling<T>(
+  fn: (prisma: PrismaClient) => Promise<T>
+): Promise<T> {
+  try {
+    const client = getPrismaClient();
+    return await fn(client);
+  } catch (error: any) {
+    if (isDBInitError(error)) {
+      throw error;
+    }
+    // Re-throw other errors as-is
+    throw error;
   }
 }
 
@@ -77,4 +169,3 @@ export async function disconnectPrisma(): Promise<void> {
 
 // Export singleton instance
 export { prisma };
-

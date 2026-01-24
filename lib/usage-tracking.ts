@@ -3,7 +3,7 @@
  * Tracks global daily usage of real Gemini API calls
  */
 
-import { getPrismaClient } from './prisma';
+import { getPrismaClient, withDBErrorHandling, isDBInitError } from './prisma';
 
 const prisma = getPrismaClient();
 
@@ -87,21 +87,27 @@ export async function incrementRealRuns(): Promise<void> {
   }
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const usage = await prisma.usageTracking.upsert({
-      where: { date: today },
-      update: {
-        realRunsToday: { increment: 1 },
-      },
-      create: {
-        date: today,
-        realRunsToday: 1,
-        resetAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-      },
+    await withDBErrorHandling(async (client) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      await client.usageTracking.upsert({
+        where: { date: today },
+        update: {
+          realRunsToday: { increment: 1 },
+        },
+        create: {
+          date: today,
+          realRunsToday: 1,
+          resetAt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
+        },
+      });
     });
   } catch (error) {
+    // If it's a DB init error, re-throw it
+    if (isDBInitError(error)) {
+      throw error;
+    }
     // Fallback to in-memory
     inMemoryUsage.realRunsToday++;
   }
@@ -136,14 +142,20 @@ export async function resetUsage(): Promise<void> {
   }
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    await prisma.usageTracking.updateMany({
-      where: { date: today },
-      data: { realRunsToday: 0 },
+    await withDBErrorHandling(async (client) => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      await client.usageTracking.updateMany({
+        where: { date: today },
+        data: { realRunsToday: 0 },
+      });
     });
   } catch (error) {
+    // If it's a DB init error, re-throw it
+    if (isDBInitError(error)) {
+      throw error;
+    }
     // Fallback
     inMemoryUsage.realRunsToday = 0;
   }

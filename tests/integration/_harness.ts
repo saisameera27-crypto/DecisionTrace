@@ -198,7 +198,7 @@ export function createTestRequest(
 }
 
 /**
- * Helper to call Next.js route handler
+ * Helper to call Next.js route handler with error handling and debugging
  */
 export async function callRouteHandler(
   handler: (req: NextRequest, context?: any) => Promise<NextResponse>,
@@ -207,8 +207,31 @@ export async function callRouteHandler(
 ): Promise<NextResponse> {
   try {
     const response = await handler(request, context);
+    
+    // If response indicates an error (status >= 400), log it for debugging
+    const status = response.status || (response as any).statusCode || 200;
+    if (status >= 400) {
+      try {
+        const json = await parseJsonResponse(response);
+        console.error(`Route handler returned error status ${status}:`, JSON.stringify(json, null, 2));
+      } catch {
+        // Failed to parse JSON, try text
+        try {
+          if (typeof response.text === 'function') {
+            const text = await response.text();
+            console.error(`Route handler returned error status ${status}:`, text);
+          }
+        } catch {
+          // Ignore parsing errors
+        }
+      }
+    }
+    
     return response;
   } catch (error) {
+    // Log the error before converting to NextResponse
+    console.error('Route handler threw an error:', error);
+    
     // Convert errors to NextResponse
     return NextResponseClass.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
@@ -429,7 +452,7 @@ export async function parseJsonResponse(response: NextResponse): Promise<any> {
 }
 
 /**
- * Helper to assert response status
+ * Helper to assert response status with detailed error output
  */
 export function assertResponseStatus(
   response: NextResponse,
@@ -437,6 +460,32 @@ export function assertResponseStatus(
 ): void {
   const status = response.status || (response as any).statusCode || 200;
   if (status !== expectedStatus) {
+    // Print response JSON for debugging
+    parseJsonResponse(response).then((json) => {
+      console.error('Response status mismatch:');
+      console.error(`  Expected: ${expectedStatus}`);
+      console.error(`  Got: ${status}`);
+      console.error('Response body:', JSON.stringify(json, null, 2));
+    }).catch(() => {
+      // If JSON parsing fails, try to get text
+      if (typeof response.text === 'function') {
+        response.text().then((text) => {
+          console.error('Response status mismatch:');
+          console.error(`  Expected: ${expectedStatus}`);
+          console.error(`  Got: ${status}`);
+          console.error('Response body (text):', text);
+        }).catch(() => {
+          console.error('Response status mismatch:');
+          console.error(`  Expected: ${expectedStatus}`);
+          console.error(`  Got: ${status}`);
+        });
+      } else {
+        console.error('Response status mismatch:');
+        console.error(`  Expected: ${expectedStatus}`);
+        console.error(`  Got: ${status}`);
+      }
+    });
+    
     throw new Error(
       `Expected status ${expectedStatus}, got ${status}`
     );
