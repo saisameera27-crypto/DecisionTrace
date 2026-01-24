@@ -169,10 +169,13 @@ describe('SSE Reliability Tests', () => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let messageCount = 0;
       
+      // Capture eventSource in a local variable to ensure TypeScript knows it's not null
+      const es = eventSource;
+      
       // Wait for connection to open first
-      eventSource.onopen = () => {
+      es.onopen = () => {
         // Now set up message handler
-        eventSource.onmessage = (event) => {
+        es.onmessage = (event) => {
           const data = JSON.parse(event.data);
           receivedMessages.push(data);
           messageCount++;
