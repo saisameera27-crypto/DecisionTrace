@@ -202,7 +202,7 @@ describe('SSE Reliability Tests', () => {
                 if (data2.step === 6 && data2.status === 'completed') {
                   expect(firstConnectionMessages).toBe(3);
                   expect(secondConnectionMessages).toBeGreaterThanOrEqual(3);
-                  done();
+                  (done as () => void)();
                 }
               }
             };
@@ -229,7 +229,7 @@ describe('SSE Reliability Tests', () => {
             eventSource.onmessage = (event2) => {
               const data2 = JSON.parse(event2.data);
               if (data2.step === 6 && data2.status === 'completed') {
-                done();
+                (done as () => void)();
               }
             };
           }, 50);
@@ -251,24 +251,28 @@ describe('SSE Reliability Tests', () => {
         // Simulate network drop after step 2
         if (data.step === 2 && !reconnected) {
           messagesBeforeDrop = receivedMessages.length;
-          eventSource.simulateNetworkDrop();
+          if (eventSource) {
+            eventSource.simulateNetworkDrop();
+          }
           
           // Simulate reconnection after 5-10 seconds
           setTimeout(() => {
             reconnected = true;
-            eventSource.simulateReconnect();
-            
-            // Continue receiving messages
-            eventSource.onmessage = (event2) => {
-              const data2 = JSON.parse(event2.data);
-              messagesAfterReconnect++;
+            if (eventSource) {
+              eventSource.simulateReconnect();
               
-              if (data2.step === 6 && data2.status === 'completed') {
-                expect(messagesBeforeDrop).toBeGreaterThan(0);
-                expect(messagesAfterReconnect).toBeGreaterThan(0);
-                done();
-              }
-            };
+              // Continue receiving messages
+              eventSource.onmessage = (event2) => {
+                const data2 = JSON.parse(event2.data);
+                messagesAfterReconnect++;
+                
+                if (data2.step === 6 && data2.status === 'completed') {
+                  expect(messagesBeforeDrop).toBeGreaterThan(0);
+                  expect(messagesAfterReconnect).toBeGreaterThan(0);
+                  (done as () => void)();
+                }
+              };
+            }
           }, 200); // Simulated 200ms delay (representing 5-10 seconds)
         } else {
           receivedMessages.push(data);
@@ -296,7 +300,7 @@ describe('SSE Reliability Tests', () => {
           finalStep = data.step;
           if (data.step === 6 && data.status === 'completed') {
             expect(dropCount).toBe(2);
-            done();
+            (done as () => void)();
           }
         }
       };
@@ -325,7 +329,7 @@ describe('SSE Reliability Tests', () => {
         
         if (data.step === 6 && data.status === 'completed') {
           expect(messagesAfterBackground).toBeGreaterThan(0);
-          done();
+          (done as () => void)();
         }
       };
     });
@@ -345,7 +349,7 @@ describe('SSE Reliability Tests', () => {
         
         if (data.step === 6 && data.status === 'completed') {
           expect(foregrounded).toBe(true);
-          done();
+          (done as () => void)();
         }
       };
     });
@@ -362,7 +366,7 @@ describe('SSE Reliability Tests', () => {
           // Connection should close automatically
           setTimeout(() => {
             expect(eventSource?.readyState).toBe(2); // CLOSED
-            done();
+            (done as () => void)();
           }, 50);
         }
       };
@@ -382,7 +386,7 @@ describe('SSE Reliability Tests', () => {
             expect(completed).toBe(true);
             expect(eventSource?.readyState).toBe(2); // CLOSED
             // Spinner should be hidden (tested in UI tests)
-            done();
+            (done as () => void)();
           }, 50);
         }
       };
@@ -405,7 +409,7 @@ describe('SSE Reliability Tests', () => {
       eventSource.onerror = () => {
         // Error handler should be called
         expect(eventSource?.readyState).not.toBe(1); // Not OPEN
-        done();
+        (done as () => void)();
       };
       
       // Simulate error
@@ -425,7 +429,7 @@ describe('SSE Reliability Tests', () => {
             // After reconnect, should continue
             setTimeout(() => {
               if (eventSource?.readyState === 1) {
-                done();
+                (done as () => void)();
               }
             }, 100);
           }, 50);
