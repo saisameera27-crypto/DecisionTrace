@@ -83,8 +83,13 @@ describe('Retry Logic', () => {
         throw error;
       });
 
-      // Start the retry operation
+      // Start the retry operation and immediately catch the promise rejection
       const promise = retryWithBackoff(mockFn, { maxRetries: 3 });
+      
+      // Add error handler to prevent unhandled rejection
+      promise.catch(() => {
+        // Error will be handled by expect().rejects below
+      });
 
       // Fast-forward through all retry delays: 1s, 2s, 4s
       await vi.advanceTimersByTimeAsync(1000);
