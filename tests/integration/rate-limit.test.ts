@@ -5,46 +5,6 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// Mock Next.js types if not available
-type NextRequest = any;
-type NextResponse = any;
-
-// Try to import Next.js types, fallback to mocks if not available
-let NextRequestClass: any;
-let NextResponseClass: any;
-
-try {
-  const nextServer = require('next/server');
-  NextRequestClass = nextServer.NextRequest;
-  NextResponseClass = nextServer.NextResponse;
-} catch {
-  // Next.js not installed - use mock types
-  NextRequestClass = class MockNextRequest {
-    url: string;
-    headers: Headers;
-    
-    constructor(url: string, init?: any) {
-      this.url = url;
-      this.headers = new Headers(init?.headers || {});
-    }
-    
-    async formData() {
-      return new FormData();
-    }
-    async json() {
-      return {};
-    }
-  };
-  NextResponseClass = {
-    json: (data: any, init?: any) => ({
-      status: init?.status || 200,
-      json: async () => data,
-      text: async () => JSON.stringify(data),
-      headers: new Headers(init?.headers || {}),
-    }),
-  };
-}
-
 import {
   callRouteHandler,
   createTestRequest,
@@ -52,116 +12,26 @@ import {
   assertResponseStatus,
 } from './_harness';
 
+import { getClientIP, checkRateLimit, resetRateLimitStore } from '../../lib/rate-limit';
+
 // Rate limit configuration
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per window
 
-// In-memory rate limit store (keyed by IP)
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
-
-const rateLimitStore: Map<string, RateLimitEntry> = new Map();
-
-/**
- * Get client IP from request (checks X-Forwarded-For header)
- */
-function getClientIP(req: NextRequest): string {
-  try {
-    // Check X-Forwarded-For header (first IP in chain)
-    const forwardedFor = req.headers?.get?.('x-forwarded-for') || 
-                        req.headers?.get?.('X-Forwarded-For') ||
-                        (req.headers as any)?.['x-forwarded-for'] ||
-                        (req.headers as any)?.['X-Forwarded-For'];
-    
-    if (forwardedFor) {
-      // X-Forwarded-For can contain multiple IPs, take the first one
-      const ips = String(forwardedFor).split(',').map((ip: string) => ip.trim());
-      return ips[0] || 'unknown';
-    }
-
-    // Fallback to other headers or default
-    const realIP = req.headers?.get?.('x-real-ip') || 
-                   req.headers?.get?.('X-Real-IP') ||
-                   (req.headers as any)?.['x-real-ip'] ||
-                   (req.headers as any)?.['X-Real-IP'];
-    
-    if (realIP) {
-      return String(realIP);
-    }
-  } catch (error) {
-    // If header access fails, continue to default
-  }
-
-  // Default IP for testing
-  return '127.0.0.1';
-}
-
-/**
- * Check rate limit for an IP
- */
-function checkRateLimit(ip: string, now: number): {
-  allowed: boolean;
-  remaining: number;
-  resetAt: number;
-  retryAfter?: number;
-} {
-  const entry = rateLimitStore.get(ip);
-
-  if (!entry || entry.resetAt < now) {
-    // New window or expired window
-    const resetAt = now + RATE_LIMIT_WINDOW_MS;
-    rateLimitStore.set(ip, {
-      count: 1,
-      resetAt,
-    });
-
-    return {
-      allowed: true,
-      remaining: RATE_LIMIT_MAX_REQUESTS - 1,
-      resetAt,
-    };
-  }
-
-  // Existing window
-  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
-    // Rate limit exceeded
-    const retryAfter = Math.ceil((entry.resetAt - now) / 1000); // seconds
-
-    return {
-      allowed: false,
-      remaining: 0,
-      resetAt: entry.resetAt,
-      retryAfter,
-    };
-  }
-
-  // Increment count
-  entry.count++;
-  rateLimitStore.set(ip, entry);
-
-  return {
-    allowed: true,
-    remaining: RATE_LIMIT_MAX_REQUESTS - entry.count,
-    resetAt: entry.resetAt,
-  };
-}
-
 /**
  * Mock API handler with rate limiting
  */
-async function mockRateLimitedHandler(req: NextRequest): Promise<NextResponse> {
+async function mockRateLimitedHandler(req: Request): Promise<Response> {
   try {
     // Get current time (works with fake timers)
     // Use Date.now() which will use fake timer when setSystemTime is called
     const now = Date.now();
 
-    // Get client IP
+    // Get client IP using the rate limit module
     const ip = getClientIP(req);
 
     // Check rate limit
-    const rateLimit = checkRateLimit(ip, now);
+    const rateLimit = checkRateLimit(ip, RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS, now);
 
     // Build rate limit headers
     const headers = new Headers();
@@ -175,38 +45,38 @@ async function mockRateLimitedHandler(req: NextRequest): Promise<NextResponse> {
         headers.set('Retry-After', String(rateLimit.retryAfter));
       }
 
-      return NextResponseClass.json(
-        {
+      return new Response(
+        JSON.stringify({
           error: 'Too many requests',
           message: 'Rate limit exceeded. Please try again later.',
           retryAfter: rateLimit.retryAfter,
-        },
+        }),
         {
           status: 429,
-          headers: Object.fromEntries((headers as any).entries ? (headers as any).entries() : []),
+          headers,
         }
       );
     }
 
     // Request allowed
-    return NextResponseClass.json(
-      {
+    return new Response(
+      JSON.stringify({
         success: true,
         message: 'Request processed',
         ip,
         requestCount: rateLimit.remaining + 1,
-      },
+      }),
       {
         status: 200,
-        headers: Object.fromEntries((headers as any).entries ? (headers as any).entries() : []),
+        headers,
       }
     );
   } catch (error: any) {
-    return NextResponseClass.json(
-      { 
+    return new Response(
+      JSON.stringify({ 
         error: error.message || 'Internal server error',
         stack: process.env.NODE_ENV === 'test' ? error.stack : undefined,
-      },
+      }),
       { status: 500 }
     );
   }
@@ -214,8 +84,8 @@ async function mockRateLimitedHandler(req: NextRequest): Promise<NextResponse> {
 
 describe('Rate Limiting', () => {
   beforeEach(() => {
-    // Clear rate limit store
-    rateLimitStore.clear();
+    // Reset rate limit store using the test-only function
+    resetRateLimitStore();
     
     // Use fake timers for deterministic testing
     vi.useFakeTimers();
@@ -231,14 +101,12 @@ describe('Rate Limiting', () => {
     const baseTime = 1000000; // Fixed base time for deterministic testing
     vi.setSystemTime(baseTime);
 
-    // Make 10 requests (should all succeed)
-    const requests: Promise<NextResponse>[] = [];
+    // Make 10 requests (should all succeed) - using ip option
+    const requests: Promise<Response>[] = [];
     for (let i = 0; i < 10; i++) {
       const request = createTestRequest('/api/test', {
         method: 'GET',
-        headers: {
-          'X-Forwarded-For': testIP,
-        },
+        ip: testIP, // Use ip option instead of manual header
       });
       requests.push(callRouteHandler(mockRateLimitedHandler, request));
     }
@@ -246,11 +114,11 @@ describe('Rate Limiting', () => {
     const responses = await Promise.all(requests);
 
     // Verify all 10 requests succeeded
-    responses.forEach((response: any, index: number) => {
+    responses.forEach((response: Response, index: number) => {
       assertResponseStatus(response, 200);
       
       // Check rate limit headers
-      const headers = response.headers || (response as any).headers || new Headers();
+      const headers = response.headers;
       expect(headers.get('X-RateLimit-Limit')).toBe('10');
       expect(headers.get('X-RateLimit-Remaining')).toBe(String(9 - index));
       expect(headers.get('X-RateLimit-Reset')).toBeDefined();
@@ -259,9 +127,7 @@ describe('Rate Limiting', () => {
     // Make 11th request (should fail with 429)
     const request11 = createTestRequest('/api/test', {
       method: 'GET',
-      headers: {
-        'X-Forwarded-For': testIP,
-      },
+      ip: testIP, // Use ip option
     });
 
     const response11 = await callRouteHandler(mockRateLimitedHandler, request11);
@@ -273,7 +139,7 @@ describe('Rate Limiting', () => {
     expect(errorData.message).toContain('Rate limit exceeded');
 
     // Verify Retry-After header
-    const headers11 = response11.headers || (response11 as any).headers || new Headers();
+    const headers11 = response11.headers;
     const retryAfter = headers11.get('Retry-After');
     expect(retryAfter).toBeDefined();
     expect(parseInt(retryAfter!)).toBeGreaterThan(0);
@@ -294,9 +160,7 @@ describe('Rate Limiting', () => {
     for (let i = 0; i < 10; i++) {
       const request = createTestRequest('/api/test', {
         method: 'GET',
-        headers: {
-          'X-Forwarded-For': testIP,
-        },
+        ip: testIP,
       });
       const response = await callRouteHandler(mockRateLimitedHandler, request);
       assertResponseStatus(response, 200);
@@ -305,9 +169,7 @@ describe('Rate Limiting', () => {
     // Verify 11th request fails
     const request11 = createTestRequest('/api/test', {
       method: 'GET',
-      headers: {
-        'X-Forwarded-For': testIP,
-      },
+      ip: testIP,
     });
     const response11 = await callRouteHandler(mockRateLimitedHandler, request11);
     assertResponseStatus(response11, 429);
@@ -318,14 +180,12 @@ describe('Rate Limiting', () => {
     // Make another request (should succeed - window reset)
     const requestAfterReset = createTestRequest('/api/test', {
       method: 'GET',
-      headers: {
-        'X-Forwarded-For': testIP,
-      },
+      ip: testIP,
     });
     const responseAfterReset = await callRouteHandler(mockRateLimitedHandler, requestAfterReset);
     assertResponseStatus(responseAfterReset, 200);
 
-    const headers = responseAfterReset.headers || (responseAfterReset as any).headers || new Headers();
+    const headers = responseAfterReset.headers;
     expect(headers.get('X-RateLimit-Remaining')).toBe('9'); // 10 - 1 = 9
   });
 
@@ -339,9 +199,7 @@ describe('Rate Limiting', () => {
     for (let i = 0; i < 10; i++) {
       const request = createTestRequest('/api/test', {
         method: 'GET',
-        headers: {
-          'X-Forwarded-For': ip1,
-        },
+        ip: ip1,
       });
       const response = await callRouteHandler(mockRateLimitedHandler, request);
       assertResponseStatus(response, 200);
@@ -350,9 +208,7 @@ describe('Rate Limiting', () => {
     // Verify IP1 is rate limited
     const request1 = createTestRequest('/api/test', {
       method: 'GET',
-      headers: {
-        'X-Forwarded-For': ip1,
-      },
+      ip: ip1,
     });
     const response1 = await callRouteHandler(mockRateLimitedHandler, request1);
     assertResponseStatus(response1, 429);
@@ -363,14 +219,12 @@ describe('Rate Limiting', () => {
     
     const request2 = createTestRequest('/api/test', {
       method: 'GET',
-      headers: {
-        'X-Forwarded-For': ip2,
-      },
+      ip: ip2,
     });
     const response2 = await callRouteHandler(mockRateLimitedHandler, request2);
     assertResponseStatus(response2, 200);
 
-    const headers2 = response2.headers || (response2 as any).headers || new Headers();
+    const headers2 = response2.headers;
     expect(headers2.get('X-RateLimit-Remaining')).toBe('9'); // IP2 has 9 remaining
   });
 
@@ -380,7 +234,7 @@ describe('Rate Limiting', () => {
     const baseTime = 1000000; // Fixed base time for deterministic testing
     vi.setSystemTime(baseTime);
 
-    // Make 10 requests with X-Forwarded-For chain
+    // Make 10 requests with X-Forwarded-For chain (using headers directly)
     for (let i = 0; i < 10; i++) {
       const request = createTestRequest('/api/test', {
         method: 'GET',
@@ -405,9 +259,7 @@ describe('Rate Limiting', () => {
     // Verify that requests with same first IP are rate limited
     const requestSameIP = createTestRequest('/api/test', {
       method: 'GET',
-      headers: {
-        'X-Forwarded-For': testIP, // Same first IP
-      },
+      ip: testIP, // Same first IP
     });
     const responseSameIP = await callRouteHandler(mockRateLimitedHandler, requestSameIP);
     assertResponseStatus(responseSameIP, 429);
@@ -421,16 +273,14 @@ describe('Rate Limiting', () => {
     // Make a request
     const request = createTestRequest('/api/test', {
       method: 'GET',
-      headers: {
-        'X-Forwarded-For': testIP,
-      },
+      ip: testIP,
     });
 
     const response = await callRouteHandler(mockRateLimitedHandler, request);
     assertResponseStatus(response, 200);
 
     // Verify all rate limit headers are present
-    const headers = response.headers || (response as any).headers || new Headers();
+    const headers = response.headers;
     
     expect(headers.get('X-RateLimit-Limit')).toBe('10');
     expect(headers.get('X-RateLimit-Remaining')).toBeDefined();

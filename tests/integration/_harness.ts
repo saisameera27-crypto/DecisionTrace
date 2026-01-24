@@ -154,6 +154,7 @@ export async function createTestCase(
 
 /**
  * Helper to create a real Fetch API Request for testing
+ * Supports IP specification via options.ip which sets x-forwarded-for header
  */
 export function createTestRequest(
   url: string,
@@ -162,9 +163,10 @@ export function createTestRequest(
     headers?: Record<string, string>;
     body?: any;
     searchParams?: Record<string, string>;
+    ip?: string; // IP address to use (sets x-forwarded-for header)
   } = {}
 ): Request {
-  const { method = 'GET', headers = {}, body, searchParams = {} } = options;
+  const { method = 'GET', headers = {}, body, searchParams = {}, ip } = options;
   
   // Add search params to URL
   const urlObj = new URL(url, 'http://localhost:3000');
@@ -172,11 +174,16 @@ export function createTestRequest(
     urlObj.searchParams.set(key, value);
   });
   
-  // Build headers object
+  // Build headers object - include IP if specified
   const headersObj = new Headers({
     'Content-Type': 'application/json',
     ...headers,
   });
+  
+  // Set x-forwarded-for header if IP is specified
+  if (ip) {
+    headersObj.set('x-forwarded-for', ip);
+  }
   
   const requestInit: RequestInit = {
     method,
