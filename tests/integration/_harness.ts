@@ -274,6 +274,9 @@ export function createMultipartRequest(
   // Store file objects on request for test access (fallback)
   (request as any).__testFiles = fileObjects;
   
+  // Store FormData on request for test access
+  (request as any).__testFormData = formData;
+  
   // Ensure formData() method works in test environment
   // Override formData() to always return our FormData
   const storedFormData = formData;
