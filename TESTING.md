@@ -145,13 +145,18 @@ describe('Case API Integration', () => {
 ```
 
 **Database Schema**:
-The test database uses Prisma with the following models:
-- `Case` - Main case records
-- `CaseDocument` - Uploaded documents
-- `CaseStep` - Analysis steps (1-6)
-- `CaseEvent` - Event stream entries
+The project uses a dual-schema Prisma approach:
+- **Postgres Schema** (`prisma/schema.postgres.prisma`) - Used in production and Postgres tests
+- **SQLite Schema** (`prisma/schema.sqlite.prisma`) - Used in SQLite-specific tests
 
-See `prisma/schema.prisma` for full schema definition.
+Both schemas have identical model definitions, only the provider differs. The appropriate schema is selected by generating the Prisma client from the correct schema file before running tests.
+
+**Important**: You must generate the Prisma client for the schema you want to use:
+- For SQLite tests: `PRISMA_SCHEMA_TARGET=sqlite npm run prisma:generate:sqlite`
+- For Postgres/production: `npm run prisma:generate:pg`
+- To generate both: `npm run prisma:generate`
+
+See `prisma/schema.postgres.prisma` and `prisma/schema.sqlite.prisma` for full schema definitions.
 
 **Setup Requirements**:
 1. Install Prisma dependencies:

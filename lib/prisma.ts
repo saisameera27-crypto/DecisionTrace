@@ -7,10 +7,7 @@
  * - Tests: Set PRISMA_SCHEMA_TARGET=sqlite to use SQLite client
  */
 
-import type { PrismaClient as PostgresPrismaClient } from '@prisma/postgres-client';
-import type { PrismaClient as SQLitePrismaClient } from '@prisma/sqlite-client';
-
-type PrismaClient = PostgresPrismaClient | SQLitePrismaClient;
+type PrismaClient = any;
 
 let prisma: PrismaClient | null = null;
 
@@ -35,47 +32,56 @@ export function getPrismaClient(): PrismaClient {
 
   try {
     if (schemaTarget === 'sqlite') {
-      // Use SQLite client
-      const { PrismaClient: SQLiteClient } = require('@prisma/sqlite-client');
-      prisma = new SQLiteClient({
-        datasources: {
-          db: {
-            url: databaseUrl,
+      // Try to use SQLite client from custom output path
+      try {
+        const sqliteClientPath = require.resolve('@prisma/sqlite-client');
+        const { PrismaClient: SQLiteClient } = require(sqliteClientPath);
+        prisma = new SQLiteClient({
+          datasources: {
+            db: {
+              url: databaseUrl,
+            },
           },
-        },
-      });
+        });
+        return prisma;
+      } catch {
+        // Fall through to default client
+      }
     } else {
-      // Use Postgres client (default)
-      const { PrismaClient: PostgresClient } = require('@prisma/postgres-client');
-      prisma = new PostgresClient({
-        datasources: {
-          db: {
-            url: databaseUrl,
+      // Try to use Postgres client from custom output path
+      try {
+        const postgresClientPath = require.resolve('@prisma/postgres-client');
+        const { PrismaClient: PostgresClient } = require(postgresClientPath);
+        prisma = new PostgresClient({
+          datasources: {
+            db: {
+              url: databaseUrl,
+            },
           },
-        },
-      });
+        });
+        return prisma;
+      } catch {
+        // Fall through to default client
+      }
     }
 
+    // Fallback: use default @prisma/client (will use whichever schema was generated last)
+    const { PrismaClient: DefaultClient } = require('@prisma/client');
+    prisma = new DefaultClient({
+      datasources: {
+        db: {
+          url: databaseUrl,
+        },
+      },
+    });
     return prisma;
   } catch (error: any) {
-    // Fallback: try to use default @prisma/client if specific clients aren't available
-    try {
-      const { PrismaClient: DefaultClient } = require('@prisma/client');
-      prisma = new DefaultClient({
-        datasources: {
-          db: {
-            url: databaseUrl,
-          },
-        },
-      });
-      return prisma;
-    } catch (fallbackError: any) {
-      throw new Error(
-        `Failed to initialize Prisma client: ${error.message}. ` +
-        `Fallback also failed: ${fallbackError.message}. ` +
-        `Make sure to run 'npm run prisma:generate' to generate both clients.`
-      );
-    }
+    throw new Error(
+      `Failed to initialize Prisma client: ${error.message}. ` +
+      `Make sure to run 'npm run prisma:generate' to generate the appropriate client. ` +
+      `For SQLite tests, use 'PRISMA_SCHEMA_TARGET=sqlite npm run prisma:generate:sqlite'. ` +
+      `For Postgres, use 'PRISMA_SCHEMA_TARGET=postgres npm run prisma:generate:pg'.`
+    );
   }
 }
 
