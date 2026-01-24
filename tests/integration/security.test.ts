@@ -83,8 +83,10 @@ async function mockPublicReadHandler(req: NextRequest): Promise<NextResponse> {
  */
 async function mockWriteHandler(req: NextRequest): Promise<NextResponse> {
   // Check for authentication/authorization
-  const authHeader = req.headers.get('authorization');
-  const csrfToken = req.headers.get('x-csrf-token');
+  // Ensure headers exists before accessing
+  const headers = req.headers || (req as any).headers || new Headers();
+  const authHeader = headers.get('authorization');
+  const csrfToken = headers.get('x-csrf-token');
   
   // Public requests should not be able to write
   if (!authHeader && !csrfToken) {
@@ -95,7 +97,7 @@ async function mockWriteHandler(req: NextRequest): Promise<NextResponse> {
   }
   
   // Check if request is from public page (should be blocked)
-  const referer = req.headers.get('referer') || '';
+  const referer = headers.get('referer') || '';
   if (referer.includes('/public/case/')) {
     return NextResponseClass.json(
       { error: 'Forbidden: Public pages cannot perform write operations' },
@@ -347,7 +349,8 @@ describe('Security Regression Tests', () => {
       
       // In a real implementation, this would validate the token
       // For now, we just check that the header is read
-      expect(req.headers.get('x-csrf-token')).toBe('invalid-token-format');
+      const headers = req.headers || (req as any).headers || new Headers();
+      expect(headers.get('x-csrf-token')).toBe('invalid-token-format');
     });
   });
 });

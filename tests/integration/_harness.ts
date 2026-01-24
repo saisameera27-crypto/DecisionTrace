@@ -194,7 +194,15 @@ export function createTestRequest(
     requestInit.body = JSON.stringify(body);
   }
   
-  return new NextRequestClass(urlObj.toString(), requestInit);
+  const request = new NextRequestClass(urlObj.toString(), requestInit);
+  
+  // Ensure headers are accessible on the request object
+  // NextRequest should have headers, but ensure it's available for tests
+  if (!request.headers) {
+    (request as any).headers = new Headers(requestInit.headers);
+  }
+  
+  return request;
 }
 
 /**
