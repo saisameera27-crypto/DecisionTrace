@@ -63,7 +63,7 @@ function calculateCaseCost(): {
   let totalOutputTokens = 0;
   const costPerStep: Array<{ step: number; cost: number }> = [];
 
-  Object.entries(ESTIMATED_TOKENS_PER_STEP).forEach(([stepName, tokens], index) => {
+  Object.entries(ESTIMATED_TOKENS_PER_STEP).forEach(([stepName, tokens]: [string, { input: number; output: number }], index: number) => {
     const stepNum = index + 1;
     totalInputTokens += tokens.input;
     totalOutputTokens += tokens.output;
@@ -207,7 +207,7 @@ async function runBudgetCheck(): Promise<void> {
   console.log(`  Cost:          $${caseCost.totalCost.toFixed(6)}`);
   
   console.log(`\nPer Step:`);
-  caseCost.costPerStep.forEach(({ step, cost }) => {
+  caseCost.costPerStep.forEach(({ step, cost }: { step: number; cost: number }) => {
     console.log(`  Step ${step}: $${cost.toFixed(6)}`);
   });
 
@@ -240,14 +240,14 @@ async function runBudgetCheck(): Promise<void> {
     console.log('✅ All rate limits are within bounds');
   } else {
     console.log('⚠️  Rate limit warnings:');
-    rateLimitCheck.warnings.forEach((warning) => {
+    rateLimitCheck.warnings.forEach((warning: string) => {
       console.log(`  ${warning}`);
     });
   }
 
   if (rateLimitCheck.recommendations.length > 0) {
     console.log('\nRecommendations:');
-    rateLimitCheck.recommendations.forEach((rec) => {
+    rateLimitCheck.recommendations.forEach((rec: string) => {
       console.log(`  • ${rec}`);
     });
   }

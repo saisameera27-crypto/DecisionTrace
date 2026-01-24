@@ -52,7 +52,7 @@ function makeRequest(
       });
       res.on('end', () => {
         const headers: Record<string, string> = {};
-        Object.keys(res.headers).forEach((key) => {
+        Object.keys(res.headers).forEach((key: string) => {
           headers[key] = String(res.headers[key] || '');
         });
         resolve({
@@ -259,11 +259,11 @@ async function runSmokeTests(): Promise<void> {
   console.log('📊 Smoke Test Summary');
   console.log('='.repeat(60));
 
-  const passed = results.filter((r) => r.passed).length;
-  const failed = results.filter((r) => !r.passed).length;
+  const passed = results.filter((r: TestResult) => r.passed).length;
+  const failed = results.filter((r: TestResult) => !r.passed).length;
   const total = results.length;
 
-  results.forEach((result) => {
+  results.forEach((result: TestResult) => {
     const icon = result.passed ? '✅' : '❌';
     const duration = result.duration ? ` (${result.duration}ms)` : '';
     console.log(`${icon} ${result.name}${duration}`);

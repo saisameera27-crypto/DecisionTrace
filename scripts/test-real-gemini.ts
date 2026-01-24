@@ -67,7 +67,7 @@ function makeRequest(
       });
       res.on('end', () => {
         const headers: Record<string, string> = {};
-        Object.keys(res.headers).forEach((key) => {
+        Object.keys(res.headers).forEach((key: string) => {
           headers[key] = String(res.headers[key] || '');
         });
         resolve({
@@ -323,13 +323,13 @@ async function runRealGeminiTest(): Promise<void> {
   console.log('📊 Real Gemini Test Summary');
   console.log('='.repeat(60));
 
-  const passed = results.filter((r) => r.passed).length;
-  const failed = results.filter((r) => !r.passed).length;
+  const passed = results.filter((r: TestResult) => r.passed).length;
+  const failed = results.filter((r: TestResult) => !r.passed).length;
   const total = results.length;
-  const totalTokens = results.reduce((sum, r) => sum + (r.tokensUsed || 0), 0);
-  const totalCost = results.reduce((sum, r) => sum + (r.costEstimate || 0), 0);
+  const totalTokens = results.reduce((sum: number, r: TestResult) => sum + (r.tokensUsed || 0), 0);
+  const totalCost = results.reduce((sum: number, r: TestResult) => sum + (r.costEstimate || 0), 0);
 
-  results.forEach((result) => {
+  results.forEach((result: TestResult) => {
     const icon = result.passed ? '✅' : '❌';
     const duration = result.duration ? ` (${result.duration}ms)` : '';
     const tokens = result.tokensUsed ? ` [${result.tokensUsed} tokens]` : '';
