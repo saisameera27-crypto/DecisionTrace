@@ -297,12 +297,26 @@ export function createMultipartRequest(
   // Store FormData on request for test access
   (request as any).__testFormData = formData;
   
+  // Store original content for test access (for buffer extraction)
+  (request as any).__testFileContents = files.map((f: any) => f.content);
+  
   // Ensure formData() method works in test environment
   // Override formData() to always return our FormData
   const storedFormData = formData;
   (request as any).formData = async () => {
     return storedFormData;
   };
+  
+  // Add arrayBuffer() method to File objects if missing (for test compatibility)
+  fileObjects.forEach((fileObj, index) => {
+    if (typeof (fileObj as any).arrayBuffer !== 'function') {
+      const content = files[index].content;
+      const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+      (fileObj as any).arrayBuffer = async () => {
+        return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      };
+    }
+  });
   
   return request;
 }

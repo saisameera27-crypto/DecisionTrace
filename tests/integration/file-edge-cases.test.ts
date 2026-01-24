@@ -82,7 +82,52 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
     for (const file of files) {
       // Check file type
       if (file.type === 'application/pdf') {
-        const buffer = Buffer.from(await file.arrayBuffer());
+        // Get buffer from file - handle both File and Buffer
+        // In Node.js test environment, File objects may not have arrayBuffer()
+        let buffer: Buffer;
+        try {
+          // Try multiple methods to get buffer
+          if (typeof (file as any).arrayBuffer === 'function') {
+            const arrayBuffer = await (file as any).arrayBuffer();
+            buffer = Buffer.from(arrayBuffer);
+          } else if (file instanceof Buffer) {
+            buffer = file as Buffer;
+          } else if ((file as any).buffer) {
+            buffer = Buffer.from((file as any).buffer);
+          } else if ((file as any).content) {
+            const content = (file as any).content;
+            buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
+          } else {
+            // Last resort: try to read from the File's internal data
+            // In Node.js, File objects created from Buffer should have the data accessible
+            const fileData = (file as any).data || (file as any)._data;
+            if (fileData) {
+              buffer = Buffer.isBuffer(fileData) ? fileData : Buffer.from(fileData);
+            } else {
+              // If all else fails, try to get the first chunk from the File
+              // This works for File objects created with [content] array
+              const fileAsAny = file as any;
+              if (fileAsAny[Symbol.iterator]) {
+                const chunks: Buffer[] = [];
+                for (const chunk of fileAsAny) {
+                  chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+                }
+                buffer = Buffer.concat(chunks);
+              } else {
+                throw new Error('Cannot extract buffer from file object');
+              }
+            }
+          }
+        } catch (error: any) {
+          return NextResponseClass.json(
+            {
+              error: 'Failed to read file content',
+              code: 'PROCESSING_ERROR',
+              message: error.message || 'Unknown error',
+            },
+            { status: 500 }
+          );
+        }
         
         // Check if PDF is password-protected (use mock return value)
         const isPasswordProtected = mockPDFParser.isPasswordProtected(buffer);

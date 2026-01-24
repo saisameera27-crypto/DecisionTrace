@@ -4,7 +4,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { isDBInitError, DBInitError } from '../lib/prisma';
+import { isDBInitError, DBInitError } from './prisma';
 
 /**
  * Handle errors in API routes and return appropriate JSON responses
