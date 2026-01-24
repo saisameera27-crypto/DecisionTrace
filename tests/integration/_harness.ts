@@ -308,7 +308,7 @@ export function createMultipartRequest(
   };
   
   // Add arrayBuffer() method to File objects if missing (for test compatibility)
-  fileObjects.forEach((fileObj, index) => {
+  fileObjects.forEach((fileObj: File, index: number) => {
     if (typeof (fileObj as any).arrayBuffer !== 'function') {
       const content = files[index].content;
       const buffer = Buffer.isBuffer(content) ? content : Buffer.from(content);
@@ -475,7 +475,7 @@ export function assertResponseStatus(
   const status = response.status || (response as any).statusCode || 200;
   if (status !== expectedStatus) {
     // Print response JSON for debugging
-    parseJsonResponse(response).then((json) => {
+    parseJsonResponse(response).then((json: any) => {
       console.error('Response status mismatch:');
       console.error(`  Expected: ${expectedStatus}`);
       console.error(`  Got: ${status}`);
@@ -483,7 +483,7 @@ export function assertResponseStatus(
     }).catch(() => {
       // If JSON parsing fails, try to get text
       if (typeof response.text === 'function') {
-        response.text().then((text) => {
+        response.text().then((text: string) => {
           console.error('Response status mismatch:');
           console.error(`  Expected: ${expectedStatus}`);
           console.error(`  Got: ${status}`);
