@@ -127,7 +127,7 @@ async function mockReportLoaderHandler(
         createdAt: case_.report.createdAt.toISOString(),
       },
       decision: normalizedDecision,
-      steps: case_.steps.map((step) => ({
+      steps: case_.steps.map((step: any) => ({
         stepNumber: step.stepNumber,
         status: step.status,
         startedAt: step.startedAt?.toISOString() || null,

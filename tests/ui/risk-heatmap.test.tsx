@@ -46,8 +46,8 @@ const RiskHeatmap: React.FC<RiskHeatmapProps> = ({ risks }) => {
   return (
     <div data-testid="risk-heatmap">
       <div className="grid grid-cols-5 gap-1" data-testid="heatmap-grid">
-        {grid.map((row, rowIdx) =>
-          row.map((cell) => (
+        {grid.map((row: any, rowIdx: number) =>
+          row.map((cell: any) => (
             <div
               key={cell.cellKey}
               data-testid={`cell-${cell.cellKey}`}
@@ -65,7 +65,7 @@ const RiskHeatmap: React.FC<RiskHeatmapProps> = ({ risks }) => {
                   <div className="font-bold mb-1">
                     Severity {cell.severity} × Probability {cell.probability}
                   </div>
-                  {cell.risks.map((risk) => (
+                  {cell.risks.map((risk: RiskItem) => (
                     <div key={risk.id} data-testid={`tooltip-risk-${risk.id}`} className="text-sm">
                       <div className="font-semibold">{risk.category}</div>
                       <div className="text-xs">{risk.description}</div>

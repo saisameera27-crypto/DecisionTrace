@@ -77,7 +77,7 @@ function getClientIP(req: NextRequest): string {
     
     if (forwardedFor) {
       // X-Forwarded-For can contain multiple IPs, take the first one
-      const ips = String(forwardedFor).split(',').map((ip) => ip.trim());
+      const ips = String(forwardedFor).split(',').map((ip: string) => ip.trim());
       return ips[0] || 'unknown';
     }
 
@@ -246,7 +246,7 @@ describe('Rate Limiting', () => {
     const responses = await Promise.all(requests);
 
     // Verify all 10 requests succeeded
-    responses.forEach((response, index) => {
+    responses.forEach((response: any, index: number) => {
       assertResponseStatus(response, 200);
       
       // Check rate limit headers

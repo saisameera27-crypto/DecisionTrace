@@ -161,7 +161,7 @@ export function createTestRequest(
   
   // Add search params to URL
   const urlObj = new URL(url, 'http://localhost:3000');
-  Object.entries(searchParams).forEach(([key, value]) => {
+  Object.entries(searchParams).forEach(([key, value]: [string, string]) => {
     urlObj.searchParams.set(key, value);
   });
   
@@ -220,7 +220,7 @@ export function createMultipartRequest(
   // Create File objects for Node.js
   const fileObjects: File[] = [];
   
-  files.forEach((file) => {
+  files.forEach((file: any) => {
     const content = Buffer.isBuffer(file.content) 
       ? file.content 
       : Buffer.from(file.content, 'utf-8');
@@ -236,7 +236,7 @@ export function createMultipartRequest(
   
   // Add additional fields
   if (additionalFields) {
-    Object.entries(additionalFields).forEach(([key, value]) => {
+    Object.entries(additionalFields).forEach(([key, value]: [string, string]) => {
       formData.append(key, value);
     });
   }

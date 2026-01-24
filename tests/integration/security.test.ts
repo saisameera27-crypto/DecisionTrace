@@ -143,7 +143,7 @@ describe('Security Regression Tests', () => {
         'gemini-api-key',
       ];
       
-      suspiciousHeaders.forEach((headerName) => {
+      suspiciousHeaders.forEach((headerName: string) => {
         expect(headerKeys).not.toContain(headerName);
         expect(headers.get(headerName)).toBeNull();
       });

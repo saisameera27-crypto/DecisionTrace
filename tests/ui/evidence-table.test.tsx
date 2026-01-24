@@ -27,11 +27,11 @@ const EvidenceTable: React.FC<EvidenceTableProps> = ({ rows }) => {
   const filteredRows = React.useMemo(() => {
     switch (filter) {
       case 'weak':
-        return rows.filter((row) => row.strength === 'weak');
+        return rows.filter((row: EvidenceRow) => row.strength === 'weak');
       case 'missing':
-        return rows.filter((row) => row.strength === 'missing' || row.evidence === null);
+        return rows.filter((row: EvidenceRow) => row.strength === 'missing' || row.evidence === null);
       case 'conflicts':
-        return rows.filter((row) => row.conflicts === true);
+        return rows.filter((row: EvidenceRow) => row.conflicts === true);
       default:
         return rows;
     }
@@ -79,7 +79,7 @@ const EvidenceTable: React.FC<EvidenceTableProps> = ({ rows }) => {
           </tr>
         </thead>
         <tbody>
-          {filteredRows.map((row) => (
+          {filteredRows.map((row: EvidenceRow) => (
             <tr key={row.id} data-testid={`row-${row.id}`}>
               <td>{row.claim}</td>
               <td>{row.evidence || 'No evidence'}</td>

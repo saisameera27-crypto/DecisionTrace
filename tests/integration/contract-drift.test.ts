@@ -297,7 +297,7 @@ describe('Contract Drift Tests', () => {
     it('should verify all recorded responses exist', () => {
       const steps = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'];
       
-      steps.forEach((step) => {
+      steps.forEach((step: string) => {
         const filePath = path.join(
           process.cwd(),
           'test-data',
@@ -313,7 +313,7 @@ describe('Contract Drift Tests', () => {
     it('should verify recorded responses are valid JSON', () => {
       const steps = ['step1', 'step2', 'step3', 'step4', 'step5', 'step6'];
       
-      steps.forEach((step) => {
+      steps.forEach((step: string) => {
         expect(() => {
           loadRecordedResponse(step);
         }).not.toThrow();
