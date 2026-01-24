@@ -8,7 +8,7 @@
  * - Network drop then reconnect
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach, type DoneCallback } from 'vitest';
 import { test as base } from '@playwright/test';
 
 // Mock EventSource for Node.js environment
@@ -146,7 +146,7 @@ describe('SSE Reliability Tests', () => {
   });
 
   describe('Basic SSE Connection', () => {
-    it('should establish SSE connection', (done) => {
+    it('should establish SSE connection', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       
       eventSource.onopen = () => {
@@ -155,7 +155,7 @@ describe('SSE Reliability Tests', () => {
       };
     });
 
-    it('should receive messages from SSE stream', (done) => {
+    it('should receive messages from SSE stream', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let messageCount = 0;
       
@@ -176,7 +176,7 @@ describe('SSE Reliability Tests', () => {
   });
 
   describe('Refresh Mid-Run', () => {
-    it('should reconnect and continue after refresh during step 2-4', (done) => {
+    it('should reconnect and continue after refresh during step 2-4', (done: DoneCallback) => {
       let firstConnectionMessages = 0;
       let secondConnectionMessages = 0;
       
@@ -213,7 +213,7 @@ describe('SSE Reliability Tests', () => {
       };
     });
 
-    it('should handle refresh during step processing', (done) => {
+    it('should handle refresh during step processing', (done: DoneCallback) => {
       let refreshHappened = false;
       
       eventSource = new MockEventSource('/api/case/test-case-123/events');
@@ -243,7 +243,7 @@ describe('SSE Reliability Tests', () => {
   });
 
   describe('Network Drop and Reconnect', () => {
-    it('should handle network drop and reconnect', (done) => {
+    it('should handle network drop and reconnect', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let messagesBeforeDrop = 0;
       let messagesAfterReconnect = 0;
@@ -284,7 +284,7 @@ describe('SSE Reliability Tests', () => {
       };
     });
 
-    it('should handle multiple network drops', (done) => {
+    it('should handle multiple network drops', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let dropCount = 0;
       let finalStep = 0;
@@ -316,7 +316,7 @@ describe('SSE Reliability Tests', () => {
   });
 
   describe('Tab Backgrounding', () => {
-    it('should continue receiving messages when tab is backgrounded', (done) => {
+    it('should continue receiving messages when tab is backgrounded', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let backgrounded = false;
       let messagesAfterBackground = 0;
@@ -342,7 +342,7 @@ describe('SSE Reliability Tests', () => {
       };
     });
 
-    it('should resume correctly when tab is foregrounded', (done) => {
+    it('should resume correctly when tab is foregrounded', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let foregrounded = false;
       
@@ -364,7 +364,7 @@ describe('SSE Reliability Tests', () => {
   });
 
   describe('SSE Cleanup', () => {
-    it('should close SSE connection cleanly at completion', (done) => {
+    it('should close SSE connection cleanly at completion', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       
       eventSource.onmessage = (event) => {
@@ -380,7 +380,7 @@ describe('SSE Reliability Tests', () => {
       };
     });
 
-    it('should not leave infinite spinner after completion', (done) => {
+    it('should not leave infinite spinner after completion', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let completed = false;
       
@@ -411,7 +411,7 @@ describe('SSE Reliability Tests', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle connection errors gracefully', (done) => {
+    it('should handle connection errors gracefully', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       
       eventSource.onerror = () => {
@@ -424,7 +424,7 @@ describe('SSE Reliability Tests', () => {
       eventSource.simulateNetworkDrop();
     });
 
-    it('should attempt reconnection on error', (done) => {
+    it('should attempt reconnection on error', (done: DoneCallback) => {
       eventSource = new MockEventSource('/api/case/test-case-123/events');
       let errorCount = 0;
       
