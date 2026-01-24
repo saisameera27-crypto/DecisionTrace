@@ -4,6 +4,7 @@
  */
 
 import { isDBInitError, DBInitError } from './prisma';
+import { isHttpError, HttpError } from './errors';
 
 /**
  * Standard API error structure
@@ -19,8 +20,19 @@ export interface ApiError {
 /**
  * Normalize any error into a standard ApiError structure
  * Framework-agnostic - works with any error type
+ * Preserves err.status and err.code when present
  */
 export function normalizeError(error: unknown): ApiError {
+  // Handle HttpError instances first (preserves status and code)
+  if (isHttpError(error)) {
+    return {
+      code: error.code,
+      message: error.message,
+      status: error.status,
+      details: error.details,
+    };
+  }
+
   // Handle DB initialization errors
   if (isDBInitError(error)) {
     const dbError = error as DBInitError;
@@ -32,16 +44,16 @@ export function normalizeError(error: unknown): ApiError {
     };
   }
 
-  // Handle Error instances
+  // Handle Error instances - check for status and code properties
   if (error instanceof Error) {
-    const status = (error as any)?.status || 500;
+    const err = error as any;
     return {
-      code: (error as any)?.code || 'SERVER_ERROR',
-      message: error.message,
-      status,
+      code: err.code || 'SERVER_ERROR',
+      message: err.message,
+      status: err.status || 500, // Preserve status if present
       ...(process.env.NODE_ENV === 'development' && {
         details: {
-          stack: error.stack,
+          stack: err.stack,
         },
       }),
     };
@@ -53,7 +65,7 @@ export function normalizeError(error: unknown): ApiError {
     return {
       code: err.code || 'SERVER_ERROR',
       message: err.message || 'An error occurred',
-      status: err.status || 500,
+      status: err.status || 500, // Preserve status if present
       hint: err.hint,
       details: err.details,
     };

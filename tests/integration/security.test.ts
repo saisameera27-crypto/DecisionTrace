@@ -21,6 +21,9 @@ import {
   createTestRequest,
 } from './_harness';
 
+import { forbidden, unauthorized, badRequest } from '../../lib/errors';
+import { toErrorResponse } from '../../lib/api-error';
+
 /**
  * Mock handler that should NOT expose API keys
  * Uses real Request/Response objects
@@ -70,35 +73,51 @@ async function mockPublicReadHandler(req: Request): Promise<Response> {
 
 /**
  * Mock handler that simulates a write endpoint (should be protected)
- * Uses real Request/Response objects
+ * Uses real Request/Response objects and throws HttpError for proper status codes
  */
 async function mockWriteHandler(req: Request): Promise<Response> {
-  // Check if request is from public page (should be blocked first)
-  const referer = req.headers.get('referer') || '';
-  if (referer.includes('/public/case/')) {
+  try {
+    // Check if request is from public page (should be blocked first)
+    const referer = req.headers.get('referer') || '';
+    if (referer.includes('/public/case/')) {
+      throw forbidden('PUBLIC_WRITE_FORBIDDEN', 'Public pages cannot perform write operations');
+    }
+    
+    // Check for CSRF token
+    const csrfToken = req.headers.get('x-csrf-token');
+    const authHeader = req.headers.get('authorization');
+    
+    // Validate CSRF token format if provided
+    if (csrfToken && !isValidCSRFToken(csrfToken)) {
+      throw badRequest('CSRF_INVALID', 'Invalid CSRF token format');
+    }
+    
+    // Require CSRF token or auth for state-changing operations
+    if (!csrfToken && !authHeader) {
+      throw forbidden('CSRF_REQUIRED', 'CSRF token required for state-changing operations');
+    }
+    
     return new Response(
-      JSON.stringify({ error: 'Forbidden: Public pages cannot perform write operations' }),
-      { status: 403, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: true }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } }
     );
+  } catch (error) {
+    // Convert HttpError to Response using error handler
+    const { status, body } = toErrorResponse(error);
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
-  
-  // Check for authentication/authorization
-  // Request objects always have headers
-  const authHeader = req.headers.get('authorization');
-  const csrfToken = req.headers.get('x-csrf-token');
-  
-  // Public requests should not be able to write
-  if (!authHeader && !csrfToken) {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized: Write operations require authentication' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-  
-  return new Response(
-    JSON.stringify({ success: true }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
-  );
+}
+
+/**
+ * Simple CSRF token validation (for testing)
+ */
+function isValidCSRFToken(token: string): boolean {
+  // Basic validation: token should be non-empty and match a pattern
+  // In real implementation, this would verify against a session/secret
+  return token.length > 0 && /^[a-zA-Z0-9_-]+$/.test(token);
 }
 
 describe('Security Regression Tests', () => {
@@ -198,7 +217,8 @@ describe('Security Regression Tests', () => {
       
       expect(response.status).toBe(403);
       const json = await response.json();
-      expect(json.error).toContain('Public pages cannot perform write operations');
+      expect(json.code).toBe('PUBLIC_WRITE_FORBIDDEN');
+      expect(json.message).toContain('Public pages cannot perform write operations');
     });
 
     it('should reject write operations without CSRF token from public pages', async () => {
@@ -212,7 +232,10 @@ describe('Security Regression Tests', () => {
       
       const response = await callRouteHandler(mockWriteHandler, req);
       
+      // Public page check happens first, so should be 403
       expect(response.status).toBe(403);
+      const json = await response.json();
+      expect(json.code).toBe('PUBLIC_WRITE_FORBIDDEN');
     });
 
     it('should allow read operations from public pages', async () => {
