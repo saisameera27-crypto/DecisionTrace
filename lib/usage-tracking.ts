@@ -5,7 +5,19 @@
 
 import { getPrismaClient, withDBErrorHandling, isDBInitError } from './prisma';
 
-const prisma = getPrismaClient();
+let prisma: any = null;
+
+try {
+  prisma = getPrismaClient();
+} catch (error) {
+  // Prisma initialization failed - will use in-memory fallback
+  if (isDBInitError(error)) {
+    // Re-throw DB init errors so API routes can handle them properly
+    throw error;
+  }
+  // Other errors - use in-memory fallback
+  prisma = null;
+}
 
 interface UsageTracking {
   realRunsToday: number;
