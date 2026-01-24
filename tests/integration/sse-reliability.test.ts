@@ -433,13 +433,15 @@ describe('SSE Reliability Tests', () => {
         // Should attempt reconnection
         if (errorCount === 1) {
           setTimeout(() => {
-            eventSource.simulateReconnect();
-            // After reconnect, should continue
-            setTimeout(() => {
-              if (eventSource?.readyState === 1) {
-                done();
-              }
-            }, 100);
+            if (eventSource) {
+              eventSource.simulateReconnect();
+              // After reconnect, should continue
+              setTimeout(() => {
+                if (eventSource?.readyState === 1) {
+                  done();
+                }
+              }, 100);
+            }
           }, 50);
         }
       };

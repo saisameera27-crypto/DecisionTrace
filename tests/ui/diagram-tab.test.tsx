@@ -50,7 +50,7 @@ const DiagramTab: React.FC<DiagramTabProps> = ({ mermaidCode }) => {
       if (diagramRef.current) {
         mockMermaid.render('diagram-svg', mermaidCode).then((result: any) => {
           if (diagramRef.current) {
-            diagramRef.current.innerHTML = result.svg;
+            (diagramRef.current as HTMLElement).innerHTML = result.svg;
           }
         });
       }

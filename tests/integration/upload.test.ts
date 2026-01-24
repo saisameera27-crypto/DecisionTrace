@@ -72,7 +72,9 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
         // Try getAll first (standard FormData API)
         if (typeof formData.getAll === 'function') {
           const allFiles = formData.getAll('file');
-          files = allFiles.filter((f): f is File => f instanceof File);
+          files = allFiles.filter((f): f is File => {
+            return typeof f !== 'string' && f instanceof File;
+          });
         } else {
           // Fallback: iterate entries
           for (const [key, value] of formData.entries()) {
