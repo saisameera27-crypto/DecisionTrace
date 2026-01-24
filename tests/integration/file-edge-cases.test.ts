@@ -92,6 +92,7 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
             {
               error: 'Password-protected PDFs are not supported',
               code: 'PASSWORD_PROTECTED',
+              message: 'Password-protected PDFs are not supported',
               fileName: file.name,
             },
             { status: 400 }
@@ -105,18 +106,59 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
             throw new Error('Invalid PDF structure');
           }
         } catch (error: any) {
-          // Check if it's a mock rejection
-          if (error.message && (error.message.includes('Invalid PDF') || error.message.includes('Invalid PDF structure') || error.message.includes('Invalid PDF header'))) {
+          const errorMessage = error.message || '';
+          const errorString = String(error).toLowerCase();
+          
+          // Robust password-protected PDF detection based on error messages
+          const passwordIndicators = [
+            'password',
+            'encrypted',
+            'passwordexception',
+            'needs password',
+            'password required',
+            'encrypted document',
+            'password-protected',
+            'encryption',
+            'decrypt',
+            'locked',
+          ];
+          
+          const isPasswordError = passwordIndicators.some(
+            indicator => 
+              errorMessage.toLowerCase().includes(indicator) ||
+              errorString.includes(indicator)
+          );
+          
+          if (isPasswordError) {
             return NextResponseClass.json(
               {
-                error: 'PDF file appears to be corrupted or invalid',
-                code: 'CORRUPTED_PDF',
+                error: 'Password-protected PDFs are not supported',
+                code: 'PASSWORD_PROTECTED',
+                message: 'Password-protected PDFs are not supported',
                 fileName: file.name,
               },
               { status: 400 }
             );
           }
-          // Re-throw if not a mock error
+          
+          // Check if it's a corrupted PDF error
+          if (errorMessage.includes('Invalid PDF') || 
+              errorMessage.includes('Invalid PDF structure') || 
+              errorMessage.includes('Invalid PDF header') ||
+              errorMessage.includes('corrupted') ||
+              errorMessage.includes('malformed')) {
+            return NextResponseClass.json(
+              {
+                error: 'PDF file appears to be corrupted or invalid',
+                code: 'CORRUPTED_PDF',
+                message: 'PDF file appears to be corrupted or invalid',
+                fileName: file.name,
+              },
+              { status: 400 }
+            );
+          }
+          
+          // Re-throw if not a recognized error
           throw error;
         }
         
@@ -140,6 +182,40 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
     
     return NextResponseClass.json({ success: true }, { status: 201 });
   } catch (error: any) {
+    const errorMessage = error.message || '';
+    const errorString = String(error).toLowerCase();
+    
+    // Robust password-protected PDF detection in catch block
+    const passwordIndicators = [
+      'password',
+      'encrypted',
+      'passwordexception',
+      'needs password',
+      'password required',
+      'encrypted document',
+      'password-protected',
+      'encryption',
+      'decrypt',
+      'locked',
+    ];
+    
+    const isPasswordError = passwordIndicators.some(
+      indicator => 
+        errorMessage.toLowerCase().includes(indicator) ||
+        errorString.includes(indicator)
+    );
+    
+    if (isPasswordError) {
+      return NextResponseClass.json(
+        {
+          error: 'Password-protected PDFs are not supported',
+          code: 'PASSWORD_PROTECTED',
+          message: 'Password-protected PDFs are not supported',
+        },
+        { status: 400 }
+      );
+    }
+    
     // Ensure errors are user-friendly, not stack traces
     return NextResponseClass.json(
       {
@@ -400,6 +476,7 @@ describe('File Processing Edge Cases', () => {
       
       expect(data.code).toBeDefined();
       expect(data.code).toBe('PASSWORD_PROTECTED');
+      expect(data.message).toBe('Password-protected PDFs are not supported');
     });
   });
 
