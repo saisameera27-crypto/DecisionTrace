@@ -7,6 +7,12 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/e2e',
   
+  /* Test timeout configuration */
+  timeout: process.env.CI ? 60000 : 30000,
+  expect: {
+    timeout: process.env.CI ? 15000 : 5000,
+  },
+  
   /* Run tests in files in parallel */
   fullyParallel: true,
   
@@ -27,11 +33,14 @@ export default defineConfig({
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: process.env.BASE_URL || 'http://localhost:3000',
     
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    /* Collect trace when retrying the failed test. */
+    trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
     
     /* Screenshot on failure */
     screenshot: 'only-on-failure',
+    
+    /* Video on failure in CI */
+    video: process.env.CI ? 'retain-on-failure' : 'off',
     
     /* Run headless in CI */
     headless: !!process.env.CI,
@@ -69,7 +78,7 @@ export default defineConfig({
   webServer: {
     command: 'npm run start:test',
     port: 3000,
-    timeout: 120000,
+    timeout: process.env.CI ? 180000 : 120000,
     reuseExistingServer: !process.env.CI,
   },
 });

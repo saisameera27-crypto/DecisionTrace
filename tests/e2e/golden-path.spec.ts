@@ -8,7 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 test.describe('Golden Path', () => {
-  test('should complete full workflow and verify all tabs', async ({ page, mockAPI, testDocument }) => {
+  test('should complete full workflow and verify all tabs @smoke', async ({ page, mockAPI, testDocument }) => {
     // Navigate to application
     await page.goto('/');
 
@@ -104,7 +104,7 @@ test.describe('Golden Path', () => {
     expect(jsonDownload.suggestedFilename()).toMatch(/\.json$/i);
   });
 
-  test('should create share link and access public case', async ({ page, mockAPI, testDocument }) => {
+  test('should create share link and access public case @smoke', async ({ page, mockAPI, testDocument }) => {
     // Mock share creation
     await page.route('**/api/case/*/share', async (route) => {
       await route.fulfill({
