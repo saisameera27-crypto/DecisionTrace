@@ -29,17 +29,9 @@ test.describe('Golden Path', () => {
     await page.goto(`/case/${caseId}`);
     await page.waitForLoadState('networkidle');
 
-    // Verify report page renders (user-visible content)
-    // Check for report title or key content instead of API structure
-    const pageContent = await page.content();
-    expect(pageContent.length).toBeGreaterThan(0);
-    
-    // Verify report content is visible (user-visible text)
-    // Look for "Decision Trace Report" or decision title in rendered HTML
-    const hasReportContent = pageContent.includes('Decision Trace Report') || 
-                            pageContent.includes('Q2 2024 Product Launch') ||
-                            pageContent.includes('Product Launch');
-    expect(hasReportContent).toBeTruthy();
+    // Verify report page renders with stable UI assertions
+    await expect(page.locator('[data-testid="report-root"]')).toBeVisible();
+    await expect(page.locator('[data-testid="report-header"]')).toBeVisible();
 
     // TODO: When report tabs UI exists, verify tabs render:
     // - await expect(page.locator('[data-testid="tab-overview"]')).toBeVisible();
@@ -92,20 +84,8 @@ test.describe('Golden Path', () => {
     await page.goto(`/public/case/${shareSlug}`);
     await page.waitForLoadState('networkidle');
 
-    // Verify public case page renders (user-visible content)
-    const pageContent = await page.content();
-    expect(pageContent.length).toBeGreaterThan(0);
-    
-    // Verify public report content is visible (user-visible text)
-    // Look for report content instead of checking API structure
-    const hasPublicReportContent = pageContent.includes('Decision Trace Report') || 
-                                  pageContent.includes('Q2 2024 Product Launch') ||
-                                  pageContent.includes('Product Launch');
-    expect(hasPublicReportContent).toBeTruthy();
-
-    // TODO: When public report UI exists, verify read-only indicators:
-    // - await expect(page.locator('[data-testid="public-report-root"]')).toBeVisible();
-    // - await expect(page.locator('text=Read-only')).toBeVisible();
-    // - Verify Share button is NOT visible on public pages
+    // Verify public report page renders with stable UI assertions
+    await expect(page.locator('[data-testid="public-report-root"]')).toBeVisible();
+    await expect(page.locator('[data-testid="public-report-readonly-badge"]')).toBeVisible();
   });
 });
