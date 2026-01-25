@@ -175,9 +175,10 @@ vercel --prod
 ### Build Fails
 
 **Error: "Prisma Client not generated"**
-- Solution: The `vercel-build` script should handle this. Check that `package.json` has:
+- Solution: The `vercel-build` script should handle this. It uses the Postgres schema at `prisma/schema.postgres.prisma`
+- Check that `package.json` has:
   ```json
-  "vercel-build": "prisma generate && prisma migrate deploy && next build"
+  "vercel-build": "npm run prisma:generate:postgres && npm run prisma:migrate:postgres && npx next build"
   ```
 
 **Error: "Database connection failed"**
@@ -215,7 +216,12 @@ vercel --prod
 
 ## Important Notes
 
-1. **One-Time Deployment**: Deploy once. Don't keep redeploying unless you make code changes.
+1. **Prisma Schemas**:
+   - **SQLite schema** (default for tests/dev): `prisma/schema.prisma`
+   - **Postgres schema** (production): `prisma/schema.postgres.prisma`
+   - Production builds use Postgres schema automatically via `vercel-build` script
+
+2. **One-Time Deployment**: Deploy once. Don't keep redeploying unless you make code changes.
 
 2. **Free Tier Limits**:
    - Vercel: 100GB bandwidth/month, unlimited requests

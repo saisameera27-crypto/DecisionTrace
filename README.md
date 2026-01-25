@@ -54,8 +54,11 @@ cd decision-trace
 # Install dependencies
 npm install
 
-# Generate Prisma client
+# Generate Prisma client (uses SQLite schema by default)
 npx prisma generate
+
+# For Postgres production, use:
+# npm run prisma:generate:postgres
 
 # Run migrations (uses SQLite by default for local dev)
 npx prisma migrate dev
@@ -163,7 +166,9 @@ See **[DEPLOY_LIVE.md](DEPLOY_LIVE.md)** for complete free-tier deployment guide
 
 - **Frontend**: Next.js (or your framework)
 - **Backend**: Node.js with TypeScript
-- **Database**: Prisma ORM (SQLite for dev, Postgres for production)
+- **Database**: Prisma ORM (SQLite for dev/tests, Postgres for production)
+  - SQLite schema: `prisma/schema.prisma` (default)
+  - Postgres schema: `prisma/schema.postgres.prisma`
 - **AI**: Google Gemini 3 Flash Preview API
 - **Validation**: Zod schemas
 - **Testing**: Vitest (unit), Playwright (E2E)

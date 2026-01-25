@@ -1,16 +1,14 @@
-// Prisma Schema for Decision Trace
-// Supports SQLite (local dev) and Postgres (production)
+// Prisma Schema for Decision Trace - SQLite Version
+// Used in SQLite-specific tests
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
-
-// For local dev with SQLite, use: provider = "sqlite" and url = env("TEST_DATABASE_URL")
 
 model Case {
   id           String   @id @default(cuid())
