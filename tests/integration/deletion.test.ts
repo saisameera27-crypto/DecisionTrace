@@ -173,7 +173,7 @@ describe('Data Retention + Deletion Flow Tests', () => {
       const req = createTestRequest(`/api/case/${caseRecord.id}`, { method: 'DELETE' });
       const response = await callRouteHandler(mockDeleteCaseHandler, req);
       
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
       const data = await parseJsonResponse(response);
       expect(data.success).toBe(true);
       expect(data.deleted).toBe(true);
@@ -254,7 +254,7 @@ describe('Data Retention + Deletion Flow Tests', () => {
       const response = await callRouteHandler(mockDeleteCaseHandler, req);
       
       // Should still succeed even if Gemini deletion fails
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
       const data = await parseJsonResponse(response);
       expect(data.success).toBe(true);
       
@@ -486,7 +486,7 @@ describe('Data Retention + Deletion Flow Tests', () => {
       const req = createTestRequest(`/api/case/${caseRecord.id}`, { method: 'DELETE' });
       const response = await callRouteHandler(mockDeleteCaseHandler, req);
       
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
       
       // In a real implementation, you might check an audit log table
       // For now, we verify the deletion succeeded

@@ -115,7 +115,7 @@ describe('Rate Limiting', () => {
 
     // Verify all 10 requests succeeded
     responses.forEach((response: Response, index: number) => {
-      assertResponseStatus(response, 200);
+      await await assertResponseStatus(response, 200);
       
       // Check rate limit headers
       const headers = response.headers;
@@ -131,7 +131,7 @@ describe('Rate Limiting', () => {
     });
 
     const response11 = await callRouteHandler(mockRateLimitedHandler, request11);
-    assertResponseStatus(response11, 429);
+    await await assertResponseStatus(response11, 429);
 
     // Verify 429 response
     const errorData = await parseJsonResponse(response11);
@@ -163,7 +163,7 @@ describe('Rate Limiting', () => {
         ip: testIP,
       });
       const response = await callRouteHandler(mockRateLimitedHandler, request);
-      assertResponseStatus(response, 200);
+      await await assertResponseStatus(response, 200);
     }
 
     // Verify 11th request fails
@@ -172,7 +172,7 @@ describe('Rate Limiting', () => {
       ip: testIP,
     });
     const response11 = await callRouteHandler(mockRateLimitedHandler, request11);
-    assertResponseStatus(response11, 429);
+    await await assertResponseStatus(response11, 429);
 
     // Advance time past the rate limit window (61 seconds)
     vi.setSystemTime(baseTime + 61 * 1000);
@@ -183,7 +183,7 @@ describe('Rate Limiting', () => {
       ip: testIP,
     });
     const responseAfterReset = await callRouteHandler(mockRateLimitedHandler, requestAfterReset);
-    assertResponseStatus(responseAfterReset, 200);
+    await await assertResponseStatus(responseAfterReset, 200);
 
     const headers = responseAfterReset.headers;
     expect(headers.get('X-RateLimit-Remaining')).toBe('9'); // 10 - 1 = 9
@@ -202,7 +202,7 @@ describe('Rate Limiting', () => {
         ip: ip1,
       });
       const response = await callRouteHandler(mockRateLimitedHandler, request);
-      assertResponseStatus(response, 200);
+      await await assertResponseStatus(response, 200);
     }
 
     // Verify IP1 is rate limited
@@ -211,7 +211,7 @@ describe('Rate Limiting', () => {
       ip: ip1,
     });
     const response1 = await callRouteHandler(mockRateLimitedHandler, request1);
-    assertResponseStatus(response1, 429);
+    await await assertResponseStatus(response1, 429);
 
     // IP2 should still be able to make requests (separate rate limit)
     // Reset time to ensure IP2 gets a fresh window
@@ -222,7 +222,7 @@ describe('Rate Limiting', () => {
       ip: ip2,
     });
     const response2 = await callRouteHandler(mockRateLimitedHandler, request2);
-    assertResponseStatus(response2, 200);
+    await await assertResponseStatus(response2, 200);
 
     const headers2 = response2.headers;
     expect(headers2.get('X-RateLimit-Remaining')).toBe('9'); // IP2 has 9 remaining
@@ -243,7 +243,7 @@ describe('Rate Limiting', () => {
         },
       });
       const response = await callRouteHandler(mockRateLimitedHandler, request);
-      assertResponseStatus(response, 200);
+      await await assertResponseStatus(response, 200);
     }
 
     // Verify 11th request fails (should use first IP in chain)
@@ -254,7 +254,7 @@ describe('Rate Limiting', () => {
       },
     });
     const response11 = await callRouteHandler(mockRateLimitedHandler, request11);
-    assertResponseStatus(response11, 429);
+    await await assertResponseStatus(response11, 429);
 
     // Verify that requests with same first IP are rate limited
     const requestSameIP = createTestRequest('/api/test', {
@@ -262,7 +262,7 @@ describe('Rate Limiting', () => {
       ip: testIP, // Same first IP
     });
     const responseSameIP = await callRouteHandler(mockRateLimitedHandler, requestSameIP);
-    assertResponseStatus(responseSameIP, 429);
+    await await assertResponseStatus(responseSameIP, 429);
   });
 
   it('should include all required rate limit headers', async () => {
@@ -277,7 +277,7 @@ describe('Rate Limiting', () => {
     });
 
     const response = await callRouteHandler(mockRateLimitedHandler, request);
-    assertResponseStatus(response, 200);
+    await assertResponseStatus(response, 200);
 
     // Verify all rate limit headers are present
     const headers = response.headers;

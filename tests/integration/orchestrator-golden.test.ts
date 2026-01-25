@@ -374,14 +374,14 @@ describe('Orchestrator Golden Path', () => {
       type: 'text/plain',
     });
 
-    assertResponseStatus(uploadResponse, 201);
+    await assertResponseStatus(uploadResponse, 201);
     const uploadData = await parseJsonResponse(uploadResponse);
     expect(uploadData.success).toBe(true);
     expect(uploadData.documentId).toBeDefined();
 
     // 3. Run orchestrator
     const runResponse = await callCaseRun(mockOrchestratorHandler, caseId);
-    assertResponseStatus(runResponse, 200);
+    await assertResponseStatus(runResponse, 200);
     const runData = await parseJsonResponse(runResponse);
     expect(runData.success).toBe(true);
     expect(runData.stepsCompleted).toBe(6);
@@ -460,7 +460,7 @@ describe('Orchestrator Golden Path', () => {
     });
 
     const runResponse = await callCaseRun(mockOrchestratorHandler, caseId);
-    assertResponseStatus(runResponse, 400);
+    await assertResponseStatus(runResponse, 400);
     const runData = await parseJsonResponse(runResponse);
     expect(runData.error).toContain('No documents uploaded');
   });
@@ -475,7 +475,7 @@ describe('Orchestrator Golden Path', () => {
     const fakeCaseId = 'non-existent-case-id';
 
     const runResponse = await callCaseRun(mockOrchestratorHandler, fakeCaseId);
-    assertResponseStatus(runResponse, 404);
+    await assertResponseStatus(runResponse, 404);
     const runData = await parseJsonResponse(runResponse);
     expect(runData.error).toContain('Case not found');
   });

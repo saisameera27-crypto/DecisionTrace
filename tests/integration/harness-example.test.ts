@@ -115,7 +115,7 @@ describe('Integration Test Harness Examples', () => {
         type: 'text/plain',
       });
 
-      assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data).toHaveProperty('documentId');
       expect(data.fileName).toBe('test-document.txt');
@@ -128,7 +128,7 @@ describe('Integration Test Harness Examples', () => {
         resumeFromStep: 4,
       });
 
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
       const data = await parseJsonResponse(response);
       expect(data.caseId).toBe(id);
       expect(data.status).toBe('processing');
@@ -139,7 +139,7 @@ describe('Integration Test Harness Examples', () => {
       
       const response = await callCaseReport(mockCaseReportHandler, id);
 
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
       const data = await parseJsonResponse(response);
       expect(data.caseId).toBe(id);
       expect(data.report).toBeDefined();
@@ -150,7 +150,7 @@ describe('Integration Test Harness Examples', () => {
       
       const { response, stream } = await callCaseEvents(mockCaseEventsHandler, id);
 
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
       const isValidStream = await validateStreamResponse(stream);
       expect(isValidStream).toBe(true);
     });
@@ -162,7 +162,7 @@ describe('Integration Test Harness Examples', () => {
       
       const response = await callPublicCase(mockPublicCaseHandler, slug);
 
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
       const data = await parseJsonResponse(response);
       expect(data.slug).toBe('public-test-case');
       expect(data.public).toBe(true);
@@ -181,19 +181,19 @@ describe('Integration Test Harness Examples', () => {
         name: 'workflow-doc.txt',
         content: 'Workflow test content',
       });
-      assertResponseStatus(uploadResponse, 201);
+      await assertResponseStatus(uploadResponse, 201);
 
       // 3. Run case analysis
       const runResponse = await callCaseRun(mockCaseRunHandler, id);
-      assertResponseStatus(runResponse, 200);
+      await assertResponseStatus(runResponse, 200);
 
       // 4. Get report
       const reportResponse = await callCaseReport(mockCaseReportHandler, id);
-      assertResponseStatus(reportResponse, 200);
+      await assertResponseStatus(reportResponse, 200);
 
       // 5. Access public case
       const publicResponse = await callPublicCase(mockPublicCaseHandler, slug);
-      assertResponseStatus(publicResponse, 200);
+      await assertResponseStatus(publicResponse, 200);
     });
   });
 });

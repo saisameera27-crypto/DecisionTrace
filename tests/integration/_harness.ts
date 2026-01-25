@@ -489,43 +489,55 @@ export async function parseJsonResponse(response: Response): Promise<any> {
 
 /**
  * Helper to assert response status with detailed error output
- * Works with real Response objects - prints response text/json on failures
- * Never replaces the Response object
+ * Works with real Response objects - reads response text/json on failures
+ * Clones response to avoid consuming the original (tests can still use it)
+ * Includes formatted response body in error message
  */
-export function assertResponseStatus(
+export async function await assertResponseStatus(
   response: Response,
   expectedStatus: number
-): void {
+): Promise<void> {
   const status = response.status;
   if (status !== expectedStatus) {
-    // Print response JSON/text for debugging
-    // Clone response to avoid consuming the body
+    // Clone response to safely read body without consuming original
     const cloned = response.clone();
     
-    parseJsonResponse(cloned).then((json: any) => {
-      console.error('Response status mismatch:');
-      console.error(`  Expected: ${expectedStatus}`);
-      console.error(`  Got: ${status}`);
-      console.error('Response body:', JSON.stringify(json, null, 2));
-    }).catch(async () => {
-      // If JSON parsing fails, try to get text
-      try {
-        const text = await cloned.text();
-        console.error('Response status mismatch:');
-        console.error(`  Expected: ${expectedStatus}`);
-        console.error(`  Got: ${status}`);
-        console.error('Response body (text):', text);
-      } catch {
-        console.error('Response status mismatch:');
-        console.error(`  Expected: ${expectedStatus}`);
-        console.error(`  Got: ${status}`);
-        console.error('Response body: (unable to read)');
-      }
-    });
+    let responseBody: string = '';
+    let isJSON = false;
     
-    throw new Error(
-      `Expected status ${expectedStatus}, got ${status}`
-    );
+    try {
+      // Check Content-Type header to determine if JSON
+      const contentType = response.headers.get('content-type') || '';
+      isJSON = contentType.includes('application/json');
+      
+      // Read response text
+      const text = await cloned.text();
+      responseBody = text;
+      
+      // If JSON, try to parse and pretty-print
+      if (isJSON && text) {
+        try {
+          const json = JSON.parse(text);
+          responseBody = JSON.stringify(json, null, 2);
+        } catch {
+          // If JSON parsing fails, use raw text
+          responseBody = text;
+        }
+      }
+    } catch (error: any) {
+      // If reading fails, include error in message
+      responseBody = `(unable to read response body: ${error.message})`;
+    }
+    
+    // Build detailed error message
+    const errorMessage = [
+      `Expected status ${expectedStatus}, got ${status}`,
+      '',
+      'Response body:',
+      isJSON ? responseBody : `(${response.headers.get('content-type') || 'unknown type'}) ${responseBody}`,
+    ].join('\n');
+    
+    throw new Error(errorMessage);
   }
 }
 

@@ -392,7 +392,7 @@ describe('Public Links and Report Loading', () => {
 
       // 4. Call report loader
       const response = await callCaseReport(mockReportLoaderHandler, caseId);
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
 
       const viewModel = await parseJsonResponse(response);
 
@@ -469,7 +469,7 @@ describe('Public Links and Report Loading', () => {
         params: { id: caseId },
       });
 
-      assertResponseStatus(shareResponse, 201);
+      await assertResponseStatus(shareResponse, 201);
       const shareData = await parseJsonResponse(shareResponse);
 
       // 3. Verify share link data
@@ -564,7 +564,7 @@ describe('Public Links and Report Loading', () => {
 
       // 4. Call public case endpoint
       const response = await callPublicCase(mockPublicCaseHandler, share.slug);
-      assertResponseStatus(response, 200);
+      await assertResponseStatus(response, 200);
 
       const publicData = await parseJsonResponse(response);
 
@@ -623,7 +623,7 @@ describe('Public Links and Report Loading', () => {
 
       // 3. Call public case endpoint
       const response = await callPublicCase(mockPublicCaseHandler, share.slug);
-      assertResponseStatus(response, 410);
+      await assertResponseStatus(response, 410);
 
       const errorData = await parseJsonResponse(response);
 

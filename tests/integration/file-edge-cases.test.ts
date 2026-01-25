@@ -301,7 +301,7 @@ describe('File Processing Edge Cases', () => {
         type: 'application/pdf',
       });
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toContain('Password-protected');
@@ -346,7 +346,7 @@ describe('File Processing Edge Cases', () => {
       });
       
       // Should return 400, not 500
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toContain('corrupted');
@@ -390,7 +390,7 @@ describe('File Processing Edge Cases', () => {
         type: 'application/pdf',
       });
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.code).toBe('CORRUPTED_PDF');
@@ -416,7 +416,7 @@ describe('File Processing Edge Cases', () => {
       });
       
       // Should allow upload but warn about OCR requirement
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -443,7 +443,7 @@ describe('File Processing Edge Cases', () => {
       });
       
       // Should succeed with warning
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -466,7 +466,7 @@ describe('File Processing Edge Cases', () => {
         type: 'application/pdf',
       });
       
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);

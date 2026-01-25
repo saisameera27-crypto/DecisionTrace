@@ -231,7 +231,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -262,7 +262,7 @@ describe('File Upload Validation', () => {
         type: 'application/x-msdownload',
       });
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -280,7 +280,7 @@ describe('File Upload Validation', () => {
         type: 'application/x-msdownload',
       });
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       expect(data.error).toContain('extension');
     });
@@ -295,7 +295,7 @@ describe('File Upload Validation', () => {
         type: 'application/pdf', // Wrong MIME type for .txt
       });
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -313,7 +313,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain', // Wrong MIME type for .pdf
       });
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       expect(data.error).toContain('MIME type');
     });
@@ -330,7 +330,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -356,7 +356,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.success).toBe(true);
     });
@@ -372,7 +372,7 @@ describe('File Upload Validation', () => {
       
       const response = await callFilesUpload(mockUploadHandler, files);
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -397,7 +397,7 @@ describe('File Upload Validation', () => {
       
       const response = await callFilesUpload(mockUploadHandler, files);
       
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -418,7 +418,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.artifacts.length).toBe(1);
     });
@@ -429,7 +429,7 @@ describe('File Upload Validation', () => {
       const request = createMultipartRequest('/api/files/upload', []);
       const response = await mockUploadHandler(request);
       
-      assertResponseStatus(response, 400);
+      await await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       expect(data.error).toContain('No files provided');
     });
@@ -456,7 +456,7 @@ describe('File Upload Validation', () => {
       
       const response = await callFilesUpload(mockUploadHandler, files);
       
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.artifacts.length).toBe(2);
       expect(mockGeminiFilesClient.uploadFile).toHaveBeenCalledTimes(2);
@@ -487,7 +487,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      assertResponseStatus(response, 201);
+      await await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.artifacts).toBeDefined();
       expect(data.artifacts.length).toBe(1);

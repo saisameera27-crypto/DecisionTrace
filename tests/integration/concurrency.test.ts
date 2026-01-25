@@ -377,7 +377,7 @@ describe('Concurrency Guard', () => {
       type: 'text/plain',
     });
 
-    assertResponseStatus(uploadResponse, 201);
+    await assertResponseStatus(uploadResponse, 201);
 
     // 3. Set up pause before starting the run
     pauseGeminiCall(caseId, 'step1');
@@ -407,7 +407,7 @@ describe('Concurrency Guard', () => {
 
     // 4. Immediately call run again (should get 409 Conflict)
     const run2Response = await callCaseRun(mockConcurrentOrchestratorHandler, caseId);
-    assertResponseStatus(run2Response, 409);
+    await assertResponseStatus(run2Response, 409);
     
     const run2Data = await parseJsonResponse(run2Response);
     expect(run2Data.error).toContain('already in progress');
@@ -423,7 +423,7 @@ describe('Concurrency Guard', () => {
 
     // Wait for first run to complete
     const run1Response = await run1Promise;
-    assertResponseStatus(run1Response, 200);
+    await assertResponseStatus(run1Response, 200);
     const run1Data = await parseJsonResponse(run1Response);
     expect(run1Data.success).toBe(true);
     expect(run1Data.runId).toBe(firstRunId);
@@ -515,11 +515,11 @@ describe('Concurrency Guard', () => {
       type: 'text/plain',
     });
 
-    assertResponseStatus(uploadResponse, 201);
+    await assertResponseStatus(uploadResponse, 201);
 
     // 3. Run orchestrator (completes normally)
     const run1Response = await callCaseRun(mockConcurrentOrchestratorHandler, caseId);
-    assertResponseStatus(run1Response, 200);
+    await assertResponseStatus(run1Response, 200);
     const run1Data = await parseJsonResponse(run1Response);
     expect(run1Data.success).toBe(true);
 

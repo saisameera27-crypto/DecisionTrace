@@ -533,11 +533,11 @@ describe('Orchestrator Reliability', () => {
         type: 'text/plain',
       });
 
-      assertResponseStatus(uploadResponse, 201);
+      await assertResponseStatus(uploadResponse, 201);
 
       // 3. Run orchestrator first time
       const run1Response = await callCaseRun(mockReliableOrchestratorHandler, caseId);
-      assertResponseStatus(run1Response, 200);
+      await assertResponseStatus(run1Response, 200);
       const run1Data = await parseJsonResponse(run1Response);
       expect(run1Data.success).toBe(true);
       expect(run1Data.stepsCompleted).toBe(6);
@@ -556,7 +556,7 @@ describe('Orchestrator Reliability', () => {
 
       // 4. Run orchestrator second time (idempotency check)
       const run2Response = await callCaseRun(mockReliableOrchestratorHandler, caseId);
-      assertResponseStatus(run2Response, 200);
+      await assertResponseStatus(run2Response, 200);
       const run2Data = await parseJsonResponse(run2Response);
       expect(run2Data.success).toBe(true);
       expect(run2Data.stepsCompleted).toBe(0); // No new steps completed
@@ -654,14 +654,14 @@ describe('Orchestrator Reliability', () => {
         type: 'text/plain',
       });
 
-      assertResponseStatus(uploadResponse, 201);
+      await assertResponseStatus(uploadResponse, 201);
 
       // 3. Inject failure at step 3
       process.env.GEMINI_MOCK_FAIL_STEP = '3';
 
       // Run orchestrator - should fail at step 3
       const run1Response = await callCaseRun(mockReliableOrchestratorHandler, caseId);
-      assertResponseStatus(run1Response, 200);
+      await assertResponseStatus(run1Response, 200);
       const run1Data = await parseJsonResponse(run1Response);
       expect(run1Data.success).toBe(false);
       expect(run1Data.failedAtStep).toBe(3);
@@ -691,7 +691,7 @@ describe('Orchestrator Reliability', () => {
       const run2Response = await callCaseRun(mockReliableOrchestratorHandler, caseId, {
         resumeFromStep: 3,
       });
-      assertResponseStatus(run2Response, 200);
+      await assertResponseStatus(run2Response, 200);
       const run2Data = await parseJsonResponse(run2Response);
       expect(run2Data.success).toBe(true);
       expect(run2Data.stepsCompleted).toBe(4); // Steps 3-6 completed
@@ -797,14 +797,14 @@ describe('Orchestrator Reliability', () => {
         type: 'text/plain',
       });
 
-      assertResponseStatus(uploadResponse, 201);
+      await assertResponseStatus(uploadResponse, 201);
 
       // 3. Inject 429 errors on step 2 (first 2 attempts)
       process.env.GEMINI_MOCK_INJECT_429 = 'true';
 
       // Run orchestrator - should retry step 2 and succeed
       const runResponse = await callCaseRun(mockReliableOrchestratorHandler, caseId);
-      assertResponseStatus(runResponse, 200);
+      await assertResponseStatus(runResponse, 200);
       const runData = await parseJsonResponse(runResponse);
       expect(runData.success).toBe(true);
       expect(runData.stepsCompleted).toBe(6);
