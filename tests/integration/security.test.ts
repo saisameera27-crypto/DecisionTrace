@@ -21,8 +21,8 @@ import {
   createTestRequest,
 } from './_harness';
 
-import { forbidden, unauthorized, badRequest } from '../../lib/errors';
-import { toErrorResponse } from '../../lib/api-error';
+import { forbidden, unauthorized, badRequest } from '@/lib/errors';
+import { toErrorResponse } from '@/lib/api-error';
 
 /**
  * Mock handler that should NOT expose API keys

@@ -15,7 +15,7 @@ import {
   getFreeModeModel,
   getFreeModeThinkingLevel,
   resetRateLimits,
-} from '../../lib/free-tier-limits';
+} from '@/lib/free-tier-limits';
 
 describe('Free Tier Limits', () => {
   beforeEach(() => {

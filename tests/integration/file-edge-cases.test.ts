@@ -17,7 +17,7 @@ import {
   parseJsonResponse,
   assertResponseStatus,
 } from './_harness';
-import { toErrorResponse } from '../../lib/api-error';
+import { toErrorResponse } from '@/lib/api-error';
 
 // Mock Next.js types
 type NextRequest = any;

@@ -15,7 +15,7 @@ import {
   step6Schema,
   formatZodError,
   validateWithSchema,
-} from '../../lib/schema-validators';
+} from '@/lib/schema-validators';
 
 describe('Step 1 Schema Validator', () => {
   it('should validate valid fixture passes', () => {

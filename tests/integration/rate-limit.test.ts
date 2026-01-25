@@ -12,7 +12,7 @@ import {
   assertResponseStatus,
 } from './_harness';
 
-import { getClientIP, checkRateLimit, resetRateLimitStore } from '../../lib/rate-limit';
+import { getClientIP, checkRateLimit, resetRateLimitStore } from '@/lib/rate-limit';
 
 // Rate limit configuration
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute

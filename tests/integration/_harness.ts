@@ -58,7 +58,7 @@ export function getTestPrismaClient(): any {
       }
       
       // Use the Prisma client factory
-      const { getPrismaClient } = require('../../lib/prisma');
+      const { getPrismaClient } = require('@/lib/prisma');
       prisma = getPrismaClient();
     } catch (error: any) {
       // Prisma not installed or configuration error - return null

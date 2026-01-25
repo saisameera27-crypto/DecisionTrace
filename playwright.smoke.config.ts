@@ -46,7 +46,9 @@ export default defineConfig({
     headless: !!process.env.CI,
   },
 
-  /* Configure projects - Chromium only for smoke tests */
+  /* Configure projects - Chromium only for smoke tests to reduce CI flakiness */
+  /* Firefox, WebKit, and mobile projects are disabled for smoke tests */
+  /* Keep them in playwright.config.js for full test suite */
   projects: [
     {
       name: 'chromium',

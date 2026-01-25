@@ -10,7 +10,7 @@ import {
   normalizeDecisionData,
   normalizeStep2Response,
   NormalizedDecisionView,
-} from '../../lib/report-normalizer';
+} from '@/lib/report-normalizer';
 
 describe('Report Normalizer', () => {
   describe('snake_case normalization', () => {

@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { retryWithBackoff, retryWithBackoffSafe } from '../../lib/retry';
+import { retryWithBackoff, retryWithBackoffSafe } from '@/lib/retry';
 
 describe('Retry Logic', () => {
   beforeEach(() => {

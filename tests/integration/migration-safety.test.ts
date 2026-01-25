@@ -155,7 +155,7 @@ describe('Database Migration Safety Tests', () => {
       }
 
       // Use the Prisma client factory with SQLite schema
-      const { getPrismaClient } = await import('../../lib/prisma');
+      const { getPrismaClient } = await import('@/lib/prisma');
       const prisma = getPrismaClient();
 
       try {

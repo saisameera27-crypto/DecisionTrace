@@ -17,7 +17,7 @@ import {
   step5Schema,
   step6Schema,
   validateWithSchema,
-} from '../../lib/schema-validators';
+} from '@/lib/schema-validators';
 
 // Current schema version
 const CURRENT_SCHEMA_VERSION = '1.0.0';

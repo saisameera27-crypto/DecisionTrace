@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { callGeminiAPI, uploadFileToGemini, GeminiCallOptions } from '../../lib/gemini';
+import { callGeminiAPI, uploadFileToGemini, GeminiCallOptions } from '@/lib/gemini';
 import * as fs from 'fs';
 import * as path from 'path';
 

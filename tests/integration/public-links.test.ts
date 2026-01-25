@@ -48,7 +48,7 @@ import {
   parseJsonResponse,
   assertResponseStatus,
 } from './_harness';
-import { normalizeDecisionData } from '../../lib/report-normalizer';
+import { normalizeDecisionData } from '@/lib/report-normalizer';
 
 // Ensure test mode is set
 process.env.GEMINI_TEST_MODE = 'mock';

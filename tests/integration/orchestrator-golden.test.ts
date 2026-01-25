@@ -48,7 +48,7 @@ import {
   parseJsonResponse,
   assertResponseStatus,
 } from './_harness';
-import { callGeminiAPI } from '../../lib/gemini';
+import { callGeminiAPI } from '@/lib/gemini';
 
 // Ensure test mode is set
 process.env.GEMINI_TEST_MODE = 'mock';
