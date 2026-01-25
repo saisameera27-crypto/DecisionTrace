@@ -4,8 +4,21 @@ import { getPrismaClient } from '../../../../lib/prisma';
 /**
  * Demo: Load Sample Case
  * Creates a pre-populated sample case with completed report for demo/testing
+ * Allowed in test/CI mode or when DEMO_MODE is enabled
  */
 export async function POST() {
+  // Allow in test/CI mode or when DEMO_MODE is enabled
+  const isTestMode = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
+  const isDemoMode = process.env.DEMO_MODE === 'true';
+  
+  if (!isTestMode && !isDemoMode) {
+    return NextResponse.json({
+      success: false,
+      error: 'Demo endpoint not available',
+      message: 'This endpoint is only available in test/CI mode or when DEMO_MODE is enabled',
+    }, { status: 403 });
+  }
+
   try {
     const prisma = getPrismaClient();
 
@@ -52,15 +65,6 @@ This decision involved launching a new product line in Q2 2024. The decision was
             durationMs: 2000,
           },
         },
-        decision: {
-          create: {
-            decisionTitle: 'Q2 2024 Product Launch',
-            decisionDate: '2024-03-15',
-            decisionMaker: 'Sarah Chen',
-            decisionStatus: 'APPROVED',
-            decisionRationale: 'Strong market demand and available resources support this launch timeline.',
-          },
-        },
         steps: {
           createMany: [
             { stepNumber: 1, status: 'completed', stepName: 'Document Processing' },
@@ -74,7 +78,6 @@ This decision involved launching a new product line in Q2 2024. The decision was
       },
       include: {
         report: true,
-        decision: true,
         steps: true,
       },
     });
