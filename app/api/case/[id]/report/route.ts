@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getPrismaClient } from '../../../../lib/prisma';
-import { normalizeDecisionData } from '../../../../lib/report-normalizer';
+import { getPrismaClient } from '@/lib/prisma';
+import { normalizeDecisionData } from '@/lib/report-normalizer';
 
 /**
  * Get case report
@@ -67,7 +67,7 @@ export async function GET(
     // Extract decision data from step 2 (optional - don't fail if missing)
     let decision = null;
     try {
-      const step2 = case_.steps.find((s) => s.stepNumber === 2);
+      const step2 = case_.steps.find((s: { stepNumber: number }) => s.stepNumber === 2);
       if (step2 && step2.data) {
         decision = normalizeDecisionData(JSON.parse(step2.data));
       }
