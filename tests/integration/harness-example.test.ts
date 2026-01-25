@@ -22,11 +22,35 @@ import {
 
 // Mock route handlers (replace with actual imports when routes exist)
 const mockFilesUploadHandler = async (req: any) => {
-  const body = await req.json();
-  return new Response(JSON.stringify({
-    documentId: 'doc_123',
-    fileName: body.fileName,
-  }), { status: 201 });
+  // Handle FormData request (not JSON)
+  try {
+    const formData = await req.formData();
+    const files = formData.getAll('file') as File[];
+    
+    if (files.length === 0) {
+      return new Response(JSON.stringify({ error: 'No files provided' }), { 
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    const file = files[0];
+    return new Response(JSON.stringify({
+      documentId: 'doc_123',
+      fileName: file.name,
+    }), { 
+      status: 201,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (error: any) {
+    return new Response(JSON.stringify({ 
+      error: 'Failed to process upload',
+      message: error.message 
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 };
 
 const mockCaseRunHandler = async (req: any, context: any) => {
