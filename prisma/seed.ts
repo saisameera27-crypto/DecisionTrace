@@ -1,6 +1,14 @@
 /**
  * Prisma Seed Script for E2E Tests
  * Seeds the database with demo cases for testing
+ * 
+ * Aligned with report/share APIs:
+ * - Case with status "completed"
+ * - Report row with ALL required columns used by report loader
+ * - CaseStep rows for steps 1–6 (step 2 includes decision data)
+ * - Public slug (Share) for easy testing
+ * 
+ * Deterministic and runnable multiple times (idempotent).
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -10,7 +18,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Upsert the demo case with completed report
+  // 1. Upsert Case (deterministic slug)
   const demoCase = await prisma.case.upsert({
     where: { slug: 'demo-sample-case' },
     update: {
@@ -24,7 +32,7 @@ async function main() {
     },
   });
 
-  // Upsert the report for the case
+  // 2. Upsert Report (explicit, not nested - all required columns)
   await prisma.report.upsert({
     where: { caseId: demoCase.id },
     update: {
@@ -100,24 +108,79 @@ This decision involved launching a new product line in Q2 2024. The decision was
     },
   });
 
-  // Delete existing steps for idempotency
+  // 3. Delete existing steps for idempotency
   await prisma.caseStep.deleteMany({
     where: { caseId: demoCase.id },
   });
 
-  // Insert 6 steps
+  // 4. Create steps 1–6 via createMany (step 2 includes decision data for report API)
+  const step2DecisionData = {
+    caseId: demoCase.id,
+    documentId: 'demo-doc-1',
+    decisionTitle: 'Q2 2024 Product Launch',
+    decisionDate: '2024-03-15',
+    decisionMaker: 'Sarah Chen',
+    decisionMakerRole: 'Product Manager',
+    decisionStatus: 'APPROVED',
+    decisionSummary: 'Decision to launch new product line in Q2 2024',
+    context: {
+      marketConditions: 'favorable',
+      resourceAvailability: 'confirmed',
+    },
+    rationale: [
+      'Market research showing strong demand',
+      'Financial projections indicating profitability',
+      'Resource allocation plan approved',
+    ],
+    risksIdentified: [
+      'Market competition',
+      'Supply chain delays',
+      'Resource constraints',
+    ],
+    mitigationStrategies: [
+      'Competitive analysis completed',
+      'Supplier contracts secured',
+      'Resource plan approved',
+    ],
+    expectedOutcomes: {
+      revenue: 'positive',
+      marketShare: 'increased',
+    },
+    confidenceScore: 0.85,
+    extractedAt: new Date().toISOString(),
+  };
+
   await prisma.caseStep.createMany({
     data: [
-      { caseId: demoCase.id, stepNumber: 1, status: 'completed' },
-      { caseId: demoCase.id, stepNumber: 2, status: 'completed' },
-      { caseId: demoCase.id, stepNumber: 3, status: 'completed' },
-      { caseId: demoCase.id, stepNumber: 4, status: 'completed' },
-      { caseId: demoCase.id, stepNumber: 5, status: 'completed' },
-      { caseId: demoCase.id, stepNumber: 6, status: 'completed' },
+      { caseId: demoCase.id, stepNumber: 1, status: 'completed', data: JSON.stringify({ step: 1 }) },
+      { caseId: demoCase.id, stepNumber: 2, status: 'completed', data: JSON.stringify(step2DecisionData) },
+      { caseId: demoCase.id, stepNumber: 3, status: 'completed', data: JSON.stringify({ step: 3 }) },
+      { caseId: demoCase.id, stepNumber: 4, status: 'completed', data: JSON.stringify({ step: 4 }) },
+      { caseId: demoCase.id, stepNumber: 5, status: 'completed', data: JSON.stringify({ step: 5 }) },
+      { caseId: demoCase.id, stepNumber: 6, status: 'completed', data: JSON.stringify({ step: 6 }) },
     ],
   });
 
+  // 5. Create public slug (Share) - optional but preferred for testing
+  // Delete existing shares for this case to ensure idempotency
+  await prisma.share.deleteMany({
+    where: { caseId: demoCase.id },
+  });
+
+  // Create a deterministic share slug for demo/testing
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 365); // Expires in 1 year
+
+  await prisma.share.create({
+    data: {
+      caseId: demoCase.id,
+      slug: 'demo-sample-case-share',
+      expiresAt,
+    },
+  });
+
   console.log('✅ Created/updated demo case:', demoCase.id);
+  console.log('✅ Created demo share slug: demo-sample-case-share');
   console.log('🌱 Seeding complete!');
 }
 
