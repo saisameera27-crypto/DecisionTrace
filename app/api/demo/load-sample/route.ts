@@ -4,15 +4,20 @@ import { getPrismaClient } from '../../../../lib/prisma';
 /**
  * Demo: Load Sample Case
  * Creates a pre-populated sample case with completed report for demo/testing
- * Allowed in test/CI mode or when DEMO_MODE is enabled
- * CSRF/public-write protection exempted in test/mock mode
+ * 
+ * Security: In test/mock mode (NODE_ENV === "test" OR GEMINI_TEST_MODE === "mock"),
+ * this endpoint skips all auth, CSRF, and write protection checks.
+ * 
+ * CI-safe: Uses getPrismaClient() factory to respect DATABASE_URL and PRISMA_SCHEMA_TARGET.
+ * Always returns structured JSON responses, never throws uncaught errors.
  */
 export async function POST() {
-  // Allow in test/CI mode or when DEMO_MODE is enabled
+  // Check if endpoint is enabled (test/mock mode or DEMO_MODE)
   const isTestMode = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
   const isMockMode = process.env.GEMINI_TEST_MODE === 'mock';
   const isDemoMode = process.env.DEMO_MODE === 'true';
   
+  // In test/mock mode: skip all auth, CSRF, and write protection checks
   if (!isTestMode && !isMockMode && !isDemoMode) {
     return NextResponse.json({
       code: 'DEMO_ENDPOINT_DISABLED',
@@ -20,7 +25,9 @@ export async function POST() {
     }, { status: 403 });
   }
 
+  // Wrap entire handler in try/catch to prevent uncaught errors
   try {
+    // Use Prisma client factory (respects DATABASE_URL and PRISMA_SCHEMA_TARGET)
     const prisma = getPrismaClient();
 
     // Create case
@@ -121,18 +128,16 @@ This decision involved launching a new product line in Q2 2024. The decision was
       ],
     });
 
+    // Always return 200 with { caseId } when demo seed exists
     return NextResponse.json({
-      success: true,
       caseId: sampleCase.id,
-      slug: sampleCase.slug,
-      title: sampleCase.title,
-      status: sampleCase.status,
     }, { status: 200 });
   } catch (error: any) {
+    // On error, return structured JSON response (never throw uncaught errors)
     console.error('Error loading sample case:', error);
-    return NextResponse.json({
-      code: 'DEMO_LOAD_FAILED',
-      message: String(error?.message || error || 'Unknown error'),
-    }, { status: 500 });
+    return NextResponse.json(
+      { code: 'DEMO_LOAD_FAILED', message: String(error) },
+      { status: 500 }
+    );
   }
 }
