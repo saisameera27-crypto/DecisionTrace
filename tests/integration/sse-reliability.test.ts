@@ -431,42 +431,52 @@ describe('SSE Reliability Tests', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle connection errors gracefully', (done: DoneCallback) => {
-      eventSource = new MockEventSource('/api/case/test-case-123/events');
-      
-      eventSource.onerror = () => {
-        // Error handler should be called
-        expect(eventSource?.readyState).not.toBe(1); // Not OPEN
-        done();
-      };
-      
-      // Simulate error
-      eventSource.simulateNetworkDrop();
+    it('should handle connection errors gracefully', async () => {
+      return new Promise<void>((resolve) => {
+        eventSource = new MockEventSource('/api/case/test-case-123/events');
+        
+        eventSource.onerror = () => {
+          // Error handler should be called
+          expect(eventSource?.readyState).not.toBe(1); // Not OPEN
+          resolve();
+        };
+        
+        // Simulate error
+        eventSource.simulateNetworkDrop();
+      });
     });
 
-    it('should attempt reconnection on error', (done: DoneCallback) => {
-      eventSource = new MockEventSource('/api/case/test-case-123/events');
-      let errorCount = 0;
-      
-      eventSource.onerror = () => {
-        errorCount++;
-        // Should attempt reconnection
-        if (errorCount === 1) {
-          setTimeout(() => {
-            if (eventSource) {
-              eventSource.simulateReconnect();
-              // After reconnect, should continue
-              setTimeout(() => {
-                if (eventSource?.readyState === 1) {
-                  done();
-                }
-              }, 100);
-            }
-          }, 50);
-        }
-      };
-      
-      eventSource.simulateNetworkDrop();
+    it('should attempt reconnection on error', async () => {
+      return new Promise<void>((resolve, reject) => {
+        eventSource = new MockEventSource('/api/case/test-case-123/events');
+        let errorCount = 0;
+        
+        eventSource.onerror = () => {
+          errorCount++;
+          // Should attempt reconnection
+          if (errorCount === 1) {
+            setTimeout(() => {
+              if (eventSource) {
+                eventSource.simulateReconnect();
+                // After reconnect, should continue
+                setTimeout(() => {
+                  if (eventSource?.readyState === 1) {
+                    resolve();
+                  } else {
+                    reject(new Error('EventSource not reconnected'));
+                  }
+                }, 100);
+              } else {
+                reject(new Error('EventSource was null'));
+              }
+            }, 50);
+          } else {
+            reject(new Error('Too many errors'));
+          }
+        };
+        
+        eventSource.simulateNetworkDrop();
+      });
     });
   });
 });

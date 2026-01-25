@@ -56,8 +56,9 @@ vi.mock('pdf-parse', () => ({
 
 /**
  * Enhanced upload handler with PDF validation
+ * Uses real Request/Response objects
  */
-async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse> {
+async function mockEnhancedUploadHandler(req: Request): Promise<Response> {
   try {
     // Try to get FormData - handle both direct access and method call
     let formData: FormData;
@@ -76,7 +77,10 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
     const files = formData.getAll('file') as File[];
     
     if (files.length === 0) {
-      return NextResponseClass.json({ error: 'No files provided' }, { status: 400 });
+      return new Response(
+        JSON.stringify({ error: 'No files provided' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
     }
     
     for (const file of files) {
@@ -119,13 +123,13 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
             }
           }
         } catch (error: any) {
-          return NextResponseClass.json(
-            {
+          return new Response(
+            JSON.stringify({
               error: 'Failed to read file content',
               code: 'PROCESSING_ERROR',
               message: error.message || 'Unknown error',
-            },
-            { status: 500 }
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
           );
         }
         
@@ -133,14 +137,14 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
         const isPasswordProtected = mockPDFParser.isPasswordProtected(buffer);
         
         if (isPasswordProtected) {
-          return NextResponseClass.json(
-            {
+          return new Response(
+            JSON.stringify({
               error: 'Password-protected PDFs are not supported',
               code: 'PASSWORD_PROTECTED',
               message: 'Password-protected PDFs are not supported',
               fileName: file.name,
-            },
-            { status: 400 }
+            }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
           );
         }
         
@@ -175,14 +179,14 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
           );
           
           if (isPasswordError) {
-            return NextResponseClass.json(
-              {
+            return new Response(
+              JSON.stringify({
                 error: 'Password-protected PDFs are not supported',
                 code: 'PASSWORD_PROTECTED',
                 message: 'Password-protected PDFs are not supported',
                 fileName: file.name,
-              },
-              { status: 400 }
+              }),
+              { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
           }
           
@@ -192,14 +196,14 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
               errorMessage.includes('Invalid PDF header') ||
               errorMessage.includes('corrupted') ||
               errorMessage.includes('malformed')) {
-            return NextResponseClass.json(
-              {
+            return new Response(
+              JSON.stringify({
                 error: 'PDF file appears to be corrupted or invalid',
                 code: 'CORRUPTED_PDF',
                 message: 'PDF file appears to be corrupted or invalid',
                 fileName: file.name,
-              },
-              { status: 400 }
+              }),
+              { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
           }
           
@@ -212,20 +216,23 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
         
         if (isScanned) {
           // Return a warning but allow upload
-          return NextResponseClass.json(
-            {
+          return new Response(
+            JSON.stringify({
               success: true,
               warning: 'PDF appears to be image-only (scanned document). OCR may be required.',
               code: 'SCANNED_DOCUMENT',
               fileName: file.name,
-            },
-            { status: 201 }
+            }),
+            { status: 201, headers: { 'Content-Type': 'application/json' } }
           );
         }
       }
     }
     
-    return NextResponseClass.json({ success: true }, { status: 201 });
+    return new Response(
+      JSON.stringify({ success: true }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
     const errorMessage = error.message || '';
     const errorString = String(error).toLowerCase();
@@ -251,24 +258,24 @@ async function mockEnhancedUploadHandler(req: NextRequest): Promise<NextResponse
     );
     
     if (isPasswordError) {
-      return NextResponseClass.json(
-        {
+      return new Response(
+        JSON.stringify({
           error: 'Password-protected PDFs are not supported',
           code: 'PASSWORD_PROTECTED',
           message: 'Password-protected PDFs are not supported',
-        },
-        { status: 400 }
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
     
     // Ensure errors are user-friendly, not stack traces
-    return NextResponseClass.json(
-      {
+    return new Response(
+      JSON.stringify({
         error: 'File processing failed',
         code: 'PROCESSING_ERROR',
         message: error.message || 'Unknown error',
-      },
-      { status: 500 }
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }

@@ -58,12 +58,11 @@ vi.mock('@/lib/gemini-files', () => ({
 /**
  * Mock upload handler that validates files and calls Gemini API
  * This simulates the actual /api/files/upload route handler
+ * Uses real Request/Response objects
  */
-async function mockUploadHandler(req: NextRequest): Promise<any> {
+async function mockUploadHandler(req: Request): Promise<Response> {
   try {
     // Extract files from request
-    // In Node.js test environment, FormData might not work as expected
-    // So we'll extract files directly from the request body if it's FormData
     let files: File[] = [];
     
     try {
@@ -77,8 +76,7 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
           });
         } else {
           // Fallback: iterate entries
-          const formDataEntries = (formData as any).entries ? (formData as any).entries() : [];
-          for (const [key, value] of formDataEntries) {
+          for (const [key, value] of formData.entries()) {
             if (key === 'file' && value instanceof File) {
               files.push(value);
             }
@@ -86,16 +84,9 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
         }
       }
     } catch (error) {
-      // If formData() fails, try to extract from body directly
-      const body = (req as any).body;
-      if (body instanceof FormData) {
-        // Manual extraction from FormData
-        const bodyEntries = (body as any).entries ? (body as any).entries() : [];
-        for (const [key, value] of bodyEntries) {
-          if (key === 'file' && value instanceof File) {
-            files.push(value);
-          }
-        }
+      // If formData() fails, try to extract from test metadata
+      if ((req as any).__testFiles) {
+        files = (req as any).__testFiles;
       }
     }
     
@@ -106,16 +97,16 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
     
     // Validation: Check file count
     if (files.length === 0) {
-      return NextResponseClass.json(
-        { error: 'No files provided' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'No files provided' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
     
     if (files.length > 5) {
-      return NextResponseClass.json(
-        { error: 'Maximum 5 files allowed' },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: 'Maximum 5 files allowed' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
     
@@ -125,9 +116,9 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
       // Validation: Check file size (10MB limit)
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
-        return NextResponseClass.json(
-          { error: `File ${file.name} exceeds 10MB limit` },
-          { status: 400 }
+        return new Response(
+          JSON.stringify({ error: `File ${file.name} exceeds 10MB limit` }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
         );
       }
       
@@ -136,9 +127,9 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
       const fileExtension = path.extname(file.name).toLowerCase();
       
       if (!allowedExtensions.includes(fileExtension)) {
-        return NextResponseClass.json(
-          { error: `File extension ${fileExtension} not allowed` },
-          { status: 400 }
+        return new Response(
+          JSON.stringify({ error: `File extension ${fileExtension} not allowed` }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
         );
       }
       
@@ -153,14 +144,35 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
       
       const expectedMimes = expectedMimeTypes[fileExtension] || [];
       if (expectedMimes.length > 0 && !expectedMimes.includes(file.type)) {
-        return NextResponseClass.json(
-          { error: `MIME type ${file.type} does not match extension ${fileExtension}` },
-          { status: 400 }
+        return new Response(
+          JSON.stringify({ error: `MIME type ${file.type} does not match extension ${fileExtension}` }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
         );
       }
       
       // Upload to Gemini Files API (mocked)
-      const fileContent = await file.arrayBuffer();
+      let fileContent: ArrayBuffer;
+      try {
+        if (typeof file.arrayBuffer === 'function') {
+          fileContent = await file.arrayBuffer();
+        } else {
+          // Fallback for test environment
+          const testContent = (file as any).content || (file as any).data;
+          if (testContent) {
+            fileContent = Buffer.isBuffer(testContent) 
+              ? testContent.buffer.slice(testContent.byteOffset, testContent.byteOffset + testContent.byteLength)
+              : new TextEncoder().encode(String(testContent)).buffer;
+          } else {
+            throw new Error('Cannot read file content');
+          }
+        }
+      } catch (error: any) {
+        return new Response(
+          JSON.stringify({ error: `Failed to read file ${file.name}: ${error.message}` }),
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
       const mockGeminiFile = {
         uri: `gs://gemini-files/test-${Date.now()}-${file.name}`,
         mimeType: file.type,
@@ -181,14 +193,17 @@ async function mockUploadHandler(req: NextRequest): Promise<any> {
       });
     }
     
-    return NextResponseClass.json({
-      success: true,
-      artifacts,
-    }, { status: 201 });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        artifacts,
+      }),
+      { status: 201, headers: { 'Content-Type': 'application/json' } }
+    );
   } catch (error: any) {
-    return NextResponseClass.json(
-      { error: error.message || 'Upload failed' },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: error.message || 'Upload failed' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }
