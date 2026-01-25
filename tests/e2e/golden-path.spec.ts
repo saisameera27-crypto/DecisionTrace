@@ -1,7 +1,7 @@
 /**
  * Golden Path E2E Test - Smoke Tests (Demo Mode)
- * Tests demo workflow: load sample case → verify report API → verify share API
- * Uses API calls only for deterministic, fast CI tests
+ * Tests demo workflow: load sample case → navigate to report → verify UI
+ * Validates user-visible behavior, not backend internals
  */
 
 import { test, expect } from './fixtures';
@@ -13,6 +13,7 @@ test.describe('Golden Path', () => {
     await page.waitForLoadState('networkidle');
 
     // Load sample case via API (demo mode - no Gemini calls)
+    // Note: When UI "Load Sample Case" button exists, replace this with UI click
     const response = await page.request.post('/api/demo/load-sample');
     if (!response.ok()) {
       console.log('STATUS:', response.status());
@@ -22,37 +23,37 @@ test.describe('Golden Path', () => {
     
     const data = await response.json();
     expect(data).toHaveProperty('caseId');
-    expect(data).toHaveProperty('slug');
-    expect(data.status).toBe('completed');
     const caseId = data.caseId;
 
-    // Verify report API returns data
-    const reportResponse = await page.request.get(`/api/case/${caseId}/report`);
-    if (!reportResponse.ok()) {
-      console.log('STATUS:', reportResponse.status());
-      console.log('BODY:', await reportResponse.text());
-    }
-    expect(reportResponse.ok()).toBeTruthy();
-    
-    const reportData = await reportResponse.json();
-    expect(reportData).toHaveProperty('caseId');
-    expect(reportData).toHaveProperty('report');
-    expect(reportData.report).toHaveProperty('finalNarrativeMarkdown');
-    expect(reportData.report.finalNarrativeMarkdown).toContain('Decision Trace Report');
-    expect(reportData).toHaveProperty('decision');
-    expect(reportData.decision.decisionTitle).toBe('Q2 2024 Product Launch');
-
-    // Navigate to case report page (if UI exists)
+    // Navigate to case report page (UI navigation)
     await page.goto(`/case/${caseId}`);
     await page.waitForLoadState('networkidle');
 
-    // Verify page loaded (check for any report-related content or fallback to API data)
+    // Verify report page renders (user-visible content)
+    // Check for report title or key content instead of API structure
     const pageContent = await page.content();
     expect(pageContent.length).toBeGreaterThan(0);
+    
+    // Verify report content is visible (user-visible text)
+    // Look for "Decision Trace Report" or decision title in rendered HTML
+    const hasReportContent = pageContent.includes('Decision Trace Report') || 
+                            pageContent.includes('Q2 2024 Product Launch') ||
+                            pageContent.includes('Product Launch');
+    expect(hasReportContent).toBeTruthy();
+
+    // TODO: When report tabs UI exists, verify tabs render:
+    // - await expect(page.locator('[data-testid="tab-overview"]')).toBeVisible();
+    // - await expect(page.locator('[data-testid="tab-evidence"]')).toBeVisible();
+    // - await expect(page.locator('[data-testid="tab-assumptions"]')).toBeVisible();
+    // - await expect(page.locator('[data-testid="tab-alternatives"]')).toBeVisible();
+    // - await expect(page.locator('[data-testid="tab-risks"]')).toBeVisible();
+    // - await expect(page.locator('[data-testid="tab-diagram"]')).toBeVisible();
+    // - await expect(page.locator('[data-testid="tab-export"]')).toBeVisible();
   });
 
   test('should create share link and access public case @smoke', async ({ page }) => {
     // Load sample case via API (demo mode)
+    // Note: When UI "Load Sample Case" button exists, replace this with UI click
     const response = await page.request.post('/api/demo/load-sample');
     if (!response.ok()) {
       console.log('STATUS:', response.status());
@@ -63,7 +64,17 @@ test.describe('Golden Path', () => {
     const data = await response.json();
     const caseId = data.caseId;
 
-    // Create share link via API
+    // Navigate to case report page
+    await page.goto(`/case/${caseId}`);
+    await page.waitForLoadState('networkidle');
+
+    // TODO: When Share button UI exists, replace API call with UI click:
+    // - await page.click('[data-testid="share-button"]');
+    // - await page.click('[data-testid="create-share-link"]');
+    // - await expect(page.locator('[data-testid="share-link-display"]')).toBeVisible();
+    // - const shareSlug = await page.locator('[data-testid="share-link-display"]').textContent();
+    
+    // For now, create share link via API (will be replaced with UI when available)
     const shareResponse = await page.request.post(`/api/case/${caseId}/share`, {
       data: { expirationDays: 30 },
     });
@@ -77,27 +88,24 @@ test.describe('Golden Path', () => {
     expect(shareData).toHaveProperty('slug');
     const shareSlug = shareData.slug;
 
-    // Verify public case endpoint returns data
-    const publicResponse = await page.request.get(`/api/public/case/${shareSlug}`);
-    if (!publicResponse.ok()) {
-      console.log('STATUS:', publicResponse.status());
-      console.log('BODY:', await publicResponse.text());
-    }
-    expect(publicResponse.ok()).toBeTruthy();
-    
-    const publicData = await publicResponse.json();
-    expect(publicData).toHaveProperty('caseId');
-    expect(publicData).toHaveProperty('report');
-    expect(publicData.report).toHaveProperty('finalNarrativeMarkdown');
-    expect(publicData).toHaveProperty('decision');
-    expect(publicData.decision.decisionTitle).toBe('Q2 2024 Product Launch');
-
-    // Navigate to public case page (if UI exists)
+    // Navigate to public case page (UI navigation)
     await page.goto(`/public/case/${shareSlug}`);
     await page.waitForLoadState('networkidle');
 
-    // Verify page loaded (check for any content)
+    // Verify public case page renders (user-visible content)
     const pageContent = await page.content();
     expect(pageContent.length).toBeGreaterThan(0);
+    
+    // Verify public report content is visible (user-visible text)
+    // Look for report content instead of checking API structure
+    const hasPublicReportContent = pageContent.includes('Decision Trace Report') || 
+                                  pageContent.includes('Q2 2024 Product Launch') ||
+                                  pageContent.includes('Product Launch');
+    expect(hasPublicReportContent).toBeTruthy();
+
+    // TODO: When public report UI exists, verify read-only indicators:
+    // - await expect(page.locator('[data-testid="public-report-root"]')).toBeVisible();
+    // - await expect(page.locator('text=Read-only')).toBeVisible();
+    // - Verify Share button is NOT visible on public pages
   });
 });
