@@ -146,7 +146,11 @@ describe('Security Regression Tests', () => {
       const response = await callRouteHandler(mockSecureHandler, req);
       
       const headers = response.headers;
-      const headerKeys = Array.from(headers.keys());
+      // Use entries() to get header keys in a type-safe way
+      const headerKeys: string[] = [];
+      headers.forEach((value, key) => {
+        headerKeys.push(key.toLowerCase());
+      });
       
       // Check common header names that might leak API keys
       const suspiciousHeaders = [
