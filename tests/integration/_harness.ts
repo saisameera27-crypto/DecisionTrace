@@ -491,54 +491,78 @@ export async function parseJsonResponse(response: Response): Promise<any> {
  * Helper to assert response status with detailed error output
  * Works with real Response objects - reads response text/json on failures
  * Clones response to avoid consuming the original (tests can still use it)
- * Includes formatted response body in error message
+ * Includes formatted response body and headers in error message
+ * 
+ * @param res - The Response object to check
+ * @param expected - Expected status code(s) - can be a single number or array of numbers
+ * @param context - Optional context string to include in error message
  */
-export async function await assertResponseStatus(
-  response: Response,
-  expectedStatus: number
+export async function assertResponseStatus(
+  res: Response,
+  expected: number | number[],
+  context?: string
 ): Promise<void> {
-  const status = response.status;
-  if (status !== expectedStatus) {
-    // Clone response to safely read body without consuming original
-    const cloned = response.clone();
-    
-    let responseBody: string = '';
-    let isJSON = false;
-    
-    try {
-      // Check Content-Type header to determine if JSON
-      const contentType = response.headers.get('content-type') || '';
-      isJSON = contentType.includes('application/json');
-      
-      // Read response text
-      const text = await cloned.text();
-      responseBody = text;
-      
-      // If JSON, try to parse and pretty-print
-      if (isJSON && text) {
-        try {
-          const json = JSON.parse(text);
-          responseBody = JSON.stringify(json, null, 2);
-        } catch {
-          // If JSON parsing fails, use raw text
-          responseBody = text;
-        }
-      }
-    } catch (error: any) {
-      // If reading fails, include error in message
-      responseBody = `(unable to read response body: ${error.message})`;
-    }
-    
-    // Build detailed error message
-    const errorMessage = [
-      `Expected status ${expectedStatus}, got ${status}`,
-      '',
-      'Response body:',
-      isJSON ? responseBody : `(${response.headers.get('content-type') || 'unknown type'}) ${responseBody}`,
-    ].join('\n');
-    
-    throw new Error(errorMessage);
+  const actual = res.status;
+  const expectedArray = Array.isArray(expected) ? expected : [expected];
+  const isMatch = expectedArray.includes(actual);
+  
+  if (isMatch) {
+    return; // Status matches, no error
   }
+  
+  // Clone response to safely read body without consuming original
+  const cloned = res.clone();
+  
+  let responseBody: string = '';
+  let isJSON = false;
+  const headers: Record<string, string> = {};
+  
+  try {
+    // Collect headers
+    res.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    
+    // Check Content-Type header to determine if JSON
+    const contentType = res.headers.get('content-type') || '';
+    isJSON = contentType.includes('application/json');
+    
+    // Read response text
+    const text = await cloned.text();
+    responseBody = text;
+    
+    // If JSON, try to parse and pretty-print
+    if (isJSON && text) {
+      try {
+        const json = JSON.parse(text);
+        responseBody = JSON.stringify(json, null, 2);
+      } catch {
+        // If JSON parsing fails, use raw text
+        responseBody = text;
+      }
+    }
+  } catch (error: any) {
+    // If reading fails, include error in message
+    responseBody = `(unable to read response body: ${error.message})`;
+  }
+  
+  // Build detailed error message
+  const expectedStr = Array.isArray(expected) 
+    ? `one of [${expected.join(', ')}]` 
+    : String(expected);
+  
+  const errorMessage = [
+    context ? `[${context}] ` : '',
+    `Expected status ${expectedStr}, got ${actual}`,
+    '',
+    'Response headers:',
+    JSON.stringify(headers, null, 2),
+    '',
+    'Response body:',
+    isJSON ? responseBody : `(${res.headers.get('content-type') || 'unknown type'}) ${responseBody}`,
+  ].join('\n');
+  
+  throw new Error(errorMessage);
 }
 
 /**
