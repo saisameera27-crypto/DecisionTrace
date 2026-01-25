@@ -7,7 +7,7 @@ import { test, expect } from './fixtures';
 import * as path from 'path';
 
 test.describe('Messy Path', () => {
-  test('should show conflicts filter with email thread @smoke', async ({ page, mockAPI }) => {
+  test('should show conflicts filter with email thread', async ({ page, mockAPI }) => {
     // Mock report with conflicts
     await page.route('**/api/case/*/report', async (route) => {
       await route.fulfill({
