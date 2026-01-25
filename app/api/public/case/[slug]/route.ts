@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getPrismaClient } from '../../../../../lib/prisma';
-import { normalizeDecisionData } from '../../../../../lib/report-normalizer';
+import { getPrismaClient } from '@/lib/prisma';
+import { normalizeDecisionData } from '@/lib/report-normalizer';
 
 /**
  * Get public case by share slug
@@ -71,7 +71,7 @@ export async function GET(
     }
 
     // Find step 2 data for decision view
-    const step2 = case_.steps.find((s) => s.stepNumber === 2);
+    const step2 = case_.steps.find((s: { stepNumber: number }) => s.stepNumber === 2);
     const decision = step2 && step2.data
       ? normalizeDecisionData(JSON.parse(step2.data))
       : null;
@@ -93,7 +93,7 @@ export async function GET(
   } catch (error: any) {
     console.error('Error loading public case:', error);
     return NextResponse.json(
-      { code: 'PUBLIC_CASE_LOAD_FAILED', message: String(error?.message || error || 'Unknown error') },
+      { code: 'PUBLIC_CASE_LOAD_FAILED', message: String(error) },
       { status: 500 }
     );
   }
