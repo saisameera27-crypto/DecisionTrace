@@ -58,6 +58,10 @@ const mockGeminiAPI = () => {
 process.env.NODE_ENV = 'test';
 process.env.GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'mock-api-key-for-testing';
 
+// Ensure tmp/ directory exists for SQLite databases
+const tmpDir = path.join(process.cwd(), 'tmp');
+fs.mkdirSync(tmpDir, { recursive: true });
+
 // Initialize mocks
 mockGeminiAPI();
 

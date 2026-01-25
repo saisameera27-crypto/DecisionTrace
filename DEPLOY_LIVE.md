@@ -217,8 +217,9 @@ vercel --prod
 ## Important Notes
 
 1. **Prisma Schemas**:
-   - **SQLite schema** (default for tests/dev): `prisma/schema.prisma`
-   - **Postgres schema** (production): `prisma/schema.postgres.prisma`
+   - **Postgres schema** (default for production): `prisma/schema.prisma`
+   - **SQLite schema** (for tests/dev): `prisma/schema.sqlite.prisma`
+   - **Postgres schema** (explicit): `prisma/schema.postgres.prisma`
    - Production builds use Postgres schema automatically via `vercel-build` script
 
 2. **One-Time Deployment**: Deploy once. Don't keep redeploying unless you make code changes.

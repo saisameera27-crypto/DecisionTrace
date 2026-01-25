@@ -167,8 +167,9 @@ See **[DEPLOY_LIVE.md](DEPLOY_LIVE.md)** for complete free-tier deployment guide
 - **Frontend**: Next.js (or your framework)
 - **Backend**: Node.js with TypeScript
 - **Database**: Prisma ORM (SQLite for dev/tests, Postgres for production)
-  - SQLite schema: `prisma/schema.prisma` (default)
-  - Postgres schema: `prisma/schema.postgres.prisma`
+  - Postgres schema: `prisma/schema.prisma` (default for production)
+  - SQLite schema: `prisma/schema.sqlite.prisma` (for tests)
+  - Postgres schema (explicit): `prisma/schema.postgres.prisma`
 - **AI**: Google Gemini 3 Flash Preview API
 - **Validation**: Zod schemas
 - **Testing**: Vitest (unit), Playwright (E2E)

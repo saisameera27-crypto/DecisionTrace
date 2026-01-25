@@ -72,8 +72,8 @@ jobs:
           DATABASE_URL: file:./tmp/e2e.db
           PRISMA_SCHEMA_TARGET: sqlite
         run: |
-          npx prisma generate --schema=prisma/schema.prisma
-          npx prisma db push --schema=prisma/schema.prisma --accept-data-loss
+          npx prisma generate --schema=prisma/schema.sqlite.prisma
+          npx prisma db push --schema=prisma/schema.sqlite.prisma --accept-data-loss
           npx tsx prisma/seed.ts
 
       - name: Build for E2E tests
@@ -146,8 +146,8 @@ jobs:
           DATABASE_URL: file:./tmp/e2e.db
           PRISMA_SCHEMA_TARGET: sqlite
         run: |
-          npx prisma generate --schema=prisma/schema.prisma
-          npx prisma db push --schema=prisma/schema.prisma --accept-data-loss
+          npx prisma generate --schema=prisma/schema.sqlite.prisma
+          npx prisma db push --schema=prisma/schema.sqlite.prisma --accept-data-loss
           npx tsx prisma/seed.ts
 
       - name: Build for E2E tests
