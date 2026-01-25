@@ -80,6 +80,13 @@ export default defineConfig({
     port: 3000,
     timeout: process.env.CI ? 180000 : 120000,
     reuseExistingServer: !process.env.CI,
+    env: {
+      ...process.env,
+      DATABASE_URL: 'file:./tmp/e2e.db',
+      PRISMA_SCHEMA_TARGET: 'sqlite',
+      GEMINI_TEST_MODE: 'mock',
+      NODE_ENV: 'test',
+    },
   },
 });
 
