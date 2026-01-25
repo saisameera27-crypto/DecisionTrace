@@ -15,12 +15,8 @@ test.describe('Golden Path', () => {
     // Load sample case via API (demo mode - no Gemini calls)
     const response = await page.request.post('/api/demo/load-sample');
     if (!response.ok()) {
-      const errorText = await response.text();
-      console.error('❌ Demo load-sample failed:', {
-        status: response.status(),
-        statusText: response.statusText(),
-        body: errorText,
-      });
+      console.log('STATUS:', response.status());
+      console.log('BODY:', await response.text());
     }
     expect(response.ok()).toBeTruthy();
     
@@ -33,11 +29,8 @@ test.describe('Golden Path', () => {
     // Verify report API returns data
     const reportResponse = await page.request.get(`/api/case/${caseId}/report`);
     if (!reportResponse.ok()) {
-      console.error('❌ Report API failed:', {
-        status: reportResponse.status(),
-        statusText: reportResponse.statusText(),
-        body: await reportResponse.text(),
-      });
+      console.log('STATUS:', reportResponse.status());
+      console.log('BODY:', await reportResponse.text());
     }
     expect(reportResponse.ok()).toBeTruthy();
     
@@ -62,12 +55,8 @@ test.describe('Golden Path', () => {
     // Load sample case via API (demo mode)
     const response = await page.request.post('/api/demo/load-sample');
     if (!response.ok()) {
-      const errorText = await response.text();
-      console.error('❌ Demo load-sample failed:', {
-        status: response.status(),
-        statusText: response.statusText(),
-        body: errorText,
-      });
+      console.log('STATUS:', response.status());
+      console.log('BODY:', await response.text());
     }
     expect(response.ok()).toBeTruthy();
     
@@ -79,11 +68,8 @@ test.describe('Golden Path', () => {
       data: { expirationDays: 30 },
     });
     if (!shareResponse.ok()) {
-      console.error('❌ Share API failed:', {
-        status: shareResponse.status(),
-        statusText: shareResponse.statusText(),
-        body: await shareResponse.text(),
-      });
+      console.log('STATUS:', shareResponse.status());
+      console.log('BODY:', await shareResponse.text());
     }
     expect(shareResponse.ok()).toBeTruthy();
     
@@ -94,11 +80,8 @@ test.describe('Golden Path', () => {
     // Verify public case endpoint returns data
     const publicResponse = await page.request.get(`/api/public/case/${shareSlug}`);
     if (!publicResponse.ok()) {
-      console.error('❌ Public case API failed:', {
-        status: publicResponse.status(),
-        statusText: publicResponse.statusText(),
-        body: await publicResponse.text(),
-      });
+      console.log('STATUS:', publicResponse.status());
+      console.log('BODY:', await publicResponse.text());
     }
     expect(publicResponse.ok()).toBeTruthy();
     
