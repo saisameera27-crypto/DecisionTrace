@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPrismaClient } from '../../../../lib/prisma';
+import { getPrismaClient } from '@/lib/prisma';
 
 /**
  * Generate a unique slug for share links
