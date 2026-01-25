@@ -23,6 +23,8 @@
     "prisma:generate": "npm run prisma:generate:pg && npm run prisma:generate:sqlite",
     "prisma:migrate:pg": "prisma migrate deploy --schema=prisma/schema.postgres.prisma",
     "prisma:migrate:sqlite": "prisma migrate deploy --schema=prisma/schema.sqlite.prisma",
+    "build:test": "npm run prisma:generate:sqlite && npm run prisma:migrate:sqlite && next build",
+    "start:test": "next start -p 3000",
     "vercel-build": "npm run prisma:generate:pg && npm run prisma:migrate:pg && next build",
     "postinstall": "npm run prisma:generate:pg"
   },

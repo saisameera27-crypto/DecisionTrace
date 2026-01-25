@@ -65,13 +65,28 @@ jobs:
         run: npx playwright install --with-deps chromium
         if: matrix.node-version == '20.x'
 
+      - name: Setup E2E test database
+        if: matrix.node-version == '20.x'
+        run: mkdir -p tmp
+
+      - name: Build for E2E tests
+        if: matrix.node-version == '20.x'
+        env:
+          DATABASE_URL: file:./tmp/e2e.db
+          PRISMA_SCHEMA_TARGET: sqlite
+          GEMINI_TEST_MODE: mock
+          FREE_MODE: true
+        run: npm run build:test
+
       - name: Run Playwright E2E tests
         env:
           NODE_ENV: test
-          GEMINI_API_KEY: mock-api-key-for-testing
+          DATABASE_URL: file:./tmp/e2e.db
+          PRISMA_SCHEMA_TARGET: sqlite
           GEMINI_TEST_MODE: mock
+          FREE_MODE: true
           CI: true
-          BASE_URL: http://localhost:8000
+          BASE_URL: http://localhost:3000
         run: npm run test:e2e
         if: matrix.node-version == '20.x'
 
@@ -118,13 +133,26 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Setup E2E test database
+        run: mkdir -p tmp
+
+      - name: Build for E2E tests
+        env:
+          DATABASE_URL: file:./tmp/e2e.db
+          PRISMA_SCHEMA_TARGET: sqlite
+          GEMINI_TEST_MODE: mock
+          FREE_MODE: true
+        run: npm run build:test
+
       - name: Run Playwright E2E tests
         env:
           NODE_ENV: test
-          GEMINI_API_KEY: mock-api-key-for-testing
+          DATABASE_URL: file:./tmp/e2e.db
+          PRISMA_SCHEMA_TARGET: sqlite
           GEMINI_TEST_MODE: mock
+          FREE_MODE: true
           CI: true
-          BASE_URL: http://localhost:8000
+          BASE_URL: http://localhost:3000
         run: npm run test:e2e
 
       - name: Upload Playwright traces
