@@ -56,14 +56,17 @@ This decision involved launching a new product line in Q2 2024. The decision was
         },
       },
       steps: {
-        createMany: [
-          { stepNumber: 1, status: 'completed', stepName: 'Document Processing' },
-          { stepNumber: 2, status: 'completed', stepName: 'Decision Extraction' },
-          { stepNumber: 3, status: 'completed', stepName: 'Context Analysis' },
-          { stepNumber: 4, status: 'completed', stepName: 'Outcome Analysis' },
-          { stepNumber: 5, status: 'completed', stepName: 'Risk Assessment' },
-          { stepNumber: 6, status: 'completed', stepName: 'Report Generation' },
-        ],
+        createMany: {
+          data: [
+            { stepNumber: 1, status: 'completed', stepName: 'Document Processing' },
+            { stepNumber: 2, status: 'completed', stepName: 'Decision Extraction' },
+            { stepNumber: 3, status: 'completed', stepName: 'Context Analysis' },
+            { stepNumber: 4, status: 'completed', stepName: 'Outcome Analysis' },
+            { stepNumber: 5, status: 'completed', stepName: 'Risk Assessment' },
+            { stepNumber: 6, status: 'completed', stepName: 'Report Generation' },
+          ],
+          skipDuplicates: true,
+        },
       },
     },
   });
