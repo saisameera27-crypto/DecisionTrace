@@ -56,6 +56,22 @@ vi.mock('@/lib/gemini-files', () => ({
 }));
 
 /**
+ * Helper to convert ArrayBuffer | SharedArrayBuffer to ArrayBuffer
+ * Node 20 requires explicit conversion for SharedArrayBuffer
+ */
+function toArrayBuffer(buffer: ArrayBuffer | SharedArrayBuffer): ArrayBuffer {
+  if (buffer instanceof SharedArrayBuffer) {
+    // Copy SharedArrayBuffer to ArrayBuffer
+    const arrayBuffer = new ArrayBuffer(buffer.byteLength);
+    const view1 = new Uint8Array(buffer);
+    const view2 = new Uint8Array(arrayBuffer);
+    view2.set(view1);
+    return arrayBuffer;
+  }
+  return buffer;
+}
+
+/**
  * Mock upload handler that validates files and calls Gemini API
  * This simulates the actual /api/files/upload route handler
  * Uses real Request/Response objects
@@ -75,12 +91,12 @@ async function mockUploadHandler(req: Request): Promise<Response> {
             return typeof f !== 'string' && f instanceof File;
           });
         } else {
-          // Fallback: iterate entries
-          for (const [key, value] of formData.entries()) {
+          // Fallback: use forEach to iterate (type-safe alternative to entries())
+          formData.forEach((value, key) => {
             if (key === 'file' && value instanceof File) {
               files.push(value);
             }
-          }
+          });
         }
       }
     } catch (error) {
@@ -154,14 +170,18 @@ async function mockUploadHandler(req: Request): Promise<Response> {
       let fileContent: ArrayBuffer;
       try {
         if (typeof file.arrayBuffer === 'function') {
-          fileContent = await file.arrayBuffer();
+          const buffer = await file.arrayBuffer();
+          fileContent = toArrayBuffer(buffer);
         } else {
           // Fallback for test environment
           const testContent = (file as any).content || (file as any).data;
           if (testContent) {
-            fileContent = Buffer.isBuffer(testContent) 
-              ? testContent.buffer.slice(testContent.byteOffset, testContent.byteOffset + testContent.byteLength)
-              : new TextEncoder().encode(String(testContent)).buffer;
+            if (Buffer.isBuffer(testContent)) {
+              fileContent = toArrayBuffer(testContent.buffer.slice(testContent.byteOffset, testContent.byteOffset + testContent.byteLength));
+            } else {
+              const encoded = new TextEncoder().encode(String(testContent));
+              fileContent = encoded.buffer;
+            }
           } else {
             throw new Error('Cannot read file content');
           }
@@ -231,7 +251,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -262,7 +282,7 @@ describe('File Upload Validation', () => {
         type: 'application/x-msdownload',
       });
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -280,7 +300,7 @@ describe('File Upload Validation', () => {
         type: 'application/x-msdownload',
       });
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       expect(data.error).toContain('extension');
     });
@@ -295,7 +315,7 @@ describe('File Upload Validation', () => {
         type: 'application/pdf', // Wrong MIME type for .txt
       });
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -313,7 +333,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain', // Wrong MIME type for .pdf
       });
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       expect(data.error).toContain('MIME type');
     });
@@ -330,7 +350,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -356,7 +376,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.success).toBe(true);
     });
@@ -372,7 +392,7 @@ describe('File Upload Validation', () => {
       
       const response = await callFilesUpload(mockUploadHandler, files);
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toBeDefined();
@@ -397,7 +417,7 @@ describe('File Upload Validation', () => {
       
       const response = await callFilesUpload(mockUploadHandler, files);
       
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -418,7 +438,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.artifacts.length).toBe(1);
     });
@@ -429,7 +449,7 @@ describe('File Upload Validation', () => {
       const request = createMultipartRequest('/api/files/upload', []);
       const response = await mockUploadHandler(request);
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       expect(data.error).toContain('No files provided');
     });
@@ -456,7 +476,7 @@ describe('File Upload Validation', () => {
       
       const response = await callFilesUpload(mockUploadHandler, files);
       
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.artifacts.length).toBe(2);
       expect(mockGeminiFilesClient.uploadFile).toHaveBeenCalledTimes(2);
@@ -487,7 +507,7 @@ describe('File Upload Validation', () => {
         type: 'text/plain',
       });
       
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       expect(data.artifacts).toBeDefined();
       expect(data.artifacts.length).toBe(1);
