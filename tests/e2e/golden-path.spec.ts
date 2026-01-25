@@ -14,6 +14,13 @@ test.describe('Golden Path', () => {
 
     // Load sample case via API (demo mode - no Gemini calls)
     const response = await page.request.post('/api/demo/load-sample');
+    if (!response.ok()) {
+      console.error('❌ Demo load-sample failed:', {
+        status: response.status(),
+        statusText: response.statusText(),
+        body: await response.text(),
+      });
+    }
     expect(response.ok()).toBeTruthy();
     
     const data = await response.json();
@@ -24,6 +31,13 @@ test.describe('Golden Path', () => {
 
     // Verify report API returns data
     const reportResponse = await page.request.get(`/api/case/${caseId}/report`);
+    if (!reportResponse.ok()) {
+      console.error('❌ Report API failed:', {
+        status: reportResponse.status(),
+        statusText: reportResponse.statusText(),
+        body: await reportResponse.text(),
+      });
+    }
     expect(reportResponse.ok()).toBeTruthy();
     
     const reportData = await reportResponse.json();
@@ -46,6 +60,13 @@ test.describe('Golden Path', () => {
   test('should create share link and access public case @smoke', async ({ page }) => {
     // Load sample case via API (demo mode)
     const response = await page.request.post('/api/demo/load-sample');
+    if (!response.ok()) {
+      console.error('❌ Demo load-sample failed:', {
+        status: response.status(),
+        statusText: response.statusText(),
+        body: await response.text(),
+      });
+    }
     expect(response.ok()).toBeTruthy();
     
     const data = await response.json();
@@ -55,6 +76,13 @@ test.describe('Golden Path', () => {
     const shareResponse = await page.request.post(`/api/case/${caseId}/share`, {
       data: { expirationDays: 30 },
     });
+    if (!shareResponse.ok()) {
+      console.error('❌ Share API failed:', {
+        status: shareResponse.status(),
+        statusText: shareResponse.statusText(),
+        body: await shareResponse.text(),
+      });
+    }
     expect(shareResponse.ok()).toBeTruthy();
     
     const shareData = await shareResponse.json();
@@ -63,6 +91,13 @@ test.describe('Golden Path', () => {
 
     // Verify public case endpoint returns data
     const publicResponse = await page.request.get(`/api/public/case/${shareSlug}`);
+    if (!publicResponse.ok()) {
+      console.error('❌ Public case API failed:', {
+        status: publicResponse.status(),
+        statusText: publicResponse.statusText(),
+        body: await publicResponse.text(),
+      });
+    }
     expect(publicResponse.ok()).toBeTruthy();
     
     const publicData = await publicResponse.json();
