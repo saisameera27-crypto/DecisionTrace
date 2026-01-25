@@ -15,10 +15,11 @@ test.describe('Golden Path', () => {
     // Load sample case via API (demo mode - no Gemini calls)
     const response = await page.request.post('/api/demo/load-sample');
     if (!response.ok()) {
+      const errorText = await response.text();
       console.error('❌ Demo load-sample failed:', {
         status: response.status(),
         statusText: response.statusText(),
-        body: await response.text(),
+        body: errorText,
       });
     }
     expect(response.ok()).toBeTruthy();
@@ -61,10 +62,11 @@ test.describe('Golden Path', () => {
     // Load sample case via API (demo mode)
     const response = await page.request.post('/api/demo/load-sample');
     if (!response.ok()) {
+      const errorText = await response.text();
       console.error('❌ Demo load-sample failed:', {
         status: response.status(),
         statusText: response.statusText(),
-        body: await response.text(),
+        body: errorText,
       });
     }
     expect(response.ok()).toBeTruthy();
