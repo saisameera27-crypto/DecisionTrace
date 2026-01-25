@@ -67,13 +67,22 @@ jobs:
       - name: Setup E2E test database
         run: mkdir -p tmp
 
+      - name: Setup E2E database schema
+        env:
+          DATABASE_URL: file:./tmp/e2e.db
+          PRISMA_SCHEMA_TARGET: sqlite
+        run: |
+          npm run prisma:generate:sqlite
+          npm run prisma:db:push:sqlite
+          npm run db:seed
+
       - name: Build for E2E tests
         env:
           DATABASE_URL: file:./tmp/e2e.db
           PRISMA_SCHEMA_TARGET: sqlite
           GEMINI_TEST_MODE: mock
           FREE_MODE: true
-        run: npm run build:test
+        run: npx next build
 
       - name: Run Playwright E2E tests
         env:
@@ -132,13 +141,22 @@ jobs:
       - name: Setup E2E test database
         run: mkdir -p tmp
 
+      - name: Setup E2E database schema
+        env:
+          DATABASE_URL: file:./tmp/e2e.db
+          PRISMA_SCHEMA_TARGET: sqlite
+        run: |
+          npm run prisma:generate:sqlite
+          npm run prisma:db:push:sqlite
+          npm run db:seed
+
       - name: Build for E2E tests
         env:
           DATABASE_URL: file:./tmp/e2e.db
           PRISMA_SCHEMA_TARGET: sqlite
           GEMINI_TEST_MODE: mock
           FREE_MODE: true
-        run: npm run build:test
+        run: npx next build
 
       - name: Run Playwright E2E tests
         env:
