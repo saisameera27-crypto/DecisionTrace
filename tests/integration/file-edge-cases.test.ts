@@ -17,6 +17,7 @@ import {
   parseJsonResponse,
   assertResponseStatus,
 } from './_harness';
+import { toErrorResponse } from '../../lib/api-error';
 
 // Mock Next.js types
 type NextRequest = any;
@@ -77,8 +78,13 @@ async function mockEnhancedUploadHandler(req: Request): Promise<Response> {
     const files = formData.getAll('file') as File[];
     
     if (files.length === 0) {
+      const { status, body } = toErrorResponse(new Error('No files provided'));
       return new Response(
-        JSON.stringify({ error: 'No files provided' }),
+        JSON.stringify({
+          code: 'NO_FILES_PROVIDED',
+          message: 'No files provided',
+          ...body,
+        }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
@@ -269,13 +275,15 @@ async function mockEnhancedUploadHandler(req: Request): Promise<Response> {
     }
     
     // Ensure errors are user-friendly, not stack traces
+    // Use toErrorResponse to ensure consistent error format
+    const { status, body } = toErrorResponse(error);
     return new Response(
       JSON.stringify({
-        error: 'File processing failed',
-        code: 'PROCESSING_ERROR',
-        message: error.message || 'Unknown error',
+        code: body.code || 'PROCESSING_ERROR',
+        message: body.message || 'File processing failed',
+        ...body,
       }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }
@@ -301,11 +309,13 @@ describe('File Processing Edge Cases', () => {
         type: 'application/pdf',
       });
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toContain('Password-protected');
+      expect(data.code).toBeDefined();
       expect(data.code).toBe('PASSWORD_PROTECTED');
+      expect(data.message).toBeDefined();
       expect(data.fileName).toBe('protected.pdf');
     });
 
@@ -328,6 +338,9 @@ describe('File Processing Edge Cases', () => {
       expect(data.error).not.toContain('stack');
       expect(data.error).toBeDefined();
       expect(typeof data.error).toBe('string');
+      // Ensure code and message exist
+      expect(data.code).toBeDefined();
+      expect(data.message).toBeDefined();
     });
   });
 
@@ -346,11 +359,13 @@ describe('File Processing Edge Cases', () => {
       });
       
       // Should return 400, not 500
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.error).toContain('corrupted');
+      expect(data.code).toBeDefined();
       expect(data.code).toBe('CORRUPTED_PDF');
+      expect(data.message).toBeDefined();
       expect(data.fileName).toBe('corrupted.pdf');
     });
 
@@ -390,7 +405,7 @@ describe('File Processing Edge Cases', () => {
         type: 'application/pdf',
       });
       
-      await await assertResponseStatus(response, 400);
+      await assertResponseStatus(response, 400);
       const data = await parseJsonResponse(response);
       
       expect(data.code).toBe('CORRUPTED_PDF');
@@ -416,7 +431,7 @@ describe('File Processing Edge Cases', () => {
       });
       
       // Should allow upload but warn about OCR requirement
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -443,7 +458,7 @@ describe('File Processing Edge Cases', () => {
       });
       
       // Should succeed with warning
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -466,7 +481,7 @@ describe('File Processing Edge Cases', () => {
         type: 'application/pdf',
       });
       
-      await await assertResponseStatus(response, 201);
+      await assertResponseStatus(response, 201);
       const data = await parseJsonResponse(response);
       
       expect(data.success).toBe(true);
@@ -513,6 +528,9 @@ describe('File Processing Edge Cases', () => {
       expect(data.error.length).toBeGreaterThan(0);
       expect(data.error).not.toContain('undefined');
       expect(data.error).not.toContain('null');
+      // Ensure code and message exist
+      expect(data.code).toBeDefined();
+      expect(data.message).toBeDefined();
     });
 
     it('should include error code for programmatic handling', async () => {
