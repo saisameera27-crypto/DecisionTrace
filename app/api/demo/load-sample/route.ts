@@ -5,32 +5,38 @@ import { getPrismaClient } from '../../../../lib/prisma';
  * Demo: Load Sample Case
  * Creates a pre-populated sample case with completed report for demo/testing
  * Allowed in test/CI mode or when DEMO_MODE is enabled
+ * CSRF/public-write protection exempted in test/mock mode
  */
 export async function POST() {
   // Allow in test/CI mode or when DEMO_MODE is enabled
   const isTestMode = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
+  const isMockMode = process.env.GEMINI_TEST_MODE === 'mock';
   const isDemoMode = process.env.DEMO_MODE === 'true';
   
-  if (!isTestMode && !isDemoMode) {
+  if (!isTestMode && !isMockMode && !isDemoMode) {
     return NextResponse.json({
-      success: false,
-      error: 'Demo endpoint not available',
-      message: 'This endpoint is only available in test/CI mode or when DEMO_MODE is enabled',
+      code: 'DEMO_ENDPOINT_DISABLED',
+      message: 'This endpoint is only available in test/CI mode, mock mode, or when DEMO_MODE is enabled',
     }, { status: 403 });
   }
 
   try {
     const prisma = getPrismaClient();
 
-    // Create a sample case with completed report
+    // Create case
     const sampleCase = await prisma.case.create({
       data: {
         title: 'Sample Decision Case - Q2 2024 Product Launch',
         status: 'completed',
         slug: `sample-${Date.now()}`,
-        report: {
-          create: {
-            finalNarrativeMarkdown: `# Decision Trace Report
+      },
+    });
+
+    // Create report
+    await prisma.report.create({
+      data: {
+        caseId: sampleCase.id,
+        finalNarrativeMarkdown: `# Decision Trace Report
 
 ## Decision Overview
 **Title**: Q2 2024 Product Launch Decision
@@ -55,31 +61,27 @@ This decision involved launching a new product line in Q2 2024. The decision was
 - Product Team
 - Marketing Team
 - Executive Leadership`,
-            mermaidDiagram: `graph TD
+        mermaidDiagram: `graph TD
     A[Decision: Q2 2024 Launch] --> B[Market Analysis]
     A --> C[Resource Planning]
     B --> D[Approved]
     C --> D
     D --> E[Implementation]`,
-            tokensUsed: 1500,
-            durationMs: 2000,
-          },
-        },
-        steps: {
-          createMany: [
-            { stepNumber: 1, status: 'completed', stepName: 'Document Processing' },
-            { stepNumber: 2, status: 'completed', stepName: 'Decision Extraction' },
-            { stepNumber: 3, status: 'completed', stepName: 'Context Analysis' },
-            { stepNumber: 4, status: 'completed', stepName: 'Outcome Analysis' },
-            { stepNumber: 5, status: 'completed', stepName: 'Risk Assessment' },
-            { stepNumber: 6, status: 'completed', stepName: 'Report Generation' },
-          ],
-        },
+        tokensUsed: 1500,
+        durationMs: 2000,
       },
-      include: {
-        report: true,
-        steps: true,
-      },
+    });
+
+    // Create steps (separate from case creation for SQLite compatibility)
+    await prisma.caseStep.createMany({
+      data: [
+        { caseId: sampleCase.id, stepNumber: 1, status: 'completed' },
+        { caseId: sampleCase.id, stepNumber: 2, status: 'completed' },
+        { caseId: sampleCase.id, stepNumber: 3, status: 'completed' },
+        { caseId: sampleCase.id, stepNumber: 4, status: 'completed' },
+        { caseId: sampleCase.id, stepNumber: 5, status: 'completed' },
+        { caseId: sampleCase.id, stepNumber: 6, status: 'completed' },
+      ],
     });
 
     return NextResponse.json({
@@ -88,13 +90,12 @@ This decision involved launching a new product line in Q2 2024. The decision was
       slug: sampleCase.slug,
       title: sampleCase.title,
       status: sampleCase.status,
-    }, { status: 201 });
+    }, { status: 200 });
   } catch (error: any) {
     console.error('Error loading sample case:', error);
     return NextResponse.json({
-      success: false,
-      error: 'Failed to load sample case',
-      message: error.message,
+      code: 'DEMO_LOAD_FAILED',
+      message: String(error?.message || error || 'Unknown error'),
     }, { status: 500 });
   }
 }
