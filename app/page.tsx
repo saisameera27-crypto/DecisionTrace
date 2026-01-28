@@ -41,14 +41,27 @@ export default function Home() {
       
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to load demo case');
+        
+        // Check for database initialization error
+        if (data.error === 'DB_NOT_INITIALIZED') {
+          setError('Demo database not initialized. Please redeploy after migrations run.');
+        } else {
+          setError(data.message || 'Failed to load demo case');
+        }
+        setLoading(null);
+        return;
       }
       
       const data = await response.json();
       // Navigate to the case page
       router.push(`/case/${data.caseId}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to load demo case');
+      // Check if error response contains DB_NOT_INITIALIZED
+      if (err.message && err.message.includes('DB_NOT_INITIALIZED')) {
+        setError('Demo database not initialized. Please redeploy after migrations run.');
+      } else {
+        setError(err.message || 'Failed to load demo case');
+      }
       setLoading(null);
     }
   };
@@ -65,14 +78,26 @@ export default function Home() {
       
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to load demo case');
+        
+        // Check for database initialization error
+        if (data.error === 'DB_NOT_INITIALIZED') {
+          setError('Demo database not initialized. Please redeploy after migrations run.');
+        } else {
+          setError(data.message || 'Failed to load demo case');
+        }
+        setLoading(null);
+        return;
       }
       
       const data = await response.json();
       // Navigate directly to the report page
       router.push(`/case/${data.caseId}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to open report');
+      if (err.message && err.message.includes('DB_NOT_INITIALIZED')) {
+        setError('Demo database not initialized. Please redeploy after migrations run.');
+      } else {
+        setError(err.message || 'Failed to open report');
+      }
       setLoading(null);
     }
   };
@@ -89,6 +114,13 @@ export default function Home() {
       
       if (!loadResponse.ok) {
         const data = await loadResponse.json();
+        
+        // Check for database initialization error
+        if (data.error === 'DB_NOT_INITIALIZED') {
+          setError('Demo database not initialized. Please redeploy after migrations run.');
+          setLoading(null);
+          return;
+        }
         throw new Error(data.message || 'Failed to load demo case');
       }
       

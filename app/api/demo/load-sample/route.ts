@@ -172,8 +172,37 @@ This decision involved launching a new product line in Q2 2024. The decision was
   } catch (error: any) {
     // On error, return structured JSON response (never throw uncaught errors)
     console.error('Error loading sample case:', error);
+    
+    // Extract error message properly
+    const errorMessage = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+    const errorCode = error?.code || '';
+    
+    // Detect missing table errors:
+    // - Postgres error code 42P01: "relation does not exist"
+    // - Prisma error messages containing "does not exist" or "table"
+    // - Error messages containing "relation" and "does not exist"
+    const isTableMissingError = 
+      errorCode === '42P01' ||
+      errorCode === 'P2025' ||
+      errorMessage.includes('does not exist') ||
+      (errorMessage.includes('table') && errorMessage.includes('does not exist')) ||
+      (errorMessage.includes('relation') && errorMessage.includes('does not exist')) ||
+      (errorMessage.includes('Table') && errorMessage.includes('does not exist'));
+    
+    if (isTableMissingError) {
+      return NextResponse.json(
+        {
+          error: 'DB_NOT_INITIALIZED',
+          message: 'Database tables are not initialized. Run migrations.',
+        },
+        { status: 503 } // Service Unavailable
+      );
+    }
+    
+    // Other errors - extract message properly
+    const errorMsg = error?.message || (typeof error === 'string' ? error : error?.toString() || 'Unknown error');
     return NextResponse.json(
-      { code: 'DEMO_LOAD_FAILED', message: String(error) },
+      { code: 'DEMO_LOAD_FAILED', message: errorMsg },
       { status: 500 }
     );
   }
