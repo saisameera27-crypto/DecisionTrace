@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { theme } from '@/styles/theme';
 
 interface ModeStatus {
   isDemoMode: boolean;
@@ -152,32 +153,57 @@ export default function Home() {
     }
   };
 
+  // Theme-based styles
+  const containerStyle: React.CSSProperties = {
+    padding: theme.spacing.xl,
+    maxWidth: '900px',
+    margin: '0 auto',
+    minHeight: '100vh',
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: theme.typography.fontSize['4xl'],
+    marginBottom: theme.spacing.sm,
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.textPrimary,
+    lineHeight: theme.typography.lineHeight.tight,
+  };
+
+  const subtitleStyle: React.CSSProperties = {
+    fontSize: theme.typography.fontSize.xl,
+    marginBottom: theme.spacing.xl,
+    color: theme.colors.textSecondary,
+    lineHeight: theme.typography.lineHeight.relaxed,
+  };
+
   return (
-    <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', fontWeight: 'bold' }}>Decision Trace</h1>
-      <p style={{ fontSize: '1.2rem', marginBottom: '2rem', color: '#666' }}>
+    <div style={containerStyle}>
+      <h1 style={titleStyle}>Decision Trace</h1>
+      <p style={subtitleStyle}>
         AI-powered decision analysis using Google Gemini 3
       </p>
 
       {/* Mode Indicator */}
       <div style={{
-        padding: '0.75rem 1rem',
-        backgroundColor: modeStatus.isDemoMode ? '#e3f2fd' : '#e8f5e9',
-        border: `2px solid ${modeStatus.isDemoMode ? '#2196f3' : '#4caf50'}`,
-        borderRadius: '8px',
-        marginBottom: '1.5rem',
+        padding: `${theme.spacing.md} ${theme.spacing.md}`,
+        backgroundColor: modeStatus.isDemoMode ? theme.colors.primaryLight : '#e8f5e9',
+        border: `2px solid ${modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success}`,
+        borderRadius: theme.borderRadius.lg,
+        marginBottom: theme.spacing.lg,
         textAlign: 'center',
       }}>
         <strong style={{ 
-          color: modeStatus.isDemoMode ? '#1976d2' : '#2e7d32',
-          fontSize: '1rem',
+          color: modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success,
+          fontSize: theme.typography.fontSize.base,
+          fontWeight: theme.typography.fontWeight.semibold,
         }}>
           {modeStatus.isDemoMode ? '🎯 DEMO MODE (Default)' : '🤖 LIVE GEMINI 3 MODE'}
         </strong>
         <p style={{ 
-          margin: '0.5rem 0 0 0', 
-          color: modeStatus.isDemoMode ? '#1976d2' : '#2e7d32',
-          fontSize: '0.9rem',
+          margin: `${theme.spacing.sm} 0 0 0`, 
+          color: modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success,
+          fontSize: theme.typography.fontSize.sm,
+          lineHeight: theme.typography.lineHeight.normal,
         }}>
           {modeStatus.isDemoMode 
             ? 'Using mock responses. No API key required. Perfect for hackathon demos!'
@@ -187,25 +213,27 @@ export default function Home() {
 
       {/* Try Demo Section - Prominent for Judges */}
       <div style={{
-        padding: '2rem',
-        backgroundColor: '#f5f5f5',
-        border: '2px solid #2196f3',
-        borderRadius: '12px',
-        marginBottom: '2rem',
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.backgroundSecondary,
+        border: `2px solid ${theme.colors.primary}`,
+        borderRadius: theme.borderRadius.xl,
+        marginBottom: theme.spacing.xl,
+        boxShadow: theme.colors.shadowMd,
       }}>
         <h2 style={{ 
-          fontSize: '1.8rem', 
-          marginBottom: '1rem', 
-          color: '#1976d2',
-          fontWeight: 'bold',
+          fontSize: theme.typography.fontSize['3xl'], 
+          marginBottom: theme.spacing.md, 
+          color: theme.colors.primary,
+          fontWeight: theme.typography.fontWeight.bold,
+          lineHeight: theme.typography.lineHeight.tight,
         }}>
           🎯 Demo Mode (Default)
         </h2>
         <p style={{ 
-          marginBottom: '1.5rem', 
-          color: '#555', 
-          fontSize: '1rem',
-          lineHeight: '1.6',
+          marginBottom: theme.spacing.lg, 
+          color: theme.colors.textSecondary, 
+          fontSize: theme.typography.fontSize.base,
+          lineHeight: theme.typography.lineHeight.relaxed,
         }}>
           Experience Decision Trace with a pre-populated demo case. Works instantly with no API key or authentication required.
         </p>
@@ -221,18 +249,29 @@ export default function Home() {
             onClick={loadDemoCase}
             disabled={loading !== null}
             style={{
-              padding: '1rem 2rem',
-              fontSize: '1.1rem',
-              backgroundColor: loading === 'load-sample' ? '#ccc' : '#2196f3',
+              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              fontSize: theme.typography.fontSize.lg,
+              backgroundColor: loading === 'load-sample' ? theme.colors.textMuted : theme.colors.primary,
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: theme.borderRadius.lg,
               cursor: loading === 'load-sample' ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
+              fontWeight: theme.typography.fontWeight.bold,
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: theme.spacing.sm,
+              transition: theme.transition.normal,
+            }}
+            onMouseEnter={(e) => {
+              if (loading !== 'load-sample') {
+                e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (loading !== 'load-sample') {
+                e.currentTarget.style.backgroundColor = theme.colors.primary;
+              }
             }}
           >
             {loading === 'load-sample' ? '⏳ Loading...' : '🚀 1. Load Sample Case'}
@@ -244,18 +283,29 @@ export default function Home() {
             onClick={openReport}
             disabled={loading !== null}
             style={{
-              padding: '1rem 2rem',
-              fontSize: '1.1rem',
-              backgroundColor: loading === 'open-report' ? '#ccc' : '#4caf50',
+              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              fontSize: theme.typography.fontSize.lg,
+              backgroundColor: loading === 'open-report' ? theme.colors.textMuted : theme.colors.success,
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: theme.borderRadius.lg,
               cursor: loading === 'open-report' ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
+              fontWeight: theme.typography.fontWeight.bold,
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: theme.spacing.sm,
+              transition: theme.transition.normal,
+            }}
+            onMouseEnter={(e) => {
+              if (loading !== 'open-report') {
+                e.currentTarget.style.backgroundColor = '#059669';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (loading !== 'open-report') {
+                e.currentTarget.style.backgroundColor = theme.colors.success;
+              }
             }}
           >
             {loading === 'open-report' ? '⏳ Loading...' : '📊 2. Open Report'}
@@ -267,18 +317,29 @@ export default function Home() {
             onClick={openPublicShare}
             disabled={loading !== null}
             style={{
-              padding: '1rem 2rem',
-              fontSize: '1.1rem',
-              backgroundColor: loading === 'open-share' ? '#ccc' : '#ff9800',
+              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              fontSize: theme.typography.fontSize.lg,
+              backgroundColor: loading === 'open-share' ? theme.colors.textMuted : theme.colors.warning,
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: theme.borderRadius.lg,
               cursor: loading === 'open-share' ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
+              fontWeight: theme.typography.fontWeight.bold,
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: theme.spacing.sm,
+              transition: theme.transition.normal,
+            }}
+            onMouseEnter={(e) => {
+              if (loading !== 'open-share') {
+                e.currentTarget.style.backgroundColor = '#d97706';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (loading !== 'open-share') {
+                e.currentTarget.style.backgroundColor = theme.colors.warning;
+              }
             }}
           >
             {loading === 'open-share' ? '⏳ Loading...' : '🔗 3. Open Public Share Link'}
@@ -289,25 +350,27 @@ export default function Home() {
       {/* Live Gemini 3 Section (Only shown if API key exists) */}
       {modeStatus.hasApiKey && (
         <div style={{
-          padding: '2rem',
+          padding: theme.spacing.xl,
           backgroundColor: '#f1f8f4',
-          border: '2px solid #4caf50',
-          borderRadius: '12px',
-          marginBottom: '2rem',
+          border: `2px solid ${theme.colors.success}`,
+          borderRadius: theme.borderRadius.xl,
+          marginBottom: theme.spacing.xl,
+          boxShadow: theme.colors.shadowMd,
         }}>
           <h2 style={{ 
-            fontSize: '1.8rem', 
-            marginBottom: '1rem', 
-            color: '#2e7d32',
-            fontWeight: 'bold',
+            fontSize: theme.typography.fontSize['3xl'], 
+            marginBottom: theme.spacing.md, 
+            color: theme.colors.success,
+            fontWeight: theme.typography.fontWeight.bold,
+            lineHeight: theme.typography.lineHeight.tight,
           }}>
             🤖 Live Gemini 3 (Optional)
           </h2>
           <p style={{ 
-            marginBottom: '1.5rem', 
-            color: '#555', 
-            fontSize: '1rem',
-            lineHeight: '1.6',
+            marginBottom: theme.spacing.lg, 
+            color: theme.colors.textSecondary, 
+            fontSize: theme.typography.fontSize.base,
+            lineHeight: theme.typography.lineHeight.relaxed,
           }}>
             Run real AI analysis using Google Gemini 3. Upload your own documents and get live analysis results.
           </p>
@@ -320,27 +383,39 @@ export default function Home() {
             }}
             disabled={loading !== null}
             style={{
-              padding: '1rem 2rem',
-              fontSize: '1.1rem',
-              backgroundColor: loading ? '#ccc' : '#4caf50',
+              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              fontSize: theme.typography.fontSize.lg,
+              backgroundColor: loading ? theme.colors.textMuted : theme.colors.success,
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: theme.borderRadius.lg,
               cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold',
+              fontWeight: theme.typography.fontWeight.bold,
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: theme.spacing.sm,
+              transition: theme.transition.normal,
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = '#059669';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = theme.colors.success;
+              }
             }}
           >
             🚀 Run Live Gemini 3 Analysis
           </button>
           <p style={{ 
-            marginTop: '1rem', 
-            color: '#666', 
-            fontSize: '0.9rem',
+            marginTop: theme.spacing.md, 
+            color: theme.colors.textTertiary, 
+            fontSize: theme.typography.fontSize.sm,
             fontStyle: 'italic',
+            lineHeight: theme.typography.lineHeight.normal,
           }}>
             Note: Live analysis requires API key and may incur costs. Demo mode is recommended for hackathon judging.
           </p>
@@ -350,48 +425,60 @@ export default function Home() {
       {/* Error Message */}
       {error && (
         <div style={{
-          padding: '1rem',
-          backgroundColor: '#ffebee',
-          border: '1px solid #f44336',
-          borderRadius: '8px',
-          color: '#c62828',
-          marginBottom: '2rem',
+          padding: theme.spacing.md,
+          backgroundColor: '#fee2e2',
+          border: `1px solid ${theme.colors.error}`,
+          borderRadius: theme.borderRadius.lg,
+          color: theme.colors.error,
+          marginBottom: theme.spacing.xl,
         }}>
-          <strong>Error:</strong> {error}
+          <strong style={{ fontWeight: theme.typography.fontWeight.semibold }}>Error:</strong> {error}
         </div>
       )}
 
       {/* Features */}
-      <div style={{ marginTop: '3rem', marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Features</h2>
-        <ul style={{ lineHeight: '1.8', fontSize: '1rem' }}>
-          <li>✅ 6-step AI analysis powered by Google Gemini 3</li>
-          <li>✅ Decision extraction and risk assessment</li>
-          <li>✅ Comprehensive reports with visualizations</li>
-          <li>✅ Public share links for collaboration</li>
-          <li>✅ Works in demo mode without API key</li>
+      <div style={{ marginTop: theme.spacing['2xl'], marginBottom: theme.spacing.xl }}>
+        <h2 style={{ 
+          fontSize: theme.typography.fontSize['2xl'], 
+          marginBottom: theme.spacing.md,
+          fontWeight: theme.typography.fontWeight.semibold,
+          color: theme.colors.textPrimary,
+        }}>
+          Features
+        </h2>
+        <ul style={{ 
+          lineHeight: theme.typography.lineHeight.relaxed, 
+          fontSize: theme.typography.fontSize.base,
+          color: theme.colors.textSecondary,
+          paddingLeft: theme.spacing.lg,
+        }}>
+          <li style={{ marginBottom: theme.spacing.sm }}>✅ 6-step AI analysis powered by Google Gemini 3</li>
+          <li style={{ marginBottom: theme.spacing.sm }}>✅ Decision extraction and risk assessment</li>
+          <li style={{ marginBottom: theme.spacing.sm }}>✅ Comprehensive reports with visualizations</li>
+          <li style={{ marginBottom: theme.spacing.sm }}>✅ Public share links for collaboration</li>
+          <li style={{ marginBottom: theme.spacing.sm }}>✅ Works in demo mode without API key</li>
         </ul>
       </div>
 
       {/* Powered by Gemini 3 */}
       <div style={{
-        marginTop: '2rem',
-        padding: '1rem',
-        backgroundColor: '#f9f9f9',
-        borderTop: '1px solid #ddd',
+        marginTop: theme.spacing.xl,
+        padding: theme.spacing.md,
+        backgroundColor: theme.colors.backgroundSecondary,
+        borderTop: `1px solid ${theme.colors.border}`,
         textAlign: 'center',
-        fontSize: '0.9rem',
-        color: '#666',
+        fontSize: theme.typography.fontSize.sm,
+        color: theme.colors.textTertiary,
       }}>
-        <p style={{ margin: '0.5rem 0' }}>
-          Powered by <strong>Google Gemini 3</strong>
+        <p style={{ margin: `${theme.spacing.sm} 0` }}>
+          Powered by <strong style={{ fontWeight: theme.typography.fontWeight.semibold }}>Google Gemini 3</strong>
         </p>
-        <p style={{ margin: '0.5rem 0' }}>
+        <p style={{ margin: `${theme.spacing.sm} 0` }}>
           <a 
             href="https://github.com/saisameera27-crypto/DecisionTrace/blob/main/GEMINI_3_ENFORCEMENT.md"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#2196f3', textDecoration: 'none' }}
+            style={{ color: theme.colors.primary, textDecoration: 'none' }}
           >
             View Gemini 3 Implementation Docs →
           </a>

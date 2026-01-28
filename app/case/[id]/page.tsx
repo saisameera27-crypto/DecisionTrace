@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { parseMarkdownSections, getSectionContent } from '@/lib/report/section-parser';
+import { theme } from '@/styles/theme';
 
 interface ReportData {
   caseId: string;
@@ -134,147 +135,148 @@ export default function CaseReportPage() {
   const containerStyle: React.CSSProperties = {
     maxWidth: '1024px',
     margin: '0 auto',
-    padding: '2rem 1.5rem',
+    padding: `${theme.spacing.xl} ${theme.spacing.lg}`,
     minHeight: '100vh',
   };
 
   // Card styles
   const cardStyle: React.CSSProperties = {
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: '12px',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+    backgroundColor: theme.colors.background,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.borderRadius.xl,
+    boxShadow: theme.colors.shadowMd,
     overflow: 'hidden',
   };
 
   // Header styles
   const headerStyle: React.CSSProperties = {
-    padding: '2rem 2rem 1.5rem',
-    borderBottom: '1px solid #e5e7eb',
-    backgroundColor: '#f9fafb',
+    padding: `${theme.spacing.xl} ${theme.spacing.xl} ${theme.spacing.lg}`,
+    borderBottom: `1px solid ${theme.colors.border}`,
+    backgroundColor: theme.colors.backgroundSecondary,
   };
 
   const titleStyle: React.CSSProperties = {
-    fontSize: '2rem',
-    fontWeight: '700',
-    color: '#111827',
-    margin: '0 0 0.5rem 0',
-    lineHeight: '1.2',
+    fontSize: theme.typography.fontSize['4xl'],
+    fontWeight: theme.typography.fontWeight.bold,
+    color: theme.colors.textPrimary,
+    margin: `0 0 ${theme.spacing.sm} 0`,
+    lineHeight: theme.typography.lineHeight.tight,
   };
 
   const subtitleStyle: React.CSSProperties = {
-    fontSize: '1.25rem',
-    fontWeight: '500',
-    color: '#4b5563',
+    fontSize: theme.typography.fontSize.xl,
+    fontWeight: theme.typography.fontWeight.medium,
+    color: theme.colors.textSecondary,
     margin: '0',
-    lineHeight: '1.4',
+    lineHeight: theme.typography.lineHeight.normal,
   };
 
   const metadataStyle: React.CSSProperties = {
-    fontSize: '0.875rem',
-    color: '#6b7280',
-    marginTop: '0.75rem',
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textTertiary,
+    marginTop: theme.spacing.md,
     display: 'flex',
-    gap: '1rem',
+    gap: theme.spacing.md,
     flexWrap: 'wrap',
   };
 
   // Tab styles
   const tabNavStyle: React.CSSProperties = {
     display: 'flex',
-    gap: '0.5rem',
-    padding: '0 2rem',
-    borderBottom: '1px solid #e5e7eb',
-    backgroundColor: '#ffffff',
+    gap: theme.spacing.sm,
+    padding: `0 ${theme.spacing.xl}`,
+    borderBottom: `1px solid ${theme.colors.border}`,
+    backgroundColor: theme.colors.background,
     overflowX: 'auto',
     flexWrap: 'wrap',
   };
 
   const tabButtonBaseStyle: React.CSSProperties = {
-    padding: '0.75rem 1.25rem',
-    fontSize: '0.9375rem',
-    fontWeight: '500',
-    color: '#6b7280',
+    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: theme.typography.fontWeight.medium,
+    color: theme.colors.textTertiary,
     backgroundColor: 'transparent',
     border: 'none',
-    borderBottom: '2px solid transparent',
+    borderBottom: `2px solid transparent`,
     cursor: 'pointer',
-    transition: 'all 0.2s ease',
+    transition: theme.transition.normal,
     whiteSpace: 'nowrap',
     marginBottom: '-1px',
   };
 
   const tabButtonActiveStyle: React.CSSProperties = {
     ...tabButtonBaseStyle,
-    color: '#0066cc',
-    borderBottomColor: '#0066cc',
-    fontWeight: '600',
+    color: theme.colors.primary,
+    borderBottomColor: theme.colors.primary,
+    fontWeight: theme.typography.fontWeight.semibold,
   };
 
   const tabButtonHoverStyle = {
-    color: '#111827',
+    color: theme.colors.textPrimary,
   };
 
   // Content styles
   const contentStyle: React.CSSProperties = {
-    padding: '2rem',
+    padding: theme.spacing.xl,
     minHeight: '400px',
   };
 
   const markdownContentStyle: React.CSSProperties = {
-    lineHeight: '1.75',
-    fontSize: '1rem',
-    color: '#374151',
+    lineHeight: theme.typography.lineHeight.relaxed,
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textSecondary,
   };
 
   // Loading skeleton style
   const skeletonStyle: React.CSSProperties = {
-    padding: '2rem',
+    padding: theme.spacing.xl,
     textAlign: 'center',
-    color: '#6b7280',
+    color: theme.colors.textTertiary,
   };
 
   // Error/empty state styles
   const emptyStateStyle: React.CSSProperties = {
-    padding: '3rem 2rem',
+    padding: `${theme.spacing['2xl']} ${theme.spacing.xl}`,
     textAlign: 'center',
   };
 
   const emptyStateTitleStyle: React.CSSProperties = {
-    fontSize: '1.5rem',
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: '0.5rem',
+    fontSize: theme.typography.fontSize['2xl'],
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.sm,
   };
 
   const emptyStateTextStyle: React.CSSProperties = {
-    fontSize: '1rem',
-    color: '#6b7280',
-    marginBottom: '1.5rem',
+    fontSize: theme.typography.fontSize.base,
+    color: theme.colors.textTertiary,
+    marginBottom: theme.spacing.lg,
+    lineHeight: theme.typography.lineHeight.relaxed,
   };
 
   const buttonStyle: React.CSSProperties = {
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#0066cc',
+    padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+    backgroundColor: theme.colors.primary,
     color: 'white',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: theme.borderRadius.md,
     cursor: 'pointer',
-    fontSize: '1rem',
-    fontWeight: '500',
-    transition: 'background-color 0.2s ease',
+    fontSize: theme.typography.fontSize.base,
+    fontWeight: theme.typography.fontWeight.medium,
+    transition: theme.transition.normal,
   };
 
   // Tab description style
   const tabDescriptionStyle: React.CSSProperties = {
-    padding: '0.75rem 2rem',
-    fontSize: '0.875rem',
-    color: '#6b7280',
-    backgroundColor: '#f9fafb',
-    borderBottom: '1px solid #e5e7eb',
+    padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textTertiary,
+    backgroundColor: theme.colors.backgroundSecondary,
+    borderBottom: `1px solid ${theme.colors.border}`,
     display: 'flex',
     alignItems: 'center',
-    gap: '0.5rem',
+    gap: theme.spacing.sm,
   };
 
   if (loading) {
@@ -285,7 +287,7 @@ export default function CaseReportPage() {
             <h1 style={titleStyle}>Decision Trace Report</h1>
           </header>
           <div style={skeletonStyle}>
-            <div style={{ fontSize: '1rem', color: '#9ca3af' }}>Loading report...</div>
+            <div style={{ fontSize: theme.typography.fontSize.base, color: theme.colors.textMuted }}>Loading report...</div>
           </div>
         </div>
       </div>
@@ -307,10 +309,10 @@ export default function CaseReportPage() {
               onClick={() => router.push('/')}
               style={buttonStyle}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#0052a3';
+                e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#0066cc';
+                e.currentTarget.style.backgroundColor = theme.colors.primary;
               }}
             >
               Return to Home
@@ -336,10 +338,10 @@ export default function CaseReportPage() {
               onClick={() => router.push('/')}
               style={buttonStyle}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#0052a3';
+                e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#0066cc';
+                e.currentTarget.style.backgroundColor = theme.colors.primary;
               }}
             >
               Return to Home
@@ -532,7 +534,7 @@ export default function CaseReportPage() {
                     className="markdown-content"
                   />
                 ) : (
-                  <div style={{ color: '#6b7280', fontStyle: 'italic' }}>No evidence section found in report.</div>
+                  <div style={{ color: theme.colors.textTertiary, fontStyle: 'italic' }}>No evidence section found in report.</div>
                 );
               })()}
             </div>
@@ -548,7 +550,7 @@ export default function CaseReportPage() {
                     className="markdown-content"
                   />
                 ) : (
-                  <div style={{ color: '#6b7280', fontStyle: 'italic' }}>No assumptions section found in report.</div>
+                  <div style={{ color: theme.colors.textTertiary, fontStyle: 'italic' }}>No assumptions section found in report.</div>
                 );
               })()}
             </div>
@@ -564,7 +566,7 @@ export default function CaseReportPage() {
                     className="markdown-content"
                   />
                 ) : (
-                  <div style={{ color: '#6b7280', fontStyle: 'italic' }}>No alternatives section found in report.</div>
+                  <div style={{ color: theme.colors.textTertiary, fontStyle: 'italic' }}>No alternatives section found in report.</div>
                 );
               })()}
             </div>
@@ -580,7 +582,7 @@ export default function CaseReportPage() {
                     className="markdown-content"
                   />
                 ) : (
-                  <div style={{ color: '#6b7280', fontStyle: 'italic' }}>No risks section found in report.</div>
+                  <div style={{ color: theme.colors.textTertiary, fontStyle: 'italic' }}>No risks section found in report.</div>
                 );
               })()}
             </div>
@@ -590,32 +592,32 @@ export default function CaseReportPage() {
               {reportData.report.mermaidDiagram ? (
                 <div>
                   <pre style={{ 
-                    backgroundColor: '#f9fafb', 
-                    padding: '1.5rem', 
-                    borderRadius: '8px',
+                    backgroundColor: theme.colors.backgroundSecondary, 
+                    padding: theme.spacing.lg, 
+                    borderRadius: theme.borderRadius.lg,
                     overflow: 'auto',
                     whiteSpace: 'pre-wrap',
-                    border: '1px solid #e5e7eb',
-                    fontSize: '0.875rem',
-                    lineHeight: '1.6',
+                    border: `1px solid ${theme.colors.border}`,
+                    fontSize: theme.typography.fontSize.sm,
+                    lineHeight: theme.typography.lineHeight.normal,
                     fontFamily: 'monospace',
-                    color: '#374151',
+                    color: theme.colors.textSecondary,
                   }}>
                     {reportData.report.mermaidDiagram}
                   </pre>
-                  <p style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+                  <p style={{ marginTop: theme.spacing.md, fontSize: theme.typography.fontSize.sm, color: theme.colors.textTertiary }}>
                     <a 
                       href="https://mermaid.live"
                       target="_blank" 
                       rel="noopener noreferrer"
-                      style={{ color: '#0066cc', textDecoration: 'underline' }}
+                      style={{ color: theme.colors.primary, textDecoration: 'underline' }}
                     >
                       Open in Mermaid Live Editor
                     </a>
                   </p>
                 </div>
               ) : (
-                <div style={{ color: '#6b7280', fontStyle: 'italic', textAlign: 'center', padding: '2rem' }}>
+                <div style={{ color: theme.colors.textTertiary, fontStyle: 'italic', textAlign: 'center', padding: theme.spacing.xl }}>
                   No diagram available
                 </div>
               )}
@@ -623,10 +625,20 @@ export default function CaseReportPage() {
           )}
           {activeTab === 'export' && (
             <div>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#111827', marginBottom: '0.5rem' }}>
+              <h3 style={{ 
+                fontSize: theme.typography.fontSize.xl, 
+                fontWeight: theme.typography.fontWeight.semibold, 
+                color: theme.colors.textPrimary, 
+                marginBottom: theme.spacing.sm 
+              }}>
                 Export Report
               </h3>
-              <p style={{ fontSize: '1rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+              <p style={{ 
+                fontSize: theme.typography.fontSize.base, 
+                color: theme.colors.textTertiary, 
+                marginBottom: theme.spacing.lg,
+                lineHeight: theme.typography.lineHeight.relaxed,
+              }}>
                 Download the full report as a Markdown file.
               </p>
               <button
