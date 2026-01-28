@@ -97,6 +97,17 @@ export default function CaseReportPage() {
     }
   };
 
+  // Tab descriptions mapping
+  const tabDescriptions: Record<string, string> = {
+    overview: 'High-level summary of the decision, stakeholders, and context.',
+    evidence: 'Supporting facts and inputs used to reach the decision.',
+    assumptions: 'Assumptions made due to missing or uncertain information.',
+    alternatives: 'Other options considered and why they were not chosen.',
+    risks: 'Risks identified and what could go wrong.',
+    diagram: 'A visual map of how evidence, reasoning, and outcomes connect.',
+    export: 'Download and share this report in a portable format.',
+  };
+
   useEffect(() => {
     async function fetchReport() {
       try {
@@ -252,6 +263,18 @@ export default function CaseReportPage() {
     fontSize: '1rem',
     fontWeight: '500',
     transition: 'background-color 0.2s ease',
+  };
+
+  // Tab description style
+  const tabDescriptionStyle: React.CSSProperties = {
+    padding: '0.75rem 2rem',
+    fontSize: '0.875rem',
+    color: '#6b7280',
+    backgroundColor: '#f9fafb',
+    borderBottom: '1px solid #e5e7eb',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
   };
 
   if (loading) {
@@ -475,6 +498,11 @@ export default function CaseReportPage() {
             Export
           </button>
         </nav>
+
+        <div data-testid="tab-description" style={tabDescriptionStyle}>
+          <span style={{ fontSize: '0.875rem' }}>ℹ️</span>
+          <span>{tabDescriptions[activeTab] || tabDescriptions.overview}</span>
+        </div>
 
         <main data-testid="report-content" style={contentStyle}>
           {activeTab === 'overview' && (
