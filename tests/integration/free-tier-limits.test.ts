@@ -17,6 +17,13 @@ import {
   resetRateLimits,
 } from '@/lib/free-tier-limits';
 
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 describe('Free Tier Limits', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -282,7 +289,7 @@ describe('Free Tier Limits', () => {
       
       // STRICT: Must be Gemini 3
       expect(model).toBe('gemini-3');
-      expect(model).toStartWith('gemini-3');
+      expect(model).toMatch(new RegExp(`^${escapeRegExp('gemini-3')}`));
     });
 
     it('should return low thinking level in free mode', () => {
