@@ -65,6 +65,9 @@ GEMINI_API_KEY=your-gemini-api-key-here
 ```bash
 # Add Vercel Postgres integration in Vercel dashboard
 # DATABASE_URL will be automatically set
+
+# IMPORTANT: Set DATABASE_URL to the prisma+postgres:// URL on Vercel and redeploy.
+# The vercel-build script will automatically apply the schema using `prisma db push`.
 ```
 
 **Option C: SQLite (Local Development Only)**
