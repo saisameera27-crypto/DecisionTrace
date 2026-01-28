@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
+import { isDemoMode } from '@/lib/demo-mode';
 
 /**
  * Generate a unique slug for share links
@@ -22,10 +23,10 @@ export async function POST(
 ) {
   // Wrap entire handler in try/catch
   try {
-    // Check if in test/mock mode (skip CSRF/auth checks)
+    // Check if in test/mock/demo mode (skip CSRF/auth checks)
     const isTestMode = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
     const isMockMode = process.env.GEMINI_TEST_MODE === 'mock';
-    const isDemoMode = isTestMode || isMockMode;
+    const demoModeEnabled = isDemoMode() || isTestMode || isMockMode;
 
     const prisma = getPrismaClient();
     const caseId = params.id;
@@ -60,7 +61,7 @@ export async function POST(
 
     if (!case_) {
       // In demo mode, don't return 404 - create a minimal case or return error
-      if (isDemoMode) {
+      if (demoModeEnabled) {
         // Return error but not 401/403/500
         return NextResponse.json(
           { code: 'CASE_NOT_FOUND', message: 'Case not found' },
@@ -74,7 +75,7 @@ export async function POST(
     }
 
     // In demo mode, skip report check - always generate/reuse slug
-    if (isDemoMode) {
+    if (demoModeEnabled) {
       // Reuse existing non-expired share if available
       if (case_.shares && case_.shares.length > 0) {
         const existingShare = case_.shares[0];
@@ -141,11 +142,11 @@ export async function POST(
     // In demo mode, never return 500 - return 200 with error code instead
     const isTestMode = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
     const isMockMode = process.env.GEMINI_TEST_MODE === 'mock';
-    const isDemoMode = isTestMode || isMockMode;
+    const demoModeEnabled = isDemoMode() || isTestMode || isMockMode;
 
     console.error('Error creating share link:', error);
 
-    if (isDemoMode) {
+    if (demoModeEnabled) {
       // In demo mode, return 200 with error code instead of 500
       return NextResponse.json({
         code: 'SHARE_CREATE_FAILED',

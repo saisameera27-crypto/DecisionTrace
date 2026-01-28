@@ -1,0 +1,58 @@
+/**
+ * Demo Mode Helper
+ * Checks if demo mode is enabled and provides utilities for demo mode behavior
+ * 
+ * Demo mode is enabled when:
+ * - DEMO_MODE=true is explicitly set, OR
+ * - No GEMINI_API_KEY is present (defaults to demo mode for hackathon demos)
+ */
+
+/**
+ * Check if demo mode is enabled
+ * 
+ * Demo mode is enabled when:
+ * 1. DEMO_MODE=true is explicitly set, OR
+ * 2. No GEMINI_API_KEY is present (defaults to demo mode)
+ * 
+ * @returns true if demo mode is enabled
+ */
+export function isDemoMode(): boolean {
+  // Explicit DEMO_MODE flag
+  if (process.env.DEMO_MODE === 'true') {
+    return true;
+  }
+  
+  // Default to demo mode if no API key is present (hackathon-friendly)
+  if (!process.env.GEMINI_API_KEY) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Check if demo mode should use mock Gemini responses
+ * In demo mode, all Gemini calls are mocked
+ */
+export function shouldMockGeminiInDemoMode(): boolean {
+  return isDemoMode();
+}
+
+/**
+ * Get demo mode status for UI display
+ */
+export function getDemoModeStatus(): {
+  enabled: boolean;
+  reason: 'explicit' | 'no-api-key' | 'disabled';
+} {
+  if (process.env.DEMO_MODE === 'true') {
+    return { enabled: true, reason: 'explicit' };
+  }
+  
+  if (!process.env.GEMINI_API_KEY) {
+    return { enabled: true, reason: 'no-api-key' };
+  }
+  
+  return { enabled: false, reason: 'disabled' };
+}
+

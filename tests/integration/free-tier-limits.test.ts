@@ -203,25 +203,40 @@ describe('Free Tier Limits', () => {
     });
   });
 
-  describe('Model Validation', () => {
-    it('should reject Pro model in free mode', () => {
+  describe('Model Validation - STRICT Gemini 3 Only', () => {
+    it('should reject non-Gemini-3 models (gemini-1.5)', () => {
       process.env.FREE_MODE = 'true';
-      const result = validateModelForFreeMode('gemini-3-pro-preview');
+      const result = validateModelForFreeMode('gemini-1.5-flash');
       
       expect(result.allowed).toBe(false);
-      expect(result.reason).toContain('Flash');
+      expect(result.reason).toContain('not a Gemini 3 model');
     });
 
-    it('should accept Flash model in free mode', () => {
+    it('should reject legacy models (gemini-1.0)', () => {
       process.env.FREE_MODE = 'true';
-      const result = validateModelForFreeMode('gemini-3-flash-preview');
+      const result = validateModelForFreeMode('gemini-1.0-pro');
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('not a Gemini 3 model');
+    });
+
+    it('should accept Gemini 3 model in free mode', () => {
+      process.env.FREE_MODE = 'true';
+      const result = validateModelForFreeMode('gemini-3');
+      
+      expect(result.allowed).toBe(true);
+    });
+
+    it('should accept Gemini 3 Flash variant in free mode', () => {
+      process.env.FREE_MODE = 'true';
+      const result = validateModelForFreeMode('gemini-3-flash');
       
       expect(result.allowed).toBe(true);
     });
 
     it('should reject high thinking level in free mode', () => {
       process.env.FREE_MODE = 'true';
-      const result = validateModelForFreeMode('gemini-3-flash-preview', 'high');
+      const result = validateModelForFreeMode('gemini-3', 'high');
       
       expect(result.allowed).toBe(false);
       expect(result.reason).toContain('thinking level');
@@ -229,14 +244,22 @@ describe('Free Tier Limits', () => {
 
     it('should accept low thinking level in free mode', () => {
       process.env.FREE_MODE = 'true';
-      const result = validateModelForFreeMode('gemini-3-flash-preview', 'low');
+      const result = validateModelForFreeMode('gemini-3', 'low');
       
       expect(result.allowed).toBe(true);
     });
 
-    it('should allow any model when not in free mode', () => {
+    it('should reject non-Gemini-3 models even when not in free mode', () => {
       delete process.env.FREE_MODE;
-      const result = validateModelForFreeMode('gemini-3-pro-preview', 'high');
+      const result = validateModelForFreeMode('gemini-1.5-pro', 'high');
+      
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toContain('not a Gemini 3 model');
+    });
+
+    it('should accept Gemini 3 models when not in free mode', () => {
+      delete process.env.FREE_MODE;
+      const result = validateModelForFreeMode('gemini-3-pro', 'high');
       
       expect(result.allowed).toBe(true);
     });
@@ -253,12 +276,13 @@ describe('Free Tier Limits', () => {
       expect(isFreeMode()).toBe(false);
     });
 
-    it('should return Flash model in free mode', () => {
+    it('should return Gemini 3 model in free mode', () => {
       process.env.FREE_MODE = 'true';
       const model = getFreeModeModel();
       
-      expect(model).toContain('flash');
-      expect(model).not.toContain('pro');
+      // STRICT: Must be Gemini 3
+      expect(model).toBe('gemini-3');
+      expect(model).toStartWith('gemini-3');
     });
 
     it('should return low thinking level in free mode', () => {

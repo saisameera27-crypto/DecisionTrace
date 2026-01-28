@@ -1,24 +1,29 @@
 import { NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
+import { isDemoMode } from '@/lib/demo-mode';
 
 /**
  * Demo: Load Sample Case
- * Creates a pre-populated sample case with completed report for demo/testing
+ * Returns seeded demo case for hackathon demos
  * 
- * Security: In test/mock mode (NODE_ENV === "test" OR GEMINI_TEST_MODE === "mock"),
- * this endpoint skips all auth, CSRF, and write protection checks.
+ * In DEMO_MODE, this endpoint:
+ * - Returns the seeded demo case (slug: 'demo-sample-case')
+ * - Creates it if it doesn't exist (idempotent)
+ * - No authentication required
+ * 
+ * Supports both GET and POST for easy access
  * 
  * CI-safe: Uses getPrismaClient() factory to respect DATABASE_URL and PRISMA_SCHEMA_TARGET.
  * Always returns structured JSON responses, never throws uncaught errors.
  */
-export async function POST() {
+async function loadSampleCase() {
   // Check if endpoint is enabled (test/mock mode or DEMO_MODE)
   const isTestMode = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
   const isMockMode = process.env.GEMINI_TEST_MODE === 'mock';
-  const isDemoMode = process.env.DEMO_MODE === 'true';
+  const demoModeEnabled = isDemoMode();
   
-  // In test/mock mode: skip all auth, CSRF, and write protection checks
-  if (!isTestMode && !isMockMode && !isDemoMode) {
+  // In test/mock/demo mode: skip all auth, CSRF, and write protection checks
+  if (!isTestMode && !isMockMode && !demoModeEnabled) {
     return NextResponse.json({
       code: 'DEMO_ENDPOINT_DISABLED',
       message: 'This endpoint is only available in test/CI mode, mock mode, or when DEMO_MODE is enabled',
@@ -30,19 +35,28 @@ export async function POST() {
     // Use Prisma client factory (respects DATABASE_URL and PRISMA_SCHEMA_TARGET)
     const prisma = getPrismaClient();
 
-    // Create case
-    const sampleCase = await prisma.case.create({
-      data: {
+    // Use seeded demo case (idempotent - creates if doesn't exist)
+    // This matches the case created by prisma/seed.ts
+    const demoCase = await prisma.case.upsert({
+      where: { slug: 'demo-sample-case' },
+      update: {
+        // Keep existing case
+      },
+      create: {
         title: 'Sample Decision Case - Q2 2024 Product Launch',
         status: 'completed',
-        slug: `sample-${Date.now()}`,
+        slug: 'demo-sample-case',
       },
     });
 
-    // Create report
-    await prisma.report.create({
-      data: {
-        caseId: sampleCase.id,
+    // Ensure report exists (idempotent)
+    await prisma.report.upsert({
+      where: { caseId: demoCase.id },
+      update: {
+        // Keep existing report
+      },
+      create: {
+        caseId: demoCase.id,
         finalNarrativeMarkdown: `# Decision Trace Report
 
 ## Decision Overview
@@ -79,10 +93,15 @@ This decision involved launching a new product line in Q2 2024. The decision was
       },
     });
 
+    // Ensure steps exist (idempotent - delete and recreate for consistency)
+    await prisma.caseStep.deleteMany({
+      where: { caseId: demoCase.id },
+    });
+    
     // Create steps (separate from case creation for SQLite compatibility)
     // Step 2 contains decision data that will be used by the report API
     const step2DecisionData = {
-      caseId: sampleCase.id,
+      caseId: demoCase.id,
       documentId: 'demo-doc-1',
       decisionTitle: 'Q2 2024 Product Launch',
       decisionDate: '2024-03-15',
@@ -119,18 +138,36 @@ This decision involved launching a new product line in Q2 2024. The decision was
 
     await prisma.caseStep.createMany({
       data: [
-        { caseId: sampleCase.id, stepNumber: 1, status: 'completed', data: JSON.stringify({ step: 1 }) },
-        { caseId: sampleCase.id, stepNumber: 2, status: 'completed', data: JSON.stringify(step2DecisionData) },
-        { caseId: sampleCase.id, stepNumber: 3, status: 'completed', data: JSON.stringify({ step: 3 }) },
-        { caseId: sampleCase.id, stepNumber: 4, status: 'completed', data: JSON.stringify({ step: 4 }) },
-        { caseId: sampleCase.id, stepNumber: 5, status: 'completed', data: JSON.stringify({ step: 5 }) },
-        { caseId: sampleCase.id, stepNumber: 6, status: 'completed', data: JSON.stringify({ step: 6 }) },
+        { caseId: demoCase.id, stepNumber: 1, status: 'completed', data: JSON.stringify({ step: 1 }) },
+        { caseId: demoCase.id, stepNumber: 2, status: 'completed', data: JSON.stringify(step2DecisionData) },
+        { caseId: demoCase.id, stepNumber: 3, status: 'completed', data: JSON.stringify({ step: 3 }) },
+        { caseId: demoCase.id, stepNumber: 4, status: 'completed', data: JSON.stringify({ step: 4 }) },
+        { caseId: demoCase.id, stepNumber: 5, status: 'completed', data: JSON.stringify({ step: 5 }) },
+        { caseId: demoCase.id, stepNumber: 6, status: 'completed', data: JSON.stringify({ step: 6 }) },
       ],
+    });
+
+    // Create public share slug if it doesn't exist (for easy testing)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 365); // Expires in 1 year
+    
+    await prisma.share.upsert({
+      where: { slug: 'demo-sample-case-share' },
+      update: {
+        // Keep existing share
+      },
+      create: {
+        caseId: demoCase.id,
+        slug: 'demo-sample-case-share',
+        expiresAt,
+      },
     });
 
     // Always return 200 with { caseId } when demo seed exists
     return NextResponse.json({
-      caseId: sampleCase.id,
+      caseId: demoCase.id,
+      slug: demoCase.slug,
+      shareSlug: 'demo-sample-case-share',
     }, { status: 200 });
   } catch (error: any) {
     // On error, return structured JSON response (never throw uncaught errors)
@@ -140,4 +177,12 @@ This decision involved launching a new product line in Q2 2024. The decision was
       { status: 500 }
     );
   }
+}
+
+export async function GET() {
+  return loadSampleCase();
+}
+
+export async function POST() {
+  return loadSampleCase();
 }

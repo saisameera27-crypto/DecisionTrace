@@ -39,9 +39,9 @@ export const FREE_TIER_LIMITS = {
   MAX_RUNS_PER_IP_PER_DAY: 3,
   MAX_REQUESTS_PER_IP_PER_MINUTE: 10,
   
-  // Model selection
+  // Model selection - STRICT: Only Gemini 3
   FREE_MODE: process.env.FREE_MODE === 'true',
-  FREE_MODEL: 'gemini-3-flash-preview', // Use Gemini 3 Flash
+  FREE_MODEL: 'gemini-3', // STRICT: Only Gemini 3 (default)
   FREE_THINKING_LEVEL: 'low' as const,
   
   // Global daily limit for real Gemini calls
@@ -290,22 +290,31 @@ export function getFreeModeThinkingLevel(): 'low' | 'medium' | 'high' {
 
 /**
  * Validate model selection for free mode
+ * STRICT: Only Gemini 3 models are allowed
  */
 export function validateModelForFreeMode(model: string, thinkingLevel?: string): LimitCheckResult {
   if (!isFreeMode()) {
+    // Still validate it's Gemini 3 even in non-free mode
+    if (!model.startsWith('gemini-3')) {
+      return {
+        allowed: false,
+        reason: `Model "${model}" is not a Gemini 3 model. Only Gemini 3 models are supported.`,
+        suggestedAction: 'Use "gemini-3" or a Gemini 3 variant',
+      };
+    }
     return { allowed: true };
   }
   
-  // Only allow Flash model in free mode
-  if (!model.includes('flash')) {
+  // STRICT: Must be Gemini 3
+  if (!model.startsWith('gemini-3')) {
     return {
       allowed: false,
-      reason: 'Only Flash model is available in free mode',
-      suggestedAction: 'Free mode uses gemini-3-flash-preview automatically',
+      reason: `Model "${model}" is not a Gemini 3 model. Only Gemini 3 models are supported.`,
+      suggestedAction: 'Free mode uses "gemini-3" automatically',
     };
   }
   
-  // Only allow low thinking level
+  // Only allow low thinking level in free mode
   if (thinkingLevel && thinkingLevel !== 'low') {
     return {
       allowed: false,

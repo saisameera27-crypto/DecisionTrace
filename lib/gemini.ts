@@ -12,6 +12,13 @@ import {
   getFreeModeThinkingLevel,
   validateModelForFreeMode,
 } from './free-tier-limits';
+import { isDemoMode } from './demo-mode';
+import {
+  GEMINI_MODEL,
+  validateGemini3Model,
+  getDefaultGemini3Model,
+  isBlockedModel,
+} from './gemini/config';
 
 export type GeminiTestMode = 'mock' | 'replay' | 'live';
 
@@ -46,8 +53,14 @@ export interface GeminiResponse {
 
 /**
  * Get test mode from environment variable
+ * In demo mode, automatically uses mock mode
  */
 function getTestMode(): GeminiTestMode {
+  // If demo mode is enabled, use mock mode (no API key needed)
+  if (isDemoMode()) {
+    return 'mock';
+  }
+  
   const mode = process.env.GEMINI_TEST_MODE;
   if (mode === 'mock' || mode === 'replay' || mode === 'live') {
     return mode;
@@ -171,6 +184,12 @@ function convertStepDataToGeminiResponse(stepData: any): GeminiResponse {
 export async function callGeminiAPI(
   options: GeminiCallOptions
 ): Promise<GeminiResponse> {
+  // In demo mode, always use mock (no API key needed)
+  if (isDemoMode()) {
+    const stepName = options.stepName || 'step1';
+    return getMockResponse(stepName);
+  }
+  
   // In production, only allow live mode (safety check)
   if (process.env.NODE_ENV === 'production') {
     const mode = process.env.GEMINI_TEST_MODE;
@@ -219,6 +238,7 @@ export async function callGeminiAPI(
 
 /**
  * Call real Gemini API (only used in live mode)
+ * STRICT: Only Gemini 3 models are allowed
  * Respects free-tier limits when FREE_MODE=true
  */
 async function callRealGeminiAPI(
@@ -229,13 +249,47 @@ async function callRealGeminiAPI(
     throw new Error('GEMINI_API_KEY is required for live mode');
   }
   
-  // Apply free mode constraints
-  let model = options.model || 'gemini-3-flash-preview';
+  // STRICT VALIDATION: Check if model is explicitly blocked
+  if (options.model && isBlockedModel(options.model)) {
+    throw new Error(
+      `Model "${options.model}" is blocked. Only Gemini 3 models are supported. ` +
+      `Please use "gemini-3" or a Gemini 3 variant.`
+    );
+  }
+  
+  // Get model - default to Gemini 3, validate strictly
+  let model: string;
+  if (options.model) {
+    // Validate that provided model is Gemini 3
+    try {
+      model = validateGemini3Model(options.model);
+    } catch (error: any) {
+      throw new Error(
+        `Invalid model: ${error.message}. ` +
+        `Only Gemini 3 models are supported. Please use "gemini-3" or a Gemini 3 variant.`
+      );
+    }
+  } else {
+    // Default to Gemini 3
+    model = getDefaultGemini3Model();
+  }
+  
   let thinkingLevel = options.thinkingLevel || 'low';
   
   if (isFreeMode()) {
-    // Force Flash model in free mode
-    model = getFreeModeModel();
+    // Force Flash model in free mode (must still be Gemini 3)
+    const freeModel = getFreeModeModel();
+    
+    // Validate free mode model is still Gemini 3
+    try {
+      model = validateGemini3Model(freeModel);
+    } catch (error: any) {
+      throw new Error(
+        `Free mode model "${freeModel}" is not a Gemini 3 model. ` +
+        `This is a configuration error. Only Gemini 3 models are supported.`
+      );
+    }
+    
     thinkingLevel = getFreeModeThinkingLevel();
     
     // Validate model selection
@@ -243,6 +297,14 @@ async function callRealGeminiAPI(
     if (!validation.allowed) {
       throw new Error(`Free mode constraint: ${validation.reason}`);
     }
+  }
+  
+  // Final validation before API call
+  if (!model.startsWith('gemini-3')) {
+    throw new Error(
+      `Model "${model}" is not a Gemini 3 model. ` +
+      `Only Gemini 3 models are supported. Please use "gemini-3" or a Gemini 3 variant.`
+    );
   }
   
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -279,8 +341,17 @@ async function callRealGeminiAPI(
   });
   
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${error}`);
+    const errorText = await response.text();
+    let errorMessage = `Gemini API error: ${response.status} - ${errorText}`;
+    
+    // Check if error is due to model unavailability
+    if (response.status === 404 || errorText.includes('not found') || errorText.includes('invalid model')) {
+      errorMessage = `Gemini 3 model "${model}" is not available. ` +
+        `Please verify that the model name is correct and that Gemini 3 is available in your region. ` +
+        `Original error: ${errorText}`;
+    }
+    
+    throw new Error(errorMessage);
   }
   
   return await response.json() as GeminiResponse;
@@ -294,6 +365,15 @@ export async function uploadFileToGemini(
   mimeType: string,
   fileName: string
 ): Promise<{ uri: string; mimeType: string; name: string }> {
+  // In demo mode, return mock file URI (no API key needed)
+  if (isDemoMode()) {
+    return {
+      uri: `gs://gemini-files/demo-${Date.now()}-${fileName}`,
+      mimeType,
+      name: fileName,
+    };
+  }
+  
   // In production, only allow live mode (safety check)
   if (process.env.NODE_ENV === 'production') {
     const mode = process.env.GEMINI_TEST_MODE;
