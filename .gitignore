@@ -1,4 +1,4 @@
-# Neo - Virtual Vet Companion
+# Decision Trace - Hackathon Project
 # .gitignore file
 
 # Operating System Files
@@ -64,13 +64,18 @@ jspm_packages/
 # Yarn Integrity file
 .yarn-integrity
 
-# Environment Variables
+# Environment Variables (NEVER COMMIT)
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
+.env.development
 .env.*.local
+.env.*
+# BUT KEEP .env.example (tracked)
+!.env.example
 
 # IDE and Editor Files
 # Visual Studio Code
@@ -110,7 +115,7 @@ auto-save-list
 tramp
 .\#*
 
-# Build and Distribution
+# Build and Distribution (NEVER COMMIT)
 dist/
 build/
 out/
@@ -118,6 +123,8 @@ out/
 .nuxt/
 .cache/
 .parcel-cache/
+.vercel/
+tsconfig.tsbuildinfo
 
 # Logs
 logs
@@ -139,10 +146,17 @@ lerna-debug.log*
 *.old
 *.orig
 
-# Database Files
+# Database Files (NEVER COMMIT)
 *.db
 *.sqlite
 *.sqlite3
+# SQLite databases in tmp directories
+tmp/*.db
+tmp/*.sqlite
+prisma/tmp/*.db
+prisma/tmp/*.sqlite
+# BUT KEEP schema files (tracked)
+!prisma/schema*.prisma
 
 # Capacitor (Mobile Development)
 # Keep the main Capacitor files but ignore platform-specific builds
@@ -154,11 +168,15 @@ capacitor.config.ts
 # Web Server Files
 .htaccess
 
-# Testing
+# Testing Artifacts (NEVER COMMIT)
 test-results/
 playwright-report/
 test-results.xml
 coverage.xml
+coverage/
+# BUT KEEP test fixtures and data (tracked)
+!test-data/
+!tests/
 
 # Miscellaneous
 *.zip
@@ -209,7 +227,7 @@ venv.bak/
 *.tar.gz
 *.rar
 
-# Security and Sensitive Files
+# Security and Sensitive Files (NEVER COMMIT)
 *.key
 *.pem
 *.p12
@@ -217,13 +235,33 @@ venv.bak/
 *.csr
 secrets.json
 credentials.json
+service-account*.json
+*-credentials.json
+*credentials*.json
+# API keys in any format
+*api*key*
+*API*KEY*
+*secret*
+*SECRET*
 
-# Project Specific
-# Add any project-specific files to ignore here
-# Example:
-# config/local.json
-# uploads/
-# user-data/
+# Project Specific - Decision Trace
+# Temporary directories
+tmp/
+.tmp/
+# Vercel
+.vercel/
+# Logs
+*.log
+logs/
+# OS files
+.DS_Store
+Thumbs.db
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # Keep these files (use ! to negate ignore)
 !.gitkeep

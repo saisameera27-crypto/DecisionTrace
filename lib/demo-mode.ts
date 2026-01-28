@@ -2,9 +2,20 @@
  * Demo Mode Helper
  * Checks if demo mode is enabled and provides utilities for demo mode behavior
  * 
- * Demo mode is enabled when:
+ * Demo mode is DEFAULT for production hackathon deployments:
  * - DEMO_MODE=true is explicitly set, OR
- * - No GEMINI_API_KEY is present (defaults to demo mode for hackathon demos)
+ * - No GEMINI_API_KEY is present (defaults to demo mode)
+ * 
+ * Demo mode provides:
+ * - Instant "Load Sample Case" functionality
+ * - Mock Gemini responses (no API calls)
+ * - No database persistence required
+ * - Perfect for hackathon judging
+ * 
+ * To use Live Gemini 3:
+ * - Set GEMINI_API_KEY environment variable
+ * - Demo mode will be disabled
+ * - "Run Live Gemini 3" option will be available
  */
 
 /**

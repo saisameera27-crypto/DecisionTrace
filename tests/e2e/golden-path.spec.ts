@@ -12,21 +12,11 @@ test.describe('Golden Path', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // Load sample case via API (demo mode - no Gemini calls)
-    // Note: When UI "Load Sample Case" button exists, replace this with UI click
-    const response = await page.request.post('/api/demo/load-sample');
-    if (!response.ok()) {
-      console.log('STATUS:', response.status());
-      console.log('BODY:', await response.text());
-    }
-    expect(response.ok()).toBeTruthy();
+    // Click "Load Sample Case" button (UI interaction)
+    await page.click('[data-testid="load-sample-case-button"]');
     
-    const data = await response.json();
-    expect(data).toHaveProperty('caseId');
-    const caseId = data.caseId;
-
-    // Navigate to case report page (UI navigation)
-    await page.goto(`/case/${caseId}`);
+    // Wait for navigation to case page
+    await page.waitForURL(/\/case\/[^/]+/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
 
     // Verify report page renders with stable UI assertions
@@ -44,48 +34,32 @@ test.describe('Golden Path', () => {
   });
 
   test('should create share link and access public case @smoke', async ({ page }) => {
-    // Load sample case via API (demo mode)
-    // Note: When UI "Load Sample Case" button exists, replace this with UI click
-    const response = await page.request.post('/api/demo/load-sample');
-    if (!response.ok()) {
-      console.log('STATUS:', response.status());
-      console.log('BODY:', await response.text());
-    }
-    expect(response.ok()).toBeTruthy();
-    
-    const data = await response.json();
-    const caseId = data.caseId;
-
-    // Navigate to case report page
-    await page.goto(`/case/${caseId}`);
+    // Navigate to landing page
+    await page.goto('/');
     await page.waitForLoadState('networkidle');
 
-    // TODO: When Share button UI exists, replace API call with UI click:
-    // - await page.click('[data-testid="share-button"]');
-    // - await page.click('[data-testid="create-share-link"]');
-    // - await expect(page.locator('[data-testid="share-link-display"]')).toBeVisible();
-    // - const shareSlug = await page.locator('[data-testid="share-link-display"]').textContent();
+    // Click "Open Public Share Link" button (UI interaction)
+    // This button loads sample case, creates share link, and navigates to public page
+    await page.click('[data-testid="open-public-share-button"]');
     
-    // For now, create share link via API (will be replaced with UI when available)
-    const shareResponse = await page.request.post(`/api/case/${caseId}/share`, {
-      data: { expirationDays: 30 },
-    });
-    if (!shareResponse.ok()) {
-      console.log('STATUS:', shareResponse.status());
-      console.log('BODY:', await shareResponse.text());
-    }
-    expect(shareResponse.ok()).toBeTruthy();
-    
-    const shareData = await shareResponse.json();
-    expect(shareData).toHaveProperty('slug');
-    const shareSlug = shareData.slug;
-
-    // Navigate to public case page (UI navigation)
-    await page.goto(`/public/case/${shareSlug}`);
+    // Wait for navigation to public case page
+    await page.waitForURL(/\/public\/case\/[^/]+/, { timeout: 10000 });
     await page.waitForLoadState('networkidle');
 
     // Verify public report page renders with stable UI assertions
     await expect(page.locator('[data-testid="public-report-root"]')).toBeVisible();
     await expect(page.locator('[data-testid="public-report-readonly-badge"]')).toBeVisible();
+    
+    // Verify required sections are present
+    await expect(page.locator('[data-testid="public-report-header"]')).toBeVisible();
+    await expect(page.locator('[data-testid="public-report-summary"]')).toBeVisible();
+    await expect(page.locator('[data-testid="public-report-diagram"]')).toBeVisible();
+    await expect(page.locator('[data-testid="public-report-evidence"]')).toBeVisible();
+    
+    // Verify decision title is shown (if available)
+    const decisionTitle = page.locator('[data-testid="public-report-decision-title"]');
+    if (await decisionTitle.count() > 0) {
+      await expect(decisionTitle).toBeVisible();
+    }
   });
 });

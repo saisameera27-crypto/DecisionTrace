@@ -75,14 +75,38 @@ export GEMINI_API_KEY=your-api-key
 npm run dev
 ```
 
-### Demo Mode
+### Demo Mode (Default for Production)
 
-**The app works fully without a Gemini API key!**
+**Demo mode is the DEFAULT for hackathon deployments!**
 
-- Uses mock responses for unlimited testing
-- No costs, no API calls
-- Perfect for demos and hackathon judging
-- All features work except real Gemini analysis
+The app works fully without a Gemini API key:
+- ✅ **Auto-enabled** when `GEMINI_API_KEY` is missing OR `DEMO_MODE=true`
+- ✅ Uses mock responses for unlimited testing
+- ✅ No costs, no API calls
+- ✅ Perfect for demos and hackathon judging
+- ✅ "Load Sample Case" works instantly
+- ✅ All features work except real Gemini analysis
+
+**To use Demo Mode:**
+```bash
+# Option 1: Set DEMO_MODE=true (recommended)
+DEMO_MODE=true npm run dev
+
+# Option 2: Simply omit GEMINI_API_KEY (auto-enables demo mode)
+npm run dev
+```
+
+**To use Live Gemini 3 (Optional):**
+```bash
+# Set GEMINI_API_KEY to enable live mode
+GEMINI_API_KEY=your-api-key npm run dev
+```
+
+**Production Deployment:**
+- Demo mode is **default** - no API key required
+- Set `DEMO_MODE=true` in Vercel environment variables
+- Or simply omit `GEMINI_API_KEY` (demo mode auto-enables)
+- Judges can try the app instantly with "Load Sample Case"
 
 ---
 
