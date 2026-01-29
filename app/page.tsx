@@ -211,7 +211,7 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Try Demo Section - Prominent for Judges */}
+      {/* Primary Actions Section */}
       <div style={{
         padding: theme.spacing.xl,
         backgroundColor: theme.colors.background,
@@ -227,7 +227,7 @@ export default function Home() {
           fontWeight: theme.typography.fontWeight.bold,
           lineHeight: theme.typography.lineHeight.tight,
         }}>
-          🎯 Demo Mode (Default)
+          Get Started
         </h2>
         <p style={{ 
           marginBottom: theme.spacing.lg, 
@@ -235,15 +235,15 @@ export default function Home() {
           fontSize: theme.typography.fontSize.base,
           lineHeight: theme.typography.lineHeight.relaxed,
         }}>
-          Experience Decision Trace with a pre-populated demo case. Works instantly with no API key or authentication required.
+          Choose how you'd like to explore Decision Trace:
         </p>
 
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '1rem',
+          gap: theme.spacing.md,
         }}>
-          {/* Button 1: Load Sample Case */}
+          {/* Button 1: Try Demo */}
           <button
             data-testid="load-sample-case-button"
             onClick={loadDemoCase}
@@ -274,9 +274,76 @@ export default function Home() {
               }
             }}
           >
-            {loading === 'load-sample' ? '⏳ Loading...' : '🚀 1. Load Sample Case'}
+            {loading === 'load-sample' ? '⏳ Loading...' : '🎯 Try Demo - Load Sample Case'}
           </button>
 
+          {/* Button 2: Create Your Own Case */}
+          <button
+            data-testid="create-case-button"
+            onClick={() => router.push('/create')}
+            disabled={loading !== null}
+            style={{
+              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+              fontSize: theme.typography.fontSize.lg,
+              backgroundColor: loading ? theme.colors.textMuted : theme.colors.success,
+              color: 'white',
+              border: 'none',
+              borderRadius: theme.borderRadius.lg,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: theme.typography.fontWeight.bold,
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              transition: theme.transition.normal,
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = '#059669';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = theme.colors.success;
+              }
+            }}
+          >
+            ✨ Create Your Own Case
+          </button>
+        </div>
+      </div>
+
+      {/* Demo Quick Actions Section */}
+      <div style={{
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.background,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.xl,
+        marginBottom: theme.spacing.xl,
+        boxShadow: theme.colors.shadowSm,
+      }}>
+        <h3 style={{ 
+          fontSize: theme.typography.fontSize.xl, 
+          marginBottom: theme.spacing.md, 
+          color: theme.colors.textPrimary,
+          fontWeight: theme.typography.fontWeight.semibold,
+        }}>
+          Quick Demo Actions
+        </h3>
+        <p style={{ 
+          marginBottom: theme.spacing.lg, 
+          color: theme.colors.textSecondary, 
+          fontSize: theme.typography.fontSize.sm,
+          lineHeight: theme.typography.lineHeight.relaxed,
+        }}>
+          After loading the sample case, you can:
+        </p>
+
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: theme.spacing.sm,
+        }}>
           {/* Button 2: Open Report */}
           <button
             data-testid="open-report-button"
@@ -284,13 +351,13 @@ export default function Home() {
             disabled={loading !== null}
             style={{
               padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: theme.typography.fontSize.lg,
+              fontSize: theme.typography.fontSize.base,
               backgroundColor: loading === 'open-report' ? theme.colors.textMuted : theme.colors.success,
               color: 'white',
               border: 'none',
               borderRadius: theme.borderRadius.lg,
               cursor: loading === 'open-report' ? 'not-allowed' : 'pointer',
-              fontWeight: theme.typography.fontWeight.bold,
+              fontWeight: theme.typography.fontWeight.semibold,
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
@@ -308,7 +375,7 @@ export default function Home() {
               }
             }}
           >
-            {loading === 'open-report' ? '⏳ Loading...' : '📊 2. Open Report'}
+            {loading === 'open-report' ? '⏳ Loading...' : '📊 Open Report'}
           </button>
 
           {/* Button 3: Open Public Share Link */}
@@ -318,13 +385,13 @@ export default function Home() {
             disabled={loading !== null}
             style={{
               padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: theme.typography.fontSize.lg,
+              fontSize: theme.typography.fontSize.base,
               backgroundColor: loading === 'open-share' ? theme.colors.textMuted : theme.colors.warning,
               color: 'white',
               border: 'none',
               borderRadius: theme.borderRadius.lg,
               cursor: loading === 'open-share' ? 'not-allowed' : 'pointer',
-              fontWeight: theme.typography.fontWeight.bold,
+              fontWeight: theme.typography.fontWeight.semibold,
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
@@ -342,7 +409,7 @@ export default function Home() {
               }
             }}
           >
-            {loading === 'open-share' ? '⏳ Loading...' : '🔗 3. Open Public Share Link'}
+            {loading === 'open-share' ? '⏳ Loading...' : '🔗 Open Public Share Link'}
           </button>
         </div>
       </div>
