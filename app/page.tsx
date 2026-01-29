@@ -186,7 +186,7 @@ export default function Home() {
       {/* Mode Indicator */}
       <div style={{
         padding: `${theme.spacing.md} ${theme.spacing.md}`,
-        backgroundColor: modeStatus.isDemoMode ? theme.colors.primaryLight : '#e8f5e9',
+        backgroundColor: theme.colors.background,
         border: `2px solid ${modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success}`,
         borderRadius: theme.borderRadius.lg,
         marginBottom: theme.spacing.lg,
