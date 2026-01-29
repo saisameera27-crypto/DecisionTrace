@@ -244,5 +244,6 @@ jobs:
           TEST_POSTGRES_URL: postgresql://test:test@localhost:5432/test_db
           DATABASE_URL: postgresql://test:test@localhost:5432/test_db
           PRISMA_SCHEMA_TARGET: postgres
+          RUN_POSTGRES_TESTS: 'true'  # Explicitly enable Postgres tests for this CI job
         run: npm run test:integration -- tests/integration/migration-safety.test.ts
 

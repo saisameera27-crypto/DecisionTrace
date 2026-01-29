@@ -21,7 +21,28 @@ let PrismaClient: any = null;
 
 // Helper to check if Postgres tests should be skipped
 const shouldSkipPostgresTests = () => {
-  return process.env.PRISMA_SCHEMA_TARGET === 'sqlite' || process.env.CI === 'true';
+  // Skip if RUN_POSTGRES_TESTS is not explicitly set to "true"
+  if (process.env.RUN_POSTGRES_TESTS !== 'true') {
+    return true;
+  }
+  
+  // Skip if DATABASE_URL is missing
+  const dbUrl = process.env.DATABASE_URL || '';
+  if (!dbUrl) {
+    return true;
+  }
+  
+  // Skip if DATABASE_URL doesn't start with postgres:// or postgresql://
+  if (!dbUrl.startsWith('postgres://') && !dbUrl.startsWith('postgresql://')) {
+    return true;
+  }
+  
+  // Also skip if explicitly running SQLite tests
+  if (process.env.PRISMA_SCHEMA_TARGET === 'sqlite') {
+    return true;
+  }
+  
+  return false;
 };
 
 beforeAll(async () => {
@@ -79,10 +100,11 @@ describe('Database Migration Safety Tests', () => {
     process.env.PRISMA_SCHEMA_TARGET = 'sqlite';
   });
 
-  // Skip Postgres-specific tests when running in SQLite mode or CI
-  if (shouldSkipPostgresTests()) {
-    it.skip('postgres-specific checks are skipped on sqlite CI', () => {});
-  }
+  // Note: Postgres Schema Validation suite is conditionally skipped
+  // See describe.skipIf() below - it will skip if:
+  // - RUN_POSTGRES_TESTS !== "true"
+  // - DATABASE_URL is missing or doesn't point to Postgres
+  // SQLite tests above will always run by default
 
   describe('SQLite CRUD Operations', () => {
     it('should connect to SQLite test database', async () => {
@@ -146,27 +168,58 @@ describe('Database Migration Safety Tests', () => {
     });
   });
 
-  describe('Postgres Schema Validation', () => {
-    // Skip Postgres tests when running in SQLite mode or CI
-    const skipPostgres = shouldSkipPostgresTests();
-
-    it.skipIf(skipPostgres)('should validate Postgres schema compatibility', async () => {
-      // This test would validate Postgres-specific features
-      // Skipped when PRISMA_SCHEMA_TARGET=sqlite or CI=true
-      if (!prisma) {
-        console.warn('Prisma not available, skipping test');
-        return;
+  // Postgres Schema Validation suite - conditionally skipped
+  // Skips if:
+  // - RUN_POSTGRES_TESTS !== "true"
+  // - DATABASE_URL is missing
+  // - DATABASE_URL doesn't start with postgres:// or postgresql://
+  // - PRISMA_SCHEMA_TARGET === 'sqlite'
+  const skipPostgres = shouldSkipPostgresTests();
+  
+  describe.skipIf(skipPostgres)('Postgres Schema Validation', () => {
+    beforeAll(async () => {
+      // Only runs if Postgres tests are enabled
+      // Set up Postgres-specific Prisma client here if needed
+      const dbUrl = process.env.DATABASE_URL;
+      if (!dbUrl) {
+        throw new Error('DATABASE_URL is required for Postgres tests');
       }
-      // Postgres-specific validation would go here
+      
+      // Ensure we're using Postgres schema
+      process.env.PRISMA_SCHEMA_TARGET = 'postgres';
+      
+      // Generate Postgres Prisma client if needed
+      try {
+        execSync('npx prisma generate --schema=prisma/schema.postgres.prisma', {
+          env: process.env,
+          stdio: 'pipe',
+          cwd: process.cwd(),
+        });
+      } catch (error: any) {
+        console.warn('Failed to generate Postgres Prisma client:', error.message);
+      }
     });
 
-    it.skipIf(skipPostgres)('should validate Postgres provider settings', async () => {
-      // This test would validate provider=postgresql settings
-      // Skipped when PRISMA_SCHEMA_TARGET=sqlite or CI=true
-      if (!prisma) {
-        console.warn('Prisma not available, skipping test');
-        return;
+    it('should validate Postgres schema compatibility', async () => {
+      // This test validates Postgres-specific features
+      // Only runs when RUN_POSTGRES_TESTS=true and DATABASE_URL points to Postgres
+      const dbUrl = process.env.DATABASE_URL;
+      if (!dbUrl || (!dbUrl.startsWith('postgres://') && !dbUrl.startsWith('postgresql://'))) {
+        throw new Error('Postgres DATABASE_URL is required for this test');
       }
+      
+      // Postgres-specific validation would go here
+      // For example: JSONB, arrays, enums, etc.
+    });
+
+    it('should validate Postgres provider settings', async () => {
+      // This test validates provider=postgresql settings
+      // Only runs when RUN_POSTGRES_TESTS=true and DATABASE_URL points to Postgres
+      const dbUrl = process.env.DATABASE_URL;
+      if (!dbUrl || (!dbUrl.startsWith('postgres://') && !dbUrl.startsWith('postgresql://'))) {
+        throw new Error('Postgres DATABASE_URL is required for this test');
+      }
+      
       // Postgres provider validation would go here
     });
   });

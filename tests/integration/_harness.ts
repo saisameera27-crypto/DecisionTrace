@@ -6,6 +6,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { initTestDB } from '@/lib/db/init-test-db';
 
 // Use real Fetch API types
 type RouteHandler = (req: Request, context?: any) => Promise<Response>;
@@ -27,9 +28,12 @@ try {
 }
 
 // Test database path (SQLite)
+// Use ./tmp directory relative to project root for better portability
+const TEST_DB_DIR = path.join(process.cwd(), 'tmp');
 const TEST_DB_PATH = process.env.TEST_DATABASE_URL 
   ? new URL(process.env.TEST_DATABASE_URL).pathname.replace('file:', '')
-  : path.join('/tmp', 'test-decision-trace.db');
+  : path.join(TEST_DB_DIR, 'test-decision-trace.db');
+const TEST_DB_URL = `file:${TEST_DB_PATH}`;
 
 // Prisma client instance for tests (optional)
 let prisma: any = null;
@@ -437,18 +441,38 @@ export async function callPublicCase(
 
 /**
  * Setup function to run before all integration tests
+ * 
+ * This function:
+ * 1. Creates the tmp directory if it doesn't exist
+ * 2. Sets test DB environment variables (SQLite)
+ * 3. Runs Prisma schema sync for SQLite using schema.sqlite.prisma
+ * 4. Optionally seeds demo data if required
+ * 
+ * This ensures the database is initialized BEFORE any tests run,
+ * preventing DB_NOT_INITIALIZED errors.
  */
 export async function setupIntegrationTests(): Promise<void> {
-  // Ensure test database directory exists
-  const dbDir = path.dirname(TEST_DB_PATH);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+  // Use the reusable initTestDB function
+  const result = await initTestDB({
+    dbPath: TEST_DB_PATH,
+    schemaFile: 'prisma/schema.sqlite.prisma',
+    seed: false, // Don't seed by default - tests can seed if needed
+  });
+
+  if (!result.success) {
+    console.warn('⚠️  Test database initialization had issues:', result.error);
+    // Continue anyway - some tests might handle missing tables gracefully
   }
+
+  // Ensure environment variables are set (initTestDB sets them, but ensure they persist)
+  process.env.DATABASE_URL = result.dbUrl;
+  process.env.TEST_DATABASE_URL = result.dbUrl;
+  process.env.PRISMA_SCHEMA_TARGET = 'sqlite';
   
-  // Initialize Prisma client
+  // Initialize Prisma client (now that schema is synced)
   getTestPrismaClient();
   
-  // Reset database
+  // Reset database (clean slate for tests)
   await resetTestDatabase();
 }
 

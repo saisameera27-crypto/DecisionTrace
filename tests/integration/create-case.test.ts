@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/case/create/route';
-import { execSync } from 'node:child_process';
 import {
   setupIntegrationTests,
   resetTestDatabase,
@@ -14,21 +13,11 @@ import {
  */
 describe('Create Case API', () => {
   beforeAll(async () => {
-    // Ensure database schema is initialized
-    try {
-      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL || 'file:/tmp/test-decision-trace.db';
-      process.env.PRISMA_SCHEMA_TARGET = 'sqlite';
-      
-      execSync('npx prisma db push --schema=prisma/schema.sqlite.prisma --accept-data-loss', {
-        env: process.env,
-        stdio: 'pipe',
-        cwd: process.cwd(),
-      });
-    } catch (error: any) {
-      // Schema push might fail if tables already exist - that's okay
-      console.warn('Schema push warning (may be expected):', error.message);
-    }
-    
+    // setupIntegrationTests() now handles:
+    // - Creating tmp directory
+    // - Setting test DB env vars (SQLite)
+    // - Running Prisma schema sync
+    // - Initializing Prisma client
     await setupIntegrationTests();
   });
 
