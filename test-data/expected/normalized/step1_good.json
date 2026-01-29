@@ -3,21 +3,52 @@
   "status": "success",
   "data": {
     "document_id": "doc_12345",
+    "has_clear_decision": true,
+    "decision_candidates": [
+      {
+        "decision_text": "We have decided to launch 'Project Phoenix' - a new mobile application targeting the healthcare sector in Q2 2024",
+        "type": "explicit",
+        "confidence": 0.95
+      }
+    ],
+    "fragments": [
+      {
+        "quote": "Market research shows strong demand for healthcare mobile apps",
+        "classification": "evidence",
+        "context": "Market research shows strong demand for healthcare mobile apps, with 15 pilot customers expressing strong interest",
+        "decision_candidate_index": 0
+      },
+      {
+        "quote": "$50B addressable market",
+        "classification": "evidence",
+        "context": "Market opportunity: $50B addressable market",
+        "decision_candidate_index": 0
+      },
+      {
+        "quote": "Engineering team has capacity",
+        "classification": "assumption",
+        "context": "Team readiness: Engineering team has capacity",
+        "decision_candidate_index": 0
+      },
+      {
+        "quote": "Regulatory compliance requirements (HIPAA)",
+        "classification": "risk",
+        "context": "Regulatory compliance requirements (HIPAA) must be addressed",
+        "decision_candidate_index": 0
+      },
+      {
+        "quote": "Sarah Chen, VP of Product",
+        "classification": "stakeholder_signal",
+        "context": "Decision Maker: Sarah Chen, VP of Product",
+        "decision_candidate_index": 0
+      }
+    ],
+    "extracted_at": "2024-03-15T10:30:00Z",
     "document_type": "decision_memo",
-    "uploaded_at": "2024-03-15T10:30:00Z",
     "file_name": "01_launch_decision_memo.txt",
     "file_size": 2048,
-    "mime_type": "text/plain",
-    "extracted_text": "DECISION MEMO: Q2 2024 Product Launch\n\nDate: March 15, 2024\nDecision Maker: Sarah Chen, VP of Product\nStatus: APPROVED\n\nDECISION SUMMARY\nWe have decided to launch \"Project Phoenix\" - a new mobile application targeting the healthcare sector...",
-    "metadata": {
-      "language": "en",
-      "character_count": 1850,
-      "word_count": 320,
-      "line_count": 45
-    },
-    "processing_time_ms": 1250
+    "mime_type": "text/plain"
   },
   "errors": [],
   "warnings": []
 }
-

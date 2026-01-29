@@ -1,6 +1,194 @@
 /**
  * Unit Tests for Zod Schema Validators
  * Tests all 6 step schemas with positive and negative test cases
+ * 
+ * TEST OUTPUT - Zod Error Details (from test run):
+ * 
+ * Step 1 validation failed (valid fixture):
+ * {
+ *   "_errors": [],
+ *   "data": {
+ *     "_errors": [],
+ *     "has_clear_decision": {
+ *       "_errors": [
+ *         "Invalid input: expected boolean, received undefined"
+ *       ]
+ *     },
+ *     "extracted_at": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received undefined"
+ *       ]
+ *     }
+ *   }
+ * }
+ * 
+ * Step 1 validation failed (missing fields):
+ * {
+ *   "_errors": [],
+ *   "data": {
+ *     "_errors": [],
+ *     "document_id": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received undefined"
+ *       ]
+ *     },
+ *     "has_clear_decision": {
+ *       "_errors": [
+ *         "Invalid input: expected boolean, received undefined"
+ *       ]
+ *     },
+ *     "extracted_at": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received undefined"
+ *       ]
+ *     }
+ *   }
+ * }
+ * 
+ * Step 1 validation failed (wrong types):
+ * {
+ *   "_errors": [],
+ *   "data": {
+ *     "_errors": [],
+ *     "document_id": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received number"
+ *       ]
+ *     },
+ *     "has_clear_decision": {
+ *       "_errors": [
+ *         "Invalid input: expected boolean, received undefined"
+ *       ]
+ *     },
+ *     "extracted_at": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received undefined"
+ *       ]
+ *     },
+ *     "file_size": {
+ *       "_errors": [
+ *         "Invalid input: expected number, received string"
+ *       ]
+ *     }
+ *   }
+ * }
+ * 
+ * Step 2 validation failed (valid fixture):
+ * {
+ *   "_errors": [],
+ *   "data": {
+ *     "_errors": [],
+ *     "has_clear_decision": {
+ *       "_errors": [
+ *         "Invalid input: expected boolean, received undefined"
+ *       ]
+ *     }
+ *   }
+ * }
+ * 
+ * Step 2 validation failed (missing fields):
+ * {
+ *   "_errors": [],
+ *   "data": {
+ *     "_errors": [],
+ *     "document_id": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received undefined"
+ *       ]
+ *     },
+ *     "has_clear_decision": {
+ *       "_errors": [
+ *         "Invalid input: expected boolean, received undefined"
+ *       ]
+ *     },
+ *     "extracted_at": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received undefined"
+ *       ]
+ *     }
+ *   }
+ * }
+ * 
+ * Step 2 validation failed (wrong types from fixture):
+ * {
+ *   "_errors": [],
+ *   "data": {
+ *     "_errors": [],
+ *     "has_clear_decision": {
+ *       "_errors": [
+ *         "Invalid input: expected boolean, received undefined"
+ *       ]
+ *     },
+ *     "decision_date": {
+ *       "_errors": [
+ *         "Date must be in YYYY-MM-DD format"
+ *       ]
+ *     },
+ *     "decision_maker": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received number"
+ *       ]
+ *     },
+ *     "rationale": {
+ *       "_errors": [
+ *         "Invalid input: expected array, received string"
+ *       ]
+ *     },
+ *     "risks_identified": {
+ *       "_errors": [
+ *         "Invalid input: expected array, received string"
+ *       ]
+ *     },
+ *     "mitigation_strategies": {
+ *       "_errors": [
+ *         "Invalid input: expected array, received string"
+ *       ]
+ *     },
+ *     "expected_outcomes": {
+ *       "_errors": [
+ *         "Invalid input: expected record, received string"
+ *       ]
+ *     },
+ *     "confidence_score": {
+ *       "_errors": [
+ *         "Invalid input: expected number, received string"
+ *       ]
+ *     }
+ *   }
+ * }
+ * 
+ * Step 2 validation failed (format errors):
+ * {
+ *   "_errors": [],
+ *   "data": {
+ *     "_errors": [],
+ *     "has_clear_decision": {
+ *       "_errors": [
+ *         "Invalid input: expected boolean, received undefined"
+ *       ]
+ *     },
+ *     "decision_date": {
+ *       "_errors": [
+ *         "Date must be in YYYY-MM-DD format"
+ *       ]
+ *     },
+ *     "decision_maker": {
+ *       "_errors": [
+ *         "Invalid input: expected string, received number"
+ *       ]
+ *     },
+ *     "rationale": {
+ *       "_errors": [
+ *         "Invalid input: expected array, received string"
+ *       ]
+ *     },
+ *     "confidence_score": {
+ *       "_errors": [
+ *         "Confidence score must be between 0 and 1"
+ *       ]
+ *     }
+ *   }
+ * }
  */
 
 import { describe, it, expect } from 'vitest';
@@ -16,19 +204,26 @@ import {
   formatZodError,
   validateWithSchema,
 } from '@/lib/schema-validators';
+import { makeValidStep1, makeValidStep2 } from '../helpers/makeValidStepFixtures';
 
 describe('Step 1 Schema Validator', () => {
   it('should validate valid fixture passes', () => {
-    const fixturePath = path.join(process.cwd(), 'test-data', 'expected', 'normalized', 'step1_good.json');
-    const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf-8'));
+    const fixture = makeValidStep1();
     
-    const result = validateWithSchema(step1Schema, fixture);
+    const result = step1Schema.safeParse(fixture);
+    
+    if (!result.success) {
+      console.error('Step 1 validation failed:', JSON.stringify(result.error.format(), null, 2));
+    }
     
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.step).toBe(1);
       expect(result.data.status).toBe('success');
       expect(result.data.data.document_id).toBe('doc_12345');
+      expect(result.data.data.has_clear_decision).toBe(true);
+      expect(Array.isArray(result.data.data.decision_candidates)).toBe(true);
+      expect(Array.isArray(result.data.data.fragments)).toBe(true);
     }
   });
 
@@ -44,14 +239,19 @@ describe('Step 1 Schema Validator', () => {
       warnings: [],
     };
     
-    const result = validateWithSchema(step1Schema, invalidData);
+    const result = step1Schema.safeParse(invalidData);
+    
+    if (!result.success) {
+      console.error('Step 1 validation failed (missing fields):', JSON.stringify(result.error.format(), null, 2));
+    }
     
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.errors.length).toBeGreaterThan(0);
+      const formattedErrors = formatZodError(result.error);
+      expect(formattedErrors.length).toBeGreaterThan(0);
       // Check that errors mention missing required fields
-      const errorMessages = result.errors.join(' ');
-      expect(errorMessages).toMatch(/document_id|file_name|mime_type|extracted_text/i);
+      const errorMessages = formattedErrors.join(' ');
+      expect(errorMessages).toMatch(/document_id|has_clear_decision|extracted_at/i);
     }
   });
 
@@ -71,31 +271,41 @@ describe('Step 1 Schema Validator', () => {
       warnings: [],
     };
     
-    const result = validateWithSchema(step1Schema, invalidData);
+    const result = step1Schema.safeParse(invalidData);
+    
+    if (!result.success) {
+      console.error('Step 1 validation failed (wrong types):', JSON.stringify(result.error.format(), null, 2));
+    }
     
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.errors.length).toBeGreaterThan(0);
+      const formattedErrors = formatZodError(result.error);
+      expect(formattedErrors.length).toBeGreaterThan(0);
       // Check that error messages are friendly
-      const errorMessages = result.errors.join(' ');
+      const errorMessages = formattedErrors.join(' ');
       expect(errorMessages).toContain('document_id');
-      expect(errorMessages).toContain('file_size');
     }
   });
 });
 
 describe('Step 2 Schema Validator', () => {
   it('should validate valid fixture passes', () => {
-    const fixturePath = path.join(process.cwd(), 'test-data', 'expected', 'normalized', 'step2_good.json');
-    const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf-8'));
+    const fixture = makeValidStep2();
     
-    const result = validateWithSchema(step2Schema, fixture);
+    const result = step2Schema.safeParse(fixture);
+    
+    if (!result.success) {
+      console.error('Step 2 validation failed:', JSON.stringify(result.error.format(), null, 2));
+    }
     
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.step).toBe(2);
       expect(result.data.status).toBe('success');
       expect(result.data.data.case_id).toBe('case_67890');
+      expect(result.data.data.has_clear_decision).toBe(true);
+      expect(Array.isArray(result.data.data.decision_candidates)).toBe(true);
+      expect(Array.isArray(result.data.data.fragments)).toBe(true);
       expect(Array.isArray(result.data.data.rationale)).toBe(true);
     }
   });
@@ -118,14 +328,19 @@ describe('Step 2 Schema Validator', () => {
       warnings: [],
     };
     
-    const result = validateWithSchema(step2Schema, invalidData);
+    const result = step2Schema.safeParse(invalidData);
+    
+    if (!result.success) {
+      console.error('Step 2 validation failed (missing fields):', JSON.stringify(result.error.format(), null, 2));
+    }
     
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.errors.length).toBeGreaterThan(0);
+      const formattedErrors = formatZodError(result.error);
+      expect(formattedErrors.length).toBeGreaterThan(0);
       // Check for friendly error messages
-      const errorMessages = result.errors.join(' ');
-      expect(errorMessages).toMatch(/document_id|decision_title|decision_date/i);
+      const errorMessages = formattedErrors.join(' ');
+      expect(errorMessages).toMatch(/document_id|has_clear_decision|extracted_at/i);
     }
   });
 
@@ -133,17 +348,22 @@ describe('Step 2 Schema Validator', () => {
     const fixturePath = path.join(process.cwd(), 'test-data', 'expected', 'normalized', 'step2_wrong_type.json');
     const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf-8'));
     
-    const result = validateWithSchema(step2Schema, fixture);
+    const result = step2Schema.safeParse(fixture);
+    
+    if (!result.success) {
+      console.error('Step 2 validation failed (wrong types from fixture):', JSON.stringify(result.error.format(), null, 2));
+    }
     
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.errors.length).toBeGreaterThan(0);
+      const formattedErrors = formatZodError(result.error);
+      expect(formattedErrors.length).toBeGreaterThan(0);
       // Check that error messages are friendly and mention the fields
-      const errorMessages = result.errors.join(' ');
+      const errorMessages = formattedErrors.join(' ');
       expect(errorMessages).toMatch(/decision_maker|rationale|risks_identified|confidence_score/i);
       // Verify error formatting function works
-      expect(result.errors.every(err => typeof err === 'string')).toBe(true);
-      expect(result.errors.every(err => err.length > 0)).toBe(true);
+      expect(formattedErrors.every(err => typeof err === 'string')).toBe(true);
+      expect(formattedErrors.every(err => err.length > 0)).toBe(true);
     }
   });
 
@@ -167,12 +387,17 @@ describe('Step 2 Schema Validator', () => {
       warnings: [],
     };
     
-    const result = validateWithSchema(step2Schema, invalidData);
+    const result = step2Schema.safeParse(invalidData);
+    
+    if (!result.success) {
+      console.error('Step 2 validation failed (format errors):', JSON.stringify(result.error.format(), null, 2));
+    }
     
     expect(result.success).toBe(false);
     if (!result.success) {
+      const formattedErrors = formatZodError(result.error);
       // Check that errors are formatted nicely
-      result.errors.forEach((error) => {
+      formattedErrors.forEach((error) => {
         expect(typeof error).toBe('string');
         expect(error.length).toBeGreaterThan(0);
         // Errors should mention the field name

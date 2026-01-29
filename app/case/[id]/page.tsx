@@ -22,6 +22,18 @@ interface ReportData {
     decision_candidates?: Array<{
       decision_text: string;
       type: 'explicit' | 'implicit';
+    }>;
+    fragments?: Array<{
+      quote: string;
+      classification: 'evidence' | 'assumption' | 'risk' | 'stakeholder_signal';
+      context?: string;
+    }>;
+    no_decision_message?: string;
+  } | null;
+  step6Analysis?: {
+    decision_candidates?: Array<{
+      decision_text: string;
+      type: 'explicit' | 'implicit';
       confidence: number;
     }>;
     fragments?: Array<{
@@ -30,7 +42,7 @@ interface ReportData {
       context?: string;
       decision_candidate_index?: number | null;
     }>;
-    no_decision_message?: string;
+    confidence_score?: number;
   } | null;
 }
 
@@ -422,8 +434,13 @@ export default function CaseReportPage() {
             }
             
             if (primaryDecision && primaryDecision.type === 'implicit') {
-              // Implicit decision with confidence
-              const confidencePercent = Math.round(primaryDecision.confidence * 100);
+              // Implicit decision - get confidence from Step6 if available
+              const step6Candidate = reportData.step6Analysis?.decision_candidates?.find(
+                (c) => c.decision_text === primaryDecision.decision_text
+              );
+              const confidence = step6Candidate?.confidence ?? reportData.step6Analysis?.confidence_score;
+              const confidencePercent = confidence ? Math.round(confidence * 100) : null;
+              
               return (
                 <>
                   <h2 style={subtitleStyle}>
@@ -438,12 +455,16 @@ export default function CaseReportPage() {
                     fontSize: theme.typography.fontSize.sm,
                     color: '#004085',
                   }}>
-                    <strong>🔍 Inferred Decision:</strong> This decision was inferred from the document content (not explicitly stated). 
-                    Confidence: <strong>{confidencePercent}%</strong>
-                    {confidencePercent < 70 && (
-                      <span style={{ display: 'block', marginTop: theme.spacing.xs }}>
-                        ⚠️ Low confidence - review carefully as the decision may be ambiguous.
-                      </span>
+                    <strong>🔍 Inferred Decision:</strong> This decision was inferred from the document content (not explicitly stated).
+                    {confidencePercent !== null && (
+                      <>
+                        {' '}Confidence: <strong>{confidencePercent}%</strong>
+                        {confidencePercent < 70 && (
+                          <span style={{ display: 'block', marginTop: theme.spacing.xs }}>
+                            ⚠️ Low confidence - review carefully as the decision may be ambiguous.
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                 </>
@@ -637,8 +658,15 @@ export default function CaseReportPage() {
                           The analysis identified multiple potential decisions. Review each candidate and its confidence level:
                         </p>
                         {decisionCandidates.map((candidate, idx) => {
-                          const confidencePercent = Math.round(candidate.confidence * 100);
-                          const confidenceColor = candidate.confidence >= 0.7 ? '#28a745' : candidate.confidence >= 0.5 ? '#ffc107' : '#dc3545';
+                          // Get confidence from Step6 if available
+                          const step6Candidate = reportData.step6Analysis?.decision_candidates?.find(
+                            (c) => c.decision_text === candidate.decision_text
+                          );
+                          const confidence = step6Candidate?.confidence ?? reportData.step6Analysis?.confidence_score;
+                          const confidencePercent = confidence ? Math.round(confidence * 100) : null;
+                          const confidenceColor = confidence 
+                            ? (confidence >= 0.7 ? '#28a745' : confidence >= 0.5 ? '#ffc107' : '#dc3545')
+                            : '#6c757d';
                           return (
                             <div key={idx} style={{
                               marginBottom: theme.spacing.md,
@@ -656,16 +684,18 @@ export default function CaseReportPage() {
                                 <strong style={{ color: theme.colors.textPrimary }}>
                                   Candidate {idx + 1} ({candidate.type === 'explicit' ? 'Explicit' : 'Inferred'})
                                 </strong>
-                                <span style={{
-                                  padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-                                  backgroundColor: confidenceColor,
-                                  color: 'white',
-                                  borderRadius: theme.borderRadius.sm,
-                                  fontSize: theme.typography.fontSize.xs,
-                                  fontWeight: theme.typography.fontWeight.semibold,
-                                }}>
-                                  {confidencePercent}% confidence
-                                </span>
+                                {confidencePercent !== null && (
+                                  <span style={{
+                                    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                                    backgroundColor: confidenceColor,
+                                    color: 'white',
+                                    borderRadius: theme.borderRadius.sm,
+                                    fontSize: theme.typography.fontSize.xs,
+                                    fontWeight: theme.typography.fontWeight.semibold,
+                                  }}>
+                                    {confidencePercent}% confidence
+                                  </span>
+                                )}
                               </div>
                               <div style={{
                                 fontSize: theme.typography.fontSize.base,

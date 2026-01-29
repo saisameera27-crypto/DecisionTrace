@@ -54,16 +54,14 @@ Return JSON in this exact format:
   "decision_candidates": [
     {
       "decision_text": "verbatim quote from document",
-      "type": "explicit" | "implicit",
-      "confidence": number (0-1)
+      "type": "explicit" | "implicit"
     }
   ],
   "fragments": [
     {
       "quote": "exact verbatim quote from document",
       "classification": "evidence" | "assumption" | "risk" | "stakeholder_signal",
-      "context": "surrounding text (verbatim) if helpful for understanding",
-      "decision_candidate_index": number (index into decision_candidates array, or null if not associated)
+      "context": "surrounding text (verbatim) if helpful for understanding"
     }
   ],
   "no_decision_message": string (only if has_clear_decision is false)
@@ -80,13 +78,11 @@ export const forensicAnalysisSchema = z.object({
   decision_candidates: z.array(z.object({
     decision_text: z.string().min(1, 'Decision text is required'),
     type: z.enum(['explicit', 'implicit']),
-    confidence: z.number().min(0).max(1),
   })).default([]),
   fragments: z.array(z.object({
     quote: z.string().min(1, 'Quote is required'),
     classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
     context: z.string().optional(),
-    decision_candidate_index: z.number().nullable().optional(),
   })).default([]),
   no_decision_message: z.string().optional(),
 });

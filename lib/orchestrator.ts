@@ -95,16 +95,14 @@ Return JSON in this exact format:
     "decision_candidates": [
       {
         "decision_text": "verbatim quote from document",
-        "type": "explicit" | "implicit",
-        "confidence": number (0-1)
+        "type": "explicit" | "implicit"
       }
     ],
     "fragments": [
       {
         "quote": "exact verbatim quote from document",
         "classification": "evidence" | "assumption" | "risk" | "stakeholder_signal",
-        "context": "surrounding text (verbatim) if helpful",
-        "decision_candidate_index": number | null
+        "context": "surrounding text (verbatim) if helpful"
       }
     ],
     "no_decision_message": string (only if has_clear_decision is false),

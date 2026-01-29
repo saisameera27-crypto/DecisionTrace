@@ -24,13 +24,11 @@ export const step1Schema = z.object({
     decision_candidates: z.array(z.object({
       decision_text: z.string().min(1, 'Decision text must be verbatim quote'),
       type: z.enum(['explicit', 'implicit']),
-      confidence: z.number().min(0).max(1),
     })).default([]),
     fragments: z.array(z.object({
       quote: z.string().min(1, 'Quote must be verbatim from document'),
       classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
       context: z.string().optional(), // Optional surrounding text (verbatim)
-      decision_candidate_index: z.number().nullable().optional(), // Index into decision_candidates array
     })).default([]),
     no_decision_message: z.string().optional(), // Only present if has_clear_decision is false
     extracted_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
@@ -65,13 +63,11 @@ export const step2Schema = z.object({
     decision_candidates: z.array(z.object({
       decision_text: z.string().min(1, 'Decision text must be verbatim quote'),
       type: z.enum(['explicit', 'implicit']),
-      confidence: z.number().min(0).max(1),
     })).default([]),
     fragments: z.array(z.object({
       quote: z.string().min(1, 'Quote must be verbatim from document'),
       classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
       context: z.string().optional(), // Optional surrounding text (verbatim)
-      decision_candidate_index: z.number().nullable().optional(), // Index into decision_candidates array
     })).default([]),
     no_decision_message: z.string().optional(), // Only present if has_clear_decision is false
     // Legacy fields for backward compatibility (derived from forensic analysis)
@@ -86,7 +82,6 @@ export const step2Schema = z.object({
     risks_identified: z.array(z.string()).default([]), // Derived from risk fragments
     mitigation_strategies: z.array(z.string()).default([]),
     expected_outcomes: z.record(z.string(), z.unknown()).nullable().optional(),
-    confidence_score: z.number().min(0).max(1, 'Confidence score must be between 0 and 1').optional(),
     extracted_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
   }),
   errors: z.array(z.string()).default([]),
@@ -181,6 +176,20 @@ export const step6Schema = z.object({
   status: z.enum(['success', 'error', 'partial_success']),
   data: z.object({
     case_id: z.string().min(1, 'Case ID is required'),
+    // Confidence and indexing fields (moved from Step 1/2)
+    decision_candidates: z.array(z.object({
+      decision_text: z.string().min(1, 'Decision text is required'),
+      type: z.enum(['explicit', 'implicit']),
+      confidence: z.number().min(0).max(1), // Confidence score for final report
+    })).default([]),
+    fragments: z.array(z.object({
+      quote: z.string().min(1, 'Quote is required'),
+      classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
+      context: z.string().optional(),
+      decision_candidate_index: z.number().nullable().optional(), // Index into decision_candidates array
+    })).default([]),
+    confidence_score: z.number().min(0).max(1, 'Confidence score must be between 0 and 1').optional(),
+    // Final report content
     lessons_learned: z.array(z.object({
       lesson: z.string().min(1, 'Lesson description is required'),
       category: z.enum(['process', 'decision_making', 'execution', 'monitoring']),

@@ -375,7 +375,6 @@ Return JSON in this exact format:
       "quote": "exact verbatim quote from document",
       "classification": "evidence" | "assumption" | "risk" | "stakeholder_signal",
       "context": "surrounding text (verbatim) if helpful for understanding",
-      "decision_candidate_index": number (index into decision_candidates array, or null if not associated)
     }
   ],
   "no_decision_message": string (only if has_clear_decision is false)

@@ -76,6 +76,18 @@ export async function GET(
       console.warn('Could not extract Step 1 forensic analysis data:', stepError);
     }
 
+    // Extract Step 6 final report data (includes confidence scores)
+    let step6Data = null;
+    try {
+      const step6 = case_.steps.find((s: { stepNumber: number }) => s.stepNumber === 6);
+      if (step6 && step6.data) {
+        step6Data = JSON.parse(step6.data);
+      }
+    } catch (stepError) {
+      // Don't fail if step6 data is missing or invalid (demo-safe)
+      console.warn('Could not extract Step 6 final report data:', stepError);
+    }
+
     // Extract decision data from step 2 (optional - don't fail if missing)
     let decision = null;
     try {
@@ -100,6 +112,7 @@ export async function GET(
       },
       decision,
       step1Analysis: step1Data, // Include Step 1 forensic analysis data
+      step6Analysis: step6Data?.data || null, // Include Step 6 final report data (with confidence)
     });
   } catch (error: any) {
     // On error, return structured JSON response
