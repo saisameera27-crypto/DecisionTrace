@@ -211,15 +211,18 @@ describe('Create Case API', () => {
 
   describe('Failure path - database errors', () => {
     it('should return 503 when database is not initialized', async () => {
-      // Mock getPrismaClient to throw a database error
+      // Mock getPrismaClient to return a Prisma client that throws DB errors
       const prismaModule = await import('@/lib/prisma');
       const { vi } = await import('vitest');
       
       const mockPrismaError: any = new Error('relation "Case" does not exist');
       mockPrismaError.code = '42P01';
       
+      // Mock Prisma client with count() method that throws DB error
+      // This simulates DB tables not existing when we check readiness
       const mockPrisma = {
         case: {
+          count: vi.fn().mockRejectedValue(mockPrismaError),
           create: vi.fn().mockRejectedValue(mockPrismaError),
         },
       };
