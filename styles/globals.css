@@ -59,28 +59,37 @@
   --transition-slow: 0.3s ease;
 }
 
-/* Dark theme support */
+/* Dark theme support - disabled, keeping white background */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-primary: #3b82f6;
-    --color-primary-hover: #2563eb;
-    --color-primary-light: #1e3a8a;
+    --color-primary: #0066cc;
+    --color-primary-hover: #0052a3;
+    --color-primary-light: #e6f2ff;
     
-    --color-background: #111827;
-    --color-background-secondary: #1f2937;
-    --color-background-tertiary: #374151;
+    /* Keep backgrounds white even in dark mode */
+    --color-background: #ffffff;
+    --color-background-secondary: #f9fafb;
+    --color-background-tertiary: #f3f4f6;
     
-    --color-text-primary: #f9fafb;
-    --color-text-secondary: #d1d5db;
-    --color-text-tertiary: #9ca3af;
-    --color-text-muted: #6b7280;
+    --color-text-primary: #111827;
+    --color-text-secondary: #4b5563;
+    --color-text-tertiary: #6b7280;
+    --color-text-muted: #9ca3af;
     
-    --color-border: #374151;
-    --color-border-light: #4b5563;
+    --color-border: #e5e7eb;
+    --color-border-light: #f3f4f6;
     
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  html {
+    background-color: #ffffff;
+  }
+  
+  body {
+    background-color: #ffffff;
   }
 }
 
@@ -88,13 +97,14 @@ html {
   font-family: var(--font-family);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
 }
 
 body {
-  background-color: var(--color-background);
+  background-color: #ffffff;
   color: var(--color-text-primary);
   line-height: 1.5;
-  transition: background-color var(--transition-normal), color var(--transition-normal);
+  transition: color var(--transition-normal);
 }
 
 /* Typography improvements */
