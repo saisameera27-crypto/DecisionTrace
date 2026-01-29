@@ -214,7 +214,7 @@ export default function Home() {
       {/* Try Demo Section - Prominent for Judges */}
       <div style={{
         padding: theme.spacing.xl,
-        backgroundColor: theme.colors.backgroundSecondary,
+        backgroundColor: theme.colors.background,
         border: `2px solid ${theme.colors.primary}`,
         borderRadius: theme.borderRadius.xl,
         marginBottom: theme.spacing.xl,
@@ -351,7 +351,7 @@ export default function Home() {
       {modeStatus.hasApiKey && (
         <div style={{
           padding: theme.spacing.xl,
-          backgroundColor: '#f1f8f4',
+          backgroundColor: theme.colors.background,
           border: `2px solid ${theme.colors.success}`,
           borderRadius: theme.borderRadius.xl,
           marginBottom: theme.spacing.xl,
@@ -464,7 +464,7 @@ export default function Home() {
       <div style={{
         marginTop: theme.spacing.xl,
         padding: theme.spacing.md,
-        backgroundColor: theme.colors.backgroundSecondary,
+        backgroundColor: theme.colors.background,
         borderTop: `1px solid ${theme.colors.border}`,
         textAlign: 'center',
         fontSize: theme.typography.fontSize.sm,
