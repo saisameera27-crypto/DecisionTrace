@@ -19,6 +19,7 @@ import {
   getDefaultGemini3Model,
   isBlockedModel,
 } from './gemini/config';
+import { buildForensicAnalysisPrompt } from './forensic-analysis';
 
 export type GeminiTestMode = 'mock' | 'replay' | 'live';
 
@@ -324,8 +325,69 @@ async function callRealGeminiAPI(
     };
   }
   
-  if (options.prompt) {
-    requestBody.contents[0].parts.push({ text: options.prompt });
+  // For step2, automatically use forensic analysis prompt
+  // The prompt should be the forensic analysis instructions (document will be read from fileUri)
+  let finalPrompt = options.prompt;
+  if (options.stepName === 'step2') {
+    // Use forensic analysis prompt - document text will be read from fileUri
+    // If prompt contains document text (no fileUri), use it directly
+    // Otherwise, use standard forensic analysis instructions
+    if (options.fileUri) {
+      // Document is in fileUri, use forensic analysis instructions
+      finalPrompt = `You are a decision forensic analyst.
+
+Input is an unstructured document containing notes, emails, fragments, or partial thoughts.
+
+There may or may not be a clearly stated decision.
+
+Your task:
+
+1. Identify ALL decision candidates (explicit or implicit).
+
+2. Extract evidence fragments as verbatim quotes.
+
+3. Classify fragments into:
+   - evidence
+   - assumptions
+   - risks
+   - stakeholder signals
+
+4. If no clear decision exists, say so explicitly.
+
+DO NOT summarize.
+DO NOT paraphrase.
+DO NOT invent facts.
+
+Return structured JSON only.
+
+Return JSON in this exact format:
+{
+  "has_clear_decision": boolean,
+  "decision_candidates": [
+    {
+      "decision_text": "verbatim quote from document",
+      "type": "explicit" | "implicit",
+      "confidence": number (0-1)
+    }
+  ],
+  "fragments": [
+    {
+      "quote": "exact verbatim quote from document",
+      "classification": "evidence" | "assumption" | "risk" | "stakeholder_signal",
+      "context": "surrounding text (verbatim) if helpful for understanding",
+      "decision_candidate_index": number (index into decision_candidates array, or null if not associated)
+    }
+  ],
+  "no_decision_message": string (only if has_clear_decision is false)
+}`;
+    } else if (options.prompt) {
+      // Document text is in prompt, use forensic analysis prompt builder
+      finalPrompt = buildForensicAnalysisPrompt(options.prompt);
+    }
+  }
+  
+  if (finalPrompt) {
+    requestBody.contents[0].parts.push({ text: finalPrompt });
   }
   
   if (options.fileUri) {

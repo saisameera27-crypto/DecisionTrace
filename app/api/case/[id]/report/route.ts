@@ -64,6 +64,18 @@ export async function GET(
       );
     }
 
+    // Extract Step 1 forensic analysis data (decision inference + categorization)
+    let step1Data = null;
+    try {
+      const step1 = case_.steps.find((s: { stepNumber: number }) => s.stepNumber === 1);
+      if (step1 && step1.data) {
+        step1Data = JSON.parse(step1.data);
+      }
+    } catch (stepError) {
+      // Don't fail if step1 data is missing or invalid (demo-safe)
+      console.warn('Could not extract Step 1 forensic analysis data:', stepError);
+    }
+
     // Extract decision data from step 2 (optional - don't fail if missing)
     let decision = null;
     try {
@@ -87,6 +99,7 @@ export async function GET(
         createdAt: case_.report.createdAt.toISOString(),
       },
       decision,
+      step1Analysis: step1Data, // Include Step 1 forensic analysis data
     });
   } catch (error: any) {
     // On error, return structured JSON response

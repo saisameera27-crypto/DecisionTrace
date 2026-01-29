@@ -6,35 +6,53 @@
 import { z } from 'zod';
 
 /**
- * Step 1 Schema: Document Upload and Processing
- * Validates document upload and text extraction results
+ * Step 1 Schema: Decision Inference + Categorization (Forensic Analysis)
+ * Validates forensic analysis results with verbatim quotes and fragment classification
+ * 
+ * Step 1 performs:
+ * - Decision inference (identifies all decision candidates)
+ * - Fragment categorization (evidence, assumptions, risks, stakeholder signals)
+ * - Verbatim quote extraction (no summarization)
  */
 export const step1Schema = z.object({
   step: z.literal(1),
   status: z.enum(['success', 'error', 'partial_success']),
   data: z.object({
     document_id: z.string().min(1, 'Document ID is required'),
+    // Forensic analysis results
+    has_clear_decision: z.boolean(),
+    decision_candidates: z.array(z.object({
+      decision_text: z.string().min(1, 'Decision text must be verbatim quote'),
+      type: z.enum(['explicit', 'implicit']),
+      confidence: z.number().min(0).max(1),
+    })).default([]),
+    fragments: z.array(z.object({
+      quote: z.string().min(1, 'Quote must be verbatim from document'),
+      classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
+      context: z.string().optional(), // Optional surrounding text (verbatim)
+      decision_candidate_index: z.number().nullable().optional(), // Index into decision_candidates array
+    })).default([]),
+    no_decision_message: z.string().optional(), // Only present if has_clear_decision is false
+    extracted_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
+    // Legacy metadata fields (optional for backward compatibility)
     document_type: z.string().optional(),
-    uploaded_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
-    file_name: z.string().min(1, 'File name is required'),
-    file_size: z.number().int().positive('File size must be positive'),
-    mime_type: z.string().min(1, 'MIME type is required'),
-    extracted_text: z.string().min(1, 'Extracted text cannot be empty'),
-    metadata: z.object({
-      language: z.string().optional(),
-      character_count: z.number().int().nonnegative().optional(),
-      word_count: z.number().int().nonnegative().optional(),
-      line_count: z.number().int().nonnegative().optional(),
-    }).optional(),
-    processing_time_ms: z.number().nonnegative().optional(),
+    file_name: z.string().optional(),
+    file_size: z.number().int().positive().optional(),
+    mime_type: z.string().optional(),
   }),
   errors: z.array(z.string()).default([]),
   warnings: z.array(z.string()).default([]),
 });
 
 /**
- * Step 2 Schema: Decision Extraction
- * Validates extracted decision information from documents
+ * Step 2 Schema: Decision Extraction (Forensic Analysis)
+ * Validates forensic analysis results with verbatim quotes and fragment classification
+ * 
+ * This schema enforces:
+ * - ALL decision candidates identified (explicit or implicit)
+ * - Evidence fragments as verbatim quotes (no summarization)
+ * - Classification into: evidence, assumptions, risks, stakeholder signals
+ * - Explicit statement if no clear decision exists
  */
 export const step2Schema = z.object({
   step: z.literal(2),
@@ -42,18 +60,33 @@ export const step2Schema = z.object({
   data: z.object({
     case_id: z.string().min(1, 'Case ID is required'),
     document_id: z.string().min(1, 'Document ID is required'),
-    decision_title: z.string().min(1, 'Decision title is required').nullable(),
-    decision_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
-    decision_maker: z.string().min(1, 'Decision maker is required'),
+    // Forensic analysis results
+    has_clear_decision: z.boolean(),
+    decision_candidates: z.array(z.object({
+      decision_text: z.string().min(1, 'Decision text must be verbatim quote'),
+      type: z.enum(['explicit', 'implicit']),
+      confidence: z.number().min(0).max(1),
+    })).default([]),
+    fragments: z.array(z.object({
+      quote: z.string().min(1, 'Quote must be verbatim from document'),
+      classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
+      context: z.string().optional(), // Optional surrounding text (verbatim)
+      decision_candidate_index: z.number().nullable().optional(), // Index into decision_candidates array
+    })).default([]),
+    no_decision_message: z.string().optional(), // Only present if has_clear_decision is false
+    // Legacy fields for backward compatibility (derived from forensic analysis)
+    decision_title: z.string().nullable().optional(), // Derived from first decision_candidate if exists
+    decision_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
+    decision_maker: z.string().optional(), // Extracted from stakeholder_signal fragments
     decision_maker_role: z.string().nullable().optional(),
-    decision_status: z.string().min(1, 'Decision status is required'),
-    decision_summary: z.string().min(1, 'Decision summary is required').nullable(),
+    decision_status: z.string().optional(),
+    decision_summary: z.string().nullable().optional(), // Can be null if no clear decision
     context: z.record(z.string(), z.unknown()).default({}),
-    rationale: z.array(z.string()).min(1, 'At least one rationale is required'),
-    risks_identified: z.array(z.string()).default([]),
+    rationale: z.array(z.string()).default([]), // Derived from evidence fragments
+    risks_identified: z.array(z.string()).default([]), // Derived from risk fragments
     mitigation_strategies: z.array(z.string()).default([]),
     expected_outcomes: z.record(z.string(), z.unknown()).nullable().optional(),
-    confidence_score: z.number().min(0).max(1, 'Confidence score must be between 0 and 1'),
+    confidence_score: z.number().min(0).max(1, 'Confidence score must be between 0 and 1').optional(),
     extracted_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
   }),
   errors: z.array(z.string()).default([]),

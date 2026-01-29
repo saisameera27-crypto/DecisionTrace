@@ -8,6 +8,7 @@ export default function CreateCasePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     decisionContext: '',
@@ -17,19 +18,57 @@ export default function CreateCasePage() {
     desiredOutput: 'full',
   });
 
+  // Determine if we're in inferred decision mode
+  // Triggered when file is uploaded but no manual fields are provided
+  const isInferredMode = uploadedFile !== null && 
+                         !formData.title.trim() && 
+                         !formData.decisionContext.trim() && 
+                         !formData.stakeholders.trim() && 
+                         !formData.evidence.trim() && 
+                         !formData.risks.trim();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setUploadedFile(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-      // Step 1: Create case (returns immediately with caseId)
+      // Step 1: Upload file if provided
+      let documentId: string | null = null;
+      if (uploadedFile) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', uploadedFile);
+
+        const uploadResponse = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: formDataUpload,
+        });
+
+        if (!uploadResponse.ok) {
+          const uploadError = await uploadResponse.json().catch(() => ({ error: 'File upload failed' }));
+          throw new Error(uploadError.error || 'File upload failed');
+        }
+
+        const uploadData = await uploadResponse.json();
+        documentId = uploadData.documentId || null;
+      }
+
+      // Step 2: Create case (returns immediately with caseId)
       const createResponse = await fetch('/api/case/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          documentId, // Include document ID if file was uploaded
+          inferredMode: isInferredMode, // Flag for inferred decision mode
+        }),
       });
 
       // Safe response parser for create
@@ -212,9 +251,71 @@ export default function CreateCasePage() {
         )}
 
         <form onSubmit={handleSubmit} data-testid="create-case-form">
+          {/* File Upload - Primary Input */}
+          <div style={{ marginBottom: theme.spacing.xl }}>
+            <label htmlFor="file" style={labelStyle}>
+              Upload Document <span style={{ color: theme.colors.error }}>*</span>
+            </label>
+            <input
+              type="file"
+              id="file"
+              name="file"
+              onChange={handleFileChange}
+              disabled={loading}
+              accept=".txt,.md,.pdf,.doc,.docx"
+              style={inputStyle}
+              required
+              data-testid="create-case-file-input"
+            />
+            <div style={helpTextStyle}>
+              Upload a document containing decision notes, emails, fragments, or partial thoughts.
+              {isInferredMode && (
+                <div style={{ 
+                  marginTop: theme.spacing.xs, 
+                  color: theme.colors.primary, 
+                  fontWeight: theme.typography.fontWeight.medium,
+                  padding: theme.spacing.sm,
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: theme.borderRadius.md,
+                }}>
+                  ℹ️ <strong>Inferred Decision Mode:</strong> The system will infer the decision from uploaded content.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Inferred Mode Notice */}
+          {isInferredMode && (
+            <div style={{
+              padding: theme.spacing.md,
+              backgroundColor: '#f0f9ff',
+              border: `1px solid ${theme.colors.primary}`,
+              borderRadius: theme.borderRadius.md,
+              marginBottom: theme.spacing.lg,
+            }}>
+              <div style={{ 
+                fontWeight: theme.typography.fontWeight.semibold, 
+                marginBottom: theme.spacing.xs,
+                color: theme.colors.primary,
+              }}>
+                🔍 Inferred Decision Mode Active
+              </div>
+              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary, lineHeight: theme.typography.lineHeight.relaxed }}>
+                <strong>The system will infer the decision from uploaded content.</strong> It will automatically:
+                <ul style={{ marginTop: theme.spacing.xs, marginLeft: theme.spacing.lg, paddingLeft: theme.spacing.sm }}>
+                  <li>Identify all decision candidates (explicit or implicit)</li>
+                  <li>Extract evidence fragments as verbatim quotes</li>
+                  <li>Classify fragments into evidence, assumptions, risks, and stakeholder signals</li>
+                </ul>
+                You can optionally provide additional context in the fields below to enhance the analysis.
+              </div>
+            </div>
+          )}
+
+          {/* Optional Manual Fields */}
           <div style={{ marginBottom: theme.spacing.lg }}>
             <label htmlFor="title" style={labelStyle}>
-              Title <span style={{ color: theme.colors.error }}>*</span>
+              Title (Optional)
             </label>
             <input
               type="text"
@@ -222,17 +323,19 @@ export default function CreateCasePage() {
               name="title"
               value={formData.title}
               onChange={handleChange}
-              required
               disabled={loading}
               style={inputStyle}
               data-testid="create-case-title-input"
               placeholder="e.g., Q2 2024 Product Launch Decision"
             />
+            <div style={helpTextStyle}>
+              Optional: Provide a title for this case. If not provided, it will be inferred from the document.
+            </div>
           </div>
 
           <div style={{ marginBottom: theme.spacing.lg }}>
             <label htmlFor="decisionContext" style={labelStyle}>
-              Decision Context
+              Decision Context (Optional)
             </label>
             <textarea
               id="decisionContext"
@@ -245,7 +348,7 @@ export default function CreateCasePage() {
               placeholder="Describe the decision that needs to be made, the situation, and any relevant background information."
             />
             <div style={helpTextStyle}>
-              Provide context about the decision, situation, and background.
+              Optional: Provide additional context about the decision, situation, and background.
             </div>
           </div>
 
@@ -271,7 +374,7 @@ export default function CreateCasePage() {
 
           <div style={{ marginBottom: theme.spacing.lg }}>
             <label htmlFor="evidence" style={labelStyle}>
-              Evidence / Notes
+              Evidence / Notes (Optional)
             </label>
             <textarea
               id="evidence"
@@ -284,7 +387,7 @@ export default function CreateCasePage() {
               placeholder="List key facts, data points, research findings, or other evidence that supports or informs this decision."
             />
             <div style={helpTextStyle}>
-              Include supporting facts, data, research, or other evidence.
+              Optional: Include additional supporting facts, data, research, or other evidence. Evidence will also be extracted from the uploaded document.
             </div>
           </div>
 
@@ -303,7 +406,7 @@ export default function CreateCasePage() {
               placeholder="List potential risks, concerns, or what could go wrong with this decision."
             />
             <div style={helpTextStyle}>
-              Identify potential risks, concerns, or failure modes.
+              Optional: Identify potential risks, concerns, or failure modes. Risks will also be extracted from the document.
             </div>
           </div>
 
@@ -352,11 +455,11 @@ export default function CreateCasePage() {
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.title.trim()}
+              disabled={loading || !uploadedFile}
               style={buttonStyle}
               data-testid="create-case-submit-button"
               onMouseEnter={(e) => {
-                if (!loading && formData.title.trim()) {
+                if (!loading && uploadedFile) {
                   e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
                 }
               }}
@@ -366,7 +469,7 @@ export default function CreateCasePage() {
                 }
               }}
             >
-              {loading ? 'Creating Case...' : 'Create Case & Generate Report'}
+              {loading ? 'Creating Case...' : isInferredMode ? 'Analyze Document & Generate Report' : 'Create Case & Generate Report'}
             </button>
           </div>
         </form>

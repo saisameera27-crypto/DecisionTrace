@@ -98,26 +98,33 @@ export async function POST(request: NextRequest) {
     evidence = body.evidence || '';
     risks = body.risks || '';
     desiredOutput = body.desiredOutput || 'full';
+    const documentId = body.documentId || null;
+    const inferredMode = body.inferredMode || false;
 
-    // Validate required fields - only title is required
-    if (!title || !title.trim()) {
+    // Validate: File upload (documentId) is required
+    // Title, context, risks are optional - will be inferred from document if not provided
+    if (!documentId) {
       return NextResponse.json(
         {
-          error: 'Title is required',
+          error: 'File upload is required. Please upload a document to analyze.',
           code: 'VALIDATION_ERROR',
         },
         { status: 400 }
       );
     }
 
-    // decisionContext defaults to "" if missing (already handled above)
-
-    // Generate slug from title
-    slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .substring(0, 100) + '-' + Date.now().toString(36);
+    // Generate slug from title or use default for inferred mode
+    if (title.trim()) {
+      slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 100) + '-' + Date.now().toString(36);
+    } else {
+      // Use inferred title if no title provided (inferred decision mode)
+      slug = 'inferred-decision-' + Date.now().toString(36);
+      title = 'Inferred Decision'; // Will be updated from document analysis via forensic analysis
+    }
 
     // Create case (without report generation - that happens in /api/case/[id]/generate)
     // Use only in-scope variables - no shorthand object properties
@@ -133,18 +140,33 @@ export async function POST(request: NextRequest) {
       evidence: trimmedEvidence,
       risks: trimmedRisks,
       desiredOutput: desiredOutput, // Explicit mapping from function-scoped variable (line 25, assigned line 49)
+      documentId: documentId, // Include document ID if file was uploaded
+      inferredMode: inferredMode, // Flag for inferred decision mode
       createdAt: new Date().toISOString(),
     };
     const metadataJson = JSON.stringify(metadataObject);
 
     const newCase = await prisma.case.create({
       data: {
-        title: trimmedTitle,
+        title: trimmedTitle || 'Inferred Decision', // Use provided title or default
         status: 'pending', // Set to pending - report will be generated separately
         slug: slug,
         metadata: metadataJson,
       },
     });
+
+    // If documentId was provided, update the document to link it to this case
+    if (documentId) {
+      try {
+        await prisma.caseDocument.update({
+          where: { id: documentId },
+          data: { caseId: newCase.id },
+        });
+      } catch (updateError) {
+        // Log but don't fail - document might not exist or might already be linked
+        console.warn('Could not link document to case:', updateError);
+      }
+    }
 
     // Success response - return immediately with caseId
     return NextResponse.json({

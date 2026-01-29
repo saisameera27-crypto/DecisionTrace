@@ -17,6 +17,21 @@ interface ReportData {
   decision: {
     decisionTitle?: string;
   } | null;
+  step1Analysis?: {
+    has_clear_decision: boolean;
+    decision_candidates?: Array<{
+      decision_text: string;
+      type: 'explicit' | 'implicit';
+      confidence: number;
+    }>;
+    fragments?: Array<{
+      quote: string;
+      classification: 'evidence' | 'assumption' | 'risk' | 'stakeholder_signal';
+      context?: string;
+      decision_candidate_index?: number | null;
+    }>;
+    no_decision_message?: string;
+  } | null;
 }
 
 export default function CaseReportPage() {
@@ -357,11 +372,92 @@ export default function CaseReportPage() {
       <div style={cardStyle}>
         <header data-testid="report-header" style={headerStyle}>
           <h1 style={titleStyle}>Decision Trace Report</h1>
-          {reportData.decision?.decisionTitle ? (
-            <h2 style={subtitleStyle}>{reportData.decision.decisionTitle}</h2>
-          ) : (
-            <h2 style={subtitleStyle}>Report not available</h2>
-          )}
+          
+          {/* Decision Title with Uncertainty Handling */}
+          {(() => {
+            const step1 = reportData.step1Analysis;
+            const hasClearDecision = step1?.has_clear_decision ?? true;
+            const decisionCandidates = step1?.decision_candidates || [];
+            const primaryDecision = decisionCandidates.length > 0 ? decisionCandidates[0] : null;
+            
+            if (!hasClearDecision && step1?.no_decision_message) {
+              return (
+                <>
+                  <h2 style={subtitleStyle}>No Clear Decision Identified</h2>
+                  <div style={{
+                    marginTop: theme.spacing.md,
+                    padding: theme.spacing.md,
+                    backgroundColor: '#fff3cd',
+                    border: `1px solid #ffc107`,
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: '#856404',
+                  }}>
+                    <strong>⚠️ Uncertainty:</strong> {step1.no_decision_message}
+                  </div>
+                </>
+              );
+            }
+            
+            if (decisionCandidates.length > 1) {
+              // Multiple inferred candidates
+              return (
+                <>
+                  <h2 style={subtitleStyle}>
+                    {primaryDecision?.decision_text || reportData.decision?.decisionTitle || 'Multiple Decision Candidates'}
+                  </h2>
+                  <div style={{
+                    marginTop: theme.spacing.md,
+                    padding: theme.spacing.md,
+                    backgroundColor: '#e7f3ff',
+                    border: `1px solid ${theme.colors.primary}`,
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: '#004085',
+                  }}>
+                    <strong>🔍 Multiple Inferred Decisions:</strong> The analysis identified {decisionCandidates.length} potential decision candidates. Review all candidates below.
+                  </div>
+                </>
+              );
+            }
+            
+            if (primaryDecision && primaryDecision.type === 'implicit') {
+              // Implicit decision with confidence
+              const confidencePercent = Math.round(primaryDecision.confidence * 100);
+              return (
+                <>
+                  <h2 style={subtitleStyle}>
+                    {primaryDecision.decision_text || reportData.decision?.decisionTitle || 'Inferred Decision'}
+                  </h2>
+                  <div style={{
+                    marginTop: theme.spacing.md,
+                    padding: theme.spacing.md,
+                    backgroundColor: '#e7f3ff',
+                    border: `1px solid ${theme.colors.primary}`,
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: theme.typography.fontSize.sm,
+                    color: '#004085',
+                  }}>
+                    <strong>🔍 Inferred Decision:</strong> This decision was inferred from the document content (not explicitly stated). 
+                    Confidence: <strong>{confidencePercent}%</strong>
+                    {confidencePercent < 70 && (
+                      <span style={{ display: 'block', marginTop: theme.spacing.xs }}>
+                        ⚠️ Low confidence - review carefully as the decision may be ambiguous.
+                      </span>
+                    )}
+                  </div>
+                </>
+              );
+            }
+            
+            // Default: explicit decision or fallback
+            return (
+              <h2 style={subtitleStyle}>
+                {primaryDecision?.decision_text || reportData.decision?.decisionTitle || 'Decision Analysis'}
+              </h2>
+            );
+          })()}
+          
           {reportData.report.createdAt && (
             <div style={metadataStyle}>
               <span>Last updated: {formatDate(reportData.report.createdAt) || 'Unknown'}</span>
@@ -510,6 +606,98 @@ export default function CaseReportPage() {
           {activeTab === 'overview' && (
             <div>
               {(() => {
+                const step1 = reportData.step1Analysis;
+                const decisionCandidates = step1?.decision_candidates || [];
+                const hasMultipleCandidates = decisionCandidates.length > 1;
+                
+                // Show decision candidates section if multiple candidates exist
+                if (hasMultipleCandidates) {
+                  return (
+                    <div>
+                      <div style={{
+                        marginBottom: theme.spacing.xl,
+                        padding: theme.spacing.lg,
+                        backgroundColor: '#f8f9fa',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.borderRadius.md,
+                      }}>
+                        <h3 style={{
+                          fontSize: theme.typography.fontSize.xl,
+                          fontWeight: theme.typography.fontWeight.semibold,
+                          color: theme.colors.textPrimary,
+                          marginBottom: theme.spacing.md,
+                        }}>
+                          Decision Candidates ({decisionCandidates.length})
+                        </h3>
+                        <p style={{
+                          fontSize: theme.typography.fontSize.sm,
+                          color: theme.colors.textTertiary,
+                          marginBottom: theme.spacing.md,
+                        }}>
+                          The analysis identified multiple potential decisions. Review each candidate and its confidence level:
+                        </p>
+                        {decisionCandidates.map((candidate, idx) => {
+                          const confidencePercent = Math.round(candidate.confidence * 100);
+                          const confidenceColor = candidate.confidence >= 0.7 ? '#28a745' : candidate.confidence >= 0.5 ? '#ffc107' : '#dc3545';
+                          return (
+                            <div key={idx} style={{
+                              marginBottom: theme.spacing.md,
+                              padding: theme.spacing.md,
+                              backgroundColor: theme.colors.background,
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: theme.borderRadius.md,
+                            }}>
+                              <div style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'flex-start',
+                                marginBottom: theme.spacing.xs,
+                              }}>
+                                <strong style={{ color: theme.colors.textPrimary }}>
+                                  Candidate {idx + 1} ({candidate.type === 'explicit' ? 'Explicit' : 'Inferred'})
+                                </strong>
+                                <span style={{
+                                  padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                                  backgroundColor: confidenceColor,
+                                  color: 'white',
+                                  borderRadius: theme.borderRadius.sm,
+                                  fontSize: theme.typography.fontSize.xs,
+                                  fontWeight: theme.typography.fontWeight.semibold,
+                                }}>
+                                  {confidencePercent}% confidence
+                                </span>
+                              </div>
+                              <div style={{
+                                fontSize: theme.typography.fontSize.base,
+                                color: theme.colors.textSecondary,
+                                lineHeight: theme.typography.lineHeight.relaxed,
+                                fontStyle: candidate.type === 'implicit' ? 'italic' : 'normal',
+                              }}>
+                                "{candidate.decision_text}"
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Overview content */}
+                      {(() => {
+                        const overviewContent = getSectionContent(markdownSections, 'overview') || 
+                                               getSectionContent(markdownSections, 'summary') ||
+                                               reportData.report.finalNarrativeMarkdown;
+                        return (
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(overviewContent) }}
+                            style={markdownContentStyle}
+                            className="markdown-content"
+                          />
+                        );
+                      })()}
+                    </div>
+                  );
+                }
+                
+                // Single decision or no candidates - show normal overview
                 const overviewContent = getSectionContent(markdownSections, 'overview') || 
                                        getSectionContent(markdownSections, 'summary') ||
                                        reportData.report.finalNarrativeMarkdown;
@@ -526,7 +714,75 @@ export default function CaseReportPage() {
           {activeTab === 'evidence' && (
             <div>
               {(() => {
+                const step1 = reportData.step1Analysis;
+                const evidenceFragments = step1?.fragments?.filter(f => f.classification === 'evidence') || [];
                 const evidenceContent = getSectionContent(markdownSections, 'evidence');
+                
+                // Show fragments if available, otherwise show markdown content
+                if (evidenceFragments.length > 0) {
+                  return (
+                    <div>
+                      <div style={{
+                        marginBottom: theme.spacing.lg,
+                        padding: theme.spacing.md,
+                        backgroundColor: '#f8f9fa',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: theme.borderRadius.md,
+                        fontSize: theme.typography.fontSize.sm,
+                        color: theme.colors.textTertiary,
+                      }}>
+                        <strong>📋 Evidence Fragments:</strong> {evidenceFragments.length} verbatim quotes extracted from the document.
+                      </div>
+                      {evidenceFragments.map((fragment, idx) => (
+                        <div key={idx} style={{
+                          marginBottom: theme.spacing.md,
+                          padding: theme.spacing.md,
+                          backgroundColor: theme.colors.background,
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: theme.borderRadius.md,
+                          borderLeft: `4px solid ${theme.colors.primary}`,
+                        }}>
+                          <div style={{
+                            fontSize: theme.typography.fontSize.base,
+                            color: theme.colors.textSecondary,
+                            lineHeight: theme.typography.lineHeight.relaxed,
+                            marginBottom: fragment.context ? theme.spacing.xs : 0,
+                          }}>
+                            "{fragment.quote}"
+                          </div>
+                          {fragment.context && (
+                            <div style={{
+                              fontSize: theme.typography.fontSize.sm,
+                              color: theme.colors.textTertiary,
+                              fontStyle: 'italic',
+                              marginTop: theme.spacing.xs,
+                            }}>
+                              Context: {fragment.context}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {evidenceContent && (
+                        <div style={{ marginTop: theme.spacing.xl }}>
+                          <h3 style={{
+                            fontSize: theme.typography.fontSize.xl,
+                            fontWeight: theme.typography.fontWeight.semibold,
+                            color: theme.colors.textPrimary,
+                            marginBottom: theme.spacing.md,
+                          }}>
+                            Additional Analysis
+                          </h3>
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(evidenceContent) }}
+                            style={markdownContentStyle}
+                            className="markdown-content"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
                 return evidenceContent ? (
                   <div 
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(evidenceContent) }}
@@ -542,7 +798,74 @@ export default function CaseReportPage() {
           {activeTab === 'assumptions' && (
             <div>
               {(() => {
+                const step1 = reportData.step1Analysis;
+                const assumptionFragments = step1?.fragments?.filter(f => f.classification === 'assumption') || [];
                 const assumptionsContent = getSectionContent(markdownSections, 'assumptions');
+                
+                if (assumptionFragments.length > 0) {
+                  return (
+                    <div>
+                      <div style={{
+                        marginBottom: theme.spacing.lg,
+                        padding: theme.spacing.md,
+                        backgroundColor: '#fff3cd',
+                        border: `1px solid #ffc107`,
+                        borderRadius: theme.borderRadius.md,
+                        fontSize: theme.typography.fontSize.sm,
+                        color: '#856404',
+                      }}>
+                        <strong>⚠️ Assumptions Identified:</strong> {assumptionFragments.length} assumptions extracted from the document. These represent uncertain information that may affect the decision.
+                      </div>
+                      {assumptionFragments.map((fragment, idx) => (
+                        <div key={idx} style={{
+                          marginBottom: theme.spacing.md,
+                          padding: theme.spacing.md,
+                          backgroundColor: theme.colors.background,
+                          border: `1px solid #ffc107`,
+                          borderRadius: theme.borderRadius.md,
+                          borderLeft: `4px solid #ffc107`,
+                        }}>
+                          <div style={{
+                            fontSize: theme.typography.fontSize.base,
+                            color: theme.colors.textSecondary,
+                            lineHeight: theme.typography.lineHeight.relaxed,
+                            marginBottom: fragment.context ? theme.spacing.xs : 0,
+                          }}>
+                            "{fragment.quote}"
+                          </div>
+                          {fragment.context && (
+                            <div style={{
+                              fontSize: theme.typography.fontSize.sm,
+                              color: theme.colors.textTertiary,
+                              fontStyle: 'italic',
+                              marginTop: theme.spacing.xs,
+                            }}>
+                              Context: {fragment.context}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {assumptionsContent && (
+                        <div style={{ marginTop: theme.spacing.xl }}>
+                          <h3 style={{
+                            fontSize: theme.typography.fontSize.xl,
+                            fontWeight: theme.typography.fontWeight.semibold,
+                            color: theme.colors.textPrimary,
+                            marginBottom: theme.spacing.md,
+                          }}>
+                            Additional Analysis
+                          </h3>
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(assumptionsContent) }}
+                            style={markdownContentStyle}
+                            className="markdown-content"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
                 return assumptionsContent ? (
                   <div 
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(assumptionsContent) }}
@@ -574,7 +897,74 @@ export default function CaseReportPage() {
           {activeTab === 'risks' && (
             <div>
               {(() => {
+                const step1 = reportData.step1Analysis;
+                const riskFragments = step1?.fragments?.filter(f => f.classification === 'risk') || [];
                 const risksContent = getSectionContent(markdownSections, 'risks');
+                
+                if (riskFragments.length > 0) {
+                  return (
+                    <div>
+                      <div style={{
+                        marginBottom: theme.spacing.lg,
+                        padding: theme.spacing.md,
+                        backgroundColor: '#f8d7da',
+                        border: `1px solid #dc3545`,
+                        borderRadius: theme.borderRadius.md,
+                        fontSize: theme.typography.fontSize.sm,
+                        color: '#721c24',
+                      }}>
+                        <strong>⚠️ Risks Identified:</strong> {riskFragments.length} risk fragments extracted from the document.
+                      </div>
+                      {riskFragments.map((fragment, idx) => (
+                        <div key={idx} style={{
+                          marginBottom: theme.spacing.md,
+                          padding: theme.spacing.md,
+                          backgroundColor: theme.colors.background,
+                          border: `1px solid #dc3545`,
+                          borderRadius: theme.borderRadius.md,
+                          borderLeft: `4px solid #dc3545`,
+                        }}>
+                          <div style={{
+                            fontSize: theme.typography.fontSize.base,
+                            color: theme.colors.textSecondary,
+                            lineHeight: theme.typography.lineHeight.relaxed,
+                            marginBottom: fragment.context ? theme.spacing.xs : 0,
+                          }}>
+                            "{fragment.quote}"
+                          </div>
+                          {fragment.context && (
+                            <div style={{
+                              fontSize: theme.typography.fontSize.sm,
+                              color: theme.colors.textTertiary,
+                              fontStyle: 'italic',
+                              marginTop: theme.spacing.xs,
+                            }}>
+                              Context: {fragment.context}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {risksContent && (
+                        <div style={{ marginTop: theme.spacing.xl }}>
+                          <h3 style={{
+                            fontSize: theme.typography.fontSize.xl,
+                            fontWeight: theme.typography.fontWeight.semibold,
+                            color: theme.colors.textPrimary,
+                            marginBottom: theme.spacing.md,
+                          }}>
+                            Additional Analysis
+                          </h3>
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(risksContent) }}
+                            style={markdownContentStyle}
+                            className="markdown-content"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
                 return risksContent ? (
                   <div 
                     dangerouslySetInnerHTML={{ __html: renderMarkdown(risksContent) }}

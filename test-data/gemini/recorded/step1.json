@@ -4,7 +4,7 @@
       "content": {
         "parts": [
           {
-            "text": "{\n  \"step\": 1,\n  \"status\": \"success\",\n  \"data\": {\n    \"document_id\": \"doc_12345\",\n    \"document_type\": \"decision_memo\",\n    \"uploaded_at\": \"2024-03-15T10:30:00Z\",\n    \"file_name\": \"01_launch_decision_memo.txt\",\n    \"file_size\": 2048,\n    \"mime_type\": \"text/plain\",\n    \"extracted_text\": \"DECISION MEMO: Q2 2024 Product Launch\\n\\nDate: March 15, 2024\\nDecision Maker: Sarah Chen, VP of Product\\nStatus: APPROVED\\n\\nDECISION SUMMARY\\nWe have decided to launch \\\"Project Phoenix\\\" - a new mobile application targeting the healthcare sector...\",\n    \"metadata\": {\n      \"language\": \"en\",\n      \"character_count\": 1850,\n      \"word_count\": 320,\n      \"line_count\": 45\n    },\n    \"processing_time_ms\": 1250\n  },\n  \"errors\": [],\n  \"warnings\": []\n}"
+            "text": "{\n  \"step\": 1,\n  \"status\": \"success\",\n  \"data\": {\n    \"document_id\": \"doc_12345\",\n    \"has_clear_decision\": true,\n    \"decision_candidates\": [\n      {\n        \"decision_text\": \"We have decided to launch 'Project Phoenix' - a new mobile application targeting the healthcare sector in Q2 2024\",\n        \"type\": \"explicit\",\n        \"confidence\": 0.95\n      }\n    ],\n    \"fragments\": [\n      {\n        \"quote\": \"Market research shows strong demand for healthcare mobile apps\",\n        \"classification\": \"evidence\",\n        \"context\": \"Market research shows strong demand for healthcare mobile apps, with 15 pilot customers expressing strong interest\",\n        \"decision_candidate_index\": 0\n      },\n      {\n        \"quote\": \"$50B addressable market\",\n        \"classification\": \"evidence\",\n        \"context\": \"Market opportunity: $50B addressable market\",\n        \"decision_candidate_index\": 0\n      },\n      {\n        \"quote\": \"Proprietary AI technology gives us competitive advantage\",\n        \"classification\": \"evidence\",\n        \"context\": \"Competitive advantage: Proprietary AI technology\",\n        \"decision_candidate_index\": 0\n      },\n      {\n        \"quote\": \"Engineering team has capacity\",\n        \"classification\": \"assumption\",\n        \"context\": \"Team readiness: Engineering team has capacity\",\n        \"decision_candidate_index\": 0\n      },\n      {\n        \"quote\": \"Regulatory compliance requirements (HIPAA)\",\n        \"classification\": \"risk\",\n        \"context\": \"Regulatory compliance requirements (HIPAA) must be addressed\",\n        \"decision_candidate_index\": 0\n      },\n      {\n        \"quote\": \"Longer sales cycles than anticipated\",\n        \"classification\": \"risk\",\n        \"context\": \"Longer sales cycles than anticipated may impact revenue projections\",\n        \"decision_candidate_index\": 0\n      },\n      {\n        \"quote\": \"Sarah Chen, VP of Product\",\n        \"classification\": \"stakeholder_signal\",\n        \"context\": \"Decision Maker: Sarah Chen, VP of Product\",\n        \"decision_candidate_index\": 0\n      }\n    ],\n    \"extracted_at\": \"2024-03-15T10:30:00Z\",\n    \"file_name\": \"01_launch_decision_memo.txt\",\n    \"mime_type\": \"text/plain\"\n  },\n  \"errors\": [],\n  \"warnings\": []\n}"
           }
         ],
         "role": "model"
@@ -32,8 +32,8 @@
     }
   ],
   "usageMetadata": {
-    "promptTokenCount": 100,
-    "candidatesTokenCount": 200,
-    "totalTokenCount": 300
+    "promptTokenCount": 150,
+    "candidatesTokenCount": 250,
+    "totalTokenCount": 400
   }
 }
