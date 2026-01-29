@@ -14,6 +14,17 @@ import { execSync } from 'child_process';
  * Returns the created case ID for routing to report generation.
  */
 export async function POST(request: NextRequest) {
+  // Declare variables in function scope so they're accessible in catch block
+  // Use getPrismaClient() from @/lib/prisma (consistent with all other API routes)
+  let prisma: ReturnType<typeof getPrismaClient> | null = null;
+  let title: string = '';
+  let decisionContext: string = '';
+  let stakeholders: string = '';
+  let evidence: string = '';
+  let risks: string = '';
+  let desiredOutput: string = 'full';
+  let slug: string = '';
+
   try {
     // Parse request body safely
     let body: any;
@@ -29,14 +40,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const {
-      title,
-      decisionContext,
-      stakeholders,
-      evidence,
-      risks,
-      desiredOutput = 'full',
-    } = body;
+    // Destructure required fields with defaults
+    title = body.title || '';
+    decisionContext = body.decisionContext || '';
+    stakeholders = body.stakeholders || '';
+    evidence = body.evidence || '';
+    risks = body.risks || '';
+    desiredOutput = body.desiredOutput || 'full';
 
     // Validate required fields
     if (!title || !title.trim()) {
@@ -49,8 +59,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!decisionContext || !decisionContext.trim()) {
+      return NextResponse.json(
+        {
+          error: 'Decision context is required',
+          code: 'VALIDATION_ERROR',
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if database is initialized
-    let prisma;
     try {
       prisma = getPrismaClient();
     } catch (dbError: any) {
@@ -136,26 +155,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate slug from title
-    const slug = title
+    slug = title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .substring(0, 100) + '-' + Date.now().toString(36);
 
     // Create case (without report generation - that happens in /api/case/[id]/generate)
+    // Use only in-scope variables - no shorthand object properties
+    const trimmedTitle = title.trim();
+    const trimmedDecisionContext = decisionContext.trim();
+    const trimmedStakeholders = stakeholders.trim();
+    const trimmedEvidence = evidence.trim();
+    const trimmedRisks = risks.trim();
+    // Explicit property mappings (not shorthand) - all variables declared above
+    const metadataObject = {
+      decisionContext: trimmedDecisionContext,
+      stakeholders: trimmedStakeholders,
+      evidence: trimmedEvidence,
+      risks: trimmedRisks,
+      desiredOutput: desiredOutput, // Explicit mapping from function-scoped variable (line 25, assigned line 49)
+      createdAt: new Date().toISOString(),
+    };
+    const metadataJson = JSON.stringify(metadataObject);
+
     const newCase = await prisma.case.create({
       data: {
-        title: title.trim(),
+        title: trimmedTitle,
         status: 'pending', // Set to pending - report will be generated separately
-        slug,
-        metadata: JSON.stringify({
-          decisionContext: decisionContext?.trim() || '',
-          stakeholders: stakeholders?.trim() || '',
-          evidence: evidence?.trim() || '',
-          risks: risks?.trim() || '',
-          desiredOutput,
-          createdAt: new Date().toISOString(),
-        }),
+        slug: slug,
+        metadata: metadataJson,
       },
     });
 
@@ -212,27 +241,60 @@ export async function POST(request: NextRequest) {
           
           console.log('✅ Demo mode: Database initialized successfully (retry)');
           
-          // Retry the operation
+          // Retry the operation - use only in-scope variables
           prisma = getPrismaClient();
-          const slug = title
+          
+          // Ensure we have the required variables (they should be set from body parsing above)
+          if (!title || !title.trim()) {
+            return NextResponse.json(
+              {
+                error: 'Title is required',
+                code: 'VALIDATION_ERROR',
+              },
+              { status: 400 }
+            );
+          }
+          
+          if (!decisionContext || !decisionContext.trim()) {
+            return NextResponse.json(
+              {
+                error: 'Decision context is required',
+                code: 'VALIDATION_ERROR',
+              },
+              { status: 400 }
+            );
+          }
+          
+          // Generate slug from title
+          slug = title
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '')
             .substring(0, 100) + '-' + Date.now().toString(36);
           
+          // Use only in-scope variables - no shorthand object properties
+          const retryTrimmedTitle = title.trim();
+          const retryTrimmedDecisionContext = decisionContext.trim();
+          const retryTrimmedStakeholders = stakeholders.trim();
+          const retryTrimmedEvidence = evidence.trim();
+          const retryTrimmedRisks = risks.trim();
+          // Explicit property mappings (not shorthand) - all variables declared at function scope
+          const retryMetadataObject = {
+            decisionContext: retryTrimmedDecisionContext,
+            stakeholders: retryTrimmedStakeholders,
+            evidence: retryTrimmedEvidence,
+            risks: retryTrimmedRisks,
+            desiredOutput: desiredOutput, // Explicit mapping from function-scoped variable (line 25, assigned line 49)
+            createdAt: new Date().toISOString(),
+          };
+          const retryMetadataJson = JSON.stringify(retryMetadataObject);
+          
           const newCase = await prisma.case.create({
             data: {
-              title: title.trim(),
+              title: retryTrimmedTitle,
               status: 'pending',
-              slug,
-              metadata: JSON.stringify({
-                decisionContext: decisionContext?.trim() || '',
-                stakeholders: stakeholders?.trim() || '',
-                evidence: evidence?.trim() || '',
-                risks: risks?.trim() || '',
-                desiredOutput,
-                createdAt: new Date().toISOString(),
-              }),
+              slug: slug,
+              metadata: retryMetadataJson,
             },
           });
           
