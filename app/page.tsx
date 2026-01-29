@@ -183,31 +183,36 @@ export default function Home() {
         AI-powered decision analysis using Google Gemini 3
       </p>
 
-      {/* Mode Indicator */}
-      <div style={{
-        padding: `${theme.spacing.md} ${theme.spacing.md}`,
-        backgroundColor: theme.colors.background,
-        border: `2px solid ${modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success}`,
-        borderRadius: theme.borderRadius.lg,
-        marginBottom: theme.spacing.lg,
-        textAlign: 'center',
-      }}>
+      {/* Mode Indicator Banner/Card */}
+      <div 
+        data-testid="mode-indicator"
+        style={{
+          padding: `${theme.spacing.md} ${theme.spacing.lg}`,
+          backgroundColor: theme.colors.background,
+          border: `2px solid ${modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success}`,
+          borderRadius: theme.borderRadius.lg,
+          marginBottom: theme.spacing.lg,
+          textAlign: 'center',
+          boxShadow: theme.colors.shadowSm,
+        }}
+      >
         <strong style={{ 
           color: modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success,
           fontSize: theme.typography.fontSize.base,
           fontWeight: theme.typography.fontWeight.semibold,
+          display: 'block',
         }}>
-          {modeStatus.isDemoMode ? '🎯 DEMO MODE (Default)' : '🤖 LIVE GEMINI 3 MODE'}
+          {modeStatus.isDemoMode ? 'Mode: Demo' : 'Mode: Live (Gemini 3)'}
         </strong>
         <p style={{ 
           margin: `${theme.spacing.sm} 0 0 0`, 
-          color: modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success,
+          color: theme.colors.textSecondary,
           fontSize: theme.typography.fontSize.sm,
           lineHeight: theme.typography.lineHeight.normal,
         }}>
           {modeStatus.isDemoMode 
-            ? 'Using mock responses. No API key required. Perfect for hackathon demos!'
-            : 'Using real Gemini 3 API. API key configured.'}
+            ? 'No API key required. Runs instantly with demo data.'
+            : 'Uses Gemini 3 to generate reports from your inputs.'}
         </p>
       </div>
 
@@ -431,7 +436,7 @@ export default function Home() {
             fontWeight: theme.typography.fontWeight.bold,
             lineHeight: theme.typography.lineHeight.tight,
           }}>
-            🤖 Live Gemini 3 (Optional)
+            🤖 Live Gemini 3
           </h2>
           <p style={{ 
             marginBottom: theme.spacing.lg, 
@@ -439,7 +444,7 @@ export default function Home() {
             fontSize: theme.typography.fontSize.base,
             lineHeight: theme.typography.lineHeight.relaxed,
           }}>
-            Run real AI analysis using Google Gemini 3. Upload your own documents and get live analysis results.
+            Uses Gemini 3 to generate reports from your inputs. Upload your own documents and get live AI analysis results.
           </p>
           <button
             data-testid="run-live-gemini-button"
@@ -503,8 +508,30 @@ export default function Home() {
         </div>
       )}
 
-      {/* Features */}
+      {/* How It Works */}
       <div style={{ marginTop: theme.spacing['2xl'], marginBottom: theme.spacing.xl }}>
+        <h2 style={{ 
+          fontSize: theme.typography.fontSize['2xl'], 
+          marginBottom: theme.spacing.md,
+          fontWeight: theme.typography.fontWeight.semibold,
+          color: theme.colors.textPrimary,
+        }}>
+          How It Works
+        </h2>
+        <ul style={{ 
+          lineHeight: theme.typography.lineHeight.relaxed, 
+          fontSize: theme.typography.fontSize.base,
+          color: theme.colors.textSecondary,
+          paddingLeft: theme.spacing.lg,
+        }}>
+          <li style={{ marginBottom: theme.spacing.sm }}>1. Upload/enter decision info</li>
+          <li style={{ marginBottom: theme.spacing.sm }}>2. Generate report</li>
+          <li style={{ marginBottom: theme.spacing.sm }}>3. Share/export</li>
+        </ul>
+      </div>
+
+      {/* Features */}
+      <div style={{ marginTop: theme.spacing.xl, marginBottom: theme.spacing.xl }}>
         <h2 style={{ 
           fontSize: theme.typography.fontSize['2xl'], 
           marginBottom: theme.spacing.md,

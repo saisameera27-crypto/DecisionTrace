@@ -23,7 +23,8 @@ export default function CreateCasePage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/case/create', {
+      // Step 1: Create case (returns immediately with caseId)
+      const createResponse = await fetch('/api/case/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -31,23 +32,80 @@ export default function CreateCasePage() {
         body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      // Safe response parser for create
+      const createRaw = await createResponse.text();
+      
+      if (!createRaw || createRaw.trim() === '') {
+        throw new Error(`Empty response from server (${createResponse.status} ${createResponse.statusText})`);
+      }
 
-      if (!response.ok) {
-        // Check for database initialization error
-        if (data.error === 'DB_NOT_INITIALIZED') {
+      let createData: any;
+      try {
+        createData = JSON.parse(createRaw);
+      } catch (parseError) {
+        const preview = createRaw.length > 300 ? createRaw.substring(0, 300) + '...' : createRaw;
+        throw new Error(`Invalid JSON response from server (${createResponse.status} ${createResponse.statusText}): ${preview}`);
+      }
+
+      if (!createResponse.ok) {
+        const statusCode = createResponse.status;
+        const statusText = createResponse.statusText;
+        const errorMessage = createData.error || createData.message || 'Unknown error';
+        const requestId = createData.requestId || createData.id || null;
+        
+        let errorText = `HTTP ${statusCode} ${statusText}: ${errorMessage}`;
+        if (requestId) {
+          errorText += ` (Request ID: ${requestId})`;
+        }
+        
+        if (createData.code === 'DB_NOT_INITIALIZED') {
           setError('Database tables are not initialized. Please redeploy after migrations run.');
         } else {
-          setError(data.message || 'Failed to create case');
+          setError(errorText);
         }
         setLoading(false);
         return;
       }
 
-      // Navigate to the report page
-      router.push(`/case/${data.caseId}`);
+      const caseId = createData.caseId;
+
+      // Step 2: Generate report
+      // Always use JSON path (fast) - demo mode uses this, live mode can also use this
+      // Streaming is available via Accept: text/event-stream header if needed in the future
+      const generateResponse = await fetch(`/api/case/${caseId}/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Don't request streaming - use fast JSON path
+        },
+      });
+
+      const generateRaw = await generateResponse.text();
+      
+      if (!generateRaw || generateRaw.trim() === '') {
+        throw new Error(`Empty response from generate endpoint (${generateResponse.status})`);
+      }
+
+      let generateData: any;
+      try {
+        generateData = JSON.parse(generateRaw);
+      } catch (parseError) {
+        const preview = generateRaw.length > 300 ? generateRaw.substring(0, 300) + '...' : generateRaw;
+        throw new Error(`Invalid JSON response from generate endpoint: ${preview}`);
+      }
+
+      if (!generateResponse.ok) {
+        const errorMessage = generateData.error || generateData.message || 'Failed to generate report';
+        setError(`Report generation failed: ${errorMessage}`);
+        setLoading(false);
+        return;
+      }
+
+      // Success - navigate to report page
+      router.push(`/case/${caseId}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to create case');
+      const errorMessage = err.message || 'Failed to create case';
+      setError(errorMessage);
       setLoading(false);
     }
   };
