@@ -2,11 +2,64 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { isDemoMode } from '@/lib/demo-mode';
 import { execSync } from 'child_process';
+import { z } from 'zod';
+
+/**
+ * Zod schema for Upload/Infer mode (inferMode = true)
+ * Requires: documentId OR fileUri
+ * Optional: title (auto-generated if missing)
+ */
+const inferModeSchema = z.object({
+  inferMode: z.literal(true),
+  documentId: z.string().min(1, 'Document ID is required').optional(),
+  fileUri: z.string().min(1, 'File URI is required').optional(),
+  title: z.string().optional(),
+  decisionContext: z.string().optional(),
+  stakeholders: z.string().optional(),
+  evidence: z.string().optional(),
+  risks: z.string().optional(),
+  desiredOutput: z.string().default('full'),
+}).refine(
+  (data) => data.documentId || data.fileUri,
+  {
+    message: 'File upload is required. Please provide either documentId or fileUri.',
+    path: ['documentId'],
+  }
+);
+
+/**
+ * Zod schema for Manual mode (inferMode = false)
+ * Requires: title, decisionContext
+ * Optional: all other fields, no file required
+ */
+const manualModeSchema = z.object({
+  inferMode: z.literal(false),
+  title: z.string().trim().min(1, 'Title is required'),
+  decisionContext: z.string().trim().min(1, 'Decision context is required'),
+  documentId: z.string().optional(),
+  fileUri: z.string().optional(),
+  stakeholders: z.string().optional(),
+  evidence: z.string().optional(),
+  risks: z.string().optional(),
+  desiredOutput: z.string().default('full'),
+});
+
+/**
+ * Union schema that validates based on inferMode
+ */
+const createCaseSchema = z.discriminatedUnion('inferMode', [
+  inferModeSchema,
+  manualModeSchema,
+]);
 
 /**
  * Create Case API Route
  * 
  * Creates a new case from user-provided decision details.
+ * 
+ * Supports two modes:
+ * 1. Upload/Infer mode (default): Requires file upload, title optional
+ * 2. Manual mode: Requires title + decisionContext, no file required
  * 
  * This endpoint ONLY creates the case and returns the caseId immediately.
  * Report generation happens separately via POST /api/case/[id]/generate
@@ -90,41 +143,78 @@ export async function POST(request: NextRequest) {
       throw dbError;
     }
 
-    // 3) Only after DB is confirmed reachable, validate fields
-    // Destructure required fields with defaults
-    title = body.title || '';
-    decisionContext = body.decisionContext || '';
-    stakeholders = body.stakeholders || '';
-    evidence = body.evidence || '';
-    risks = body.risks || '';
-    desiredOutput = body.desiredOutput || 'full';
-    const documentId = body.documentId || null;
-    const inferredMode = body.inferredMode || false;
+    // 3) Only after DB is confirmed reachable, validate fields with Zod
+    // Default inferMode to true if not provided
+    const inferMode = body.inferMode !== undefined ? body.inferMode : true;
+    const bodyWithInferMode = { 
+      ...body, 
+      inferMode: inferMode as true | false // Ensure it's a literal type
+    };
 
-    // Validate: File upload (documentId) is required
-    // Title, context, risks are optional - will be inferred from document if not provided
-    if (!documentId) {
+    // Validate request body with Zod schema
+    const validationResult = createCaseSchema.safeParse(bodyWithInferMode);
+    
+    if (!validationResult.success) {
+      // Extract first error message for user-friendly response
+      const firstError = validationResult.error.issues[0];
+      const errorMessage = firstError?.message || 'Validation error';
+      const errorPath = firstError?.path?.join('.') || 'unknown';
+      
+      // Provide mode-specific error messages
+      let userMessage = errorMessage;
+      if (inferMode && errorPath.includes('documentId')) {
+        userMessage = 'File upload is required. Please upload a document to analyze.';
+      } else if (!inferMode && errorPath === 'title') {
+        userMessage = 'Title is required in manual mode.';
+      } else if (!inferMode && errorPath === 'decisionContext') {
+        userMessage = 'Decision context is required in manual mode.';
+      }
+      
       return NextResponse.json(
         {
-          error: 'File upload is required. Please upload a document to analyze.',
+          error: userMessage,
           code: 'VALIDATION_ERROR',
+          details: validationResult.error.issues,
         },
         { status: 400 }
       );
     }
 
-    // Generate slug from title or use default for inferred mode
-    if (title.trim()) {
-      slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .substring(0, 100) + '-' + Date.now().toString(36);
-    } else {
-      // Use inferred title if no title provided (inferred decision mode)
-      slug = 'inferred-decision-' + Date.now().toString(36);
-      title = 'Inferred Decision'; // Will be updated from document analysis via forensic analysis
+    const validatedData = validationResult.data;
+    
+    // Extract validated fields
+    const documentId = validatedData.documentId || null;
+    const fileUri = validatedData.fileUri || null;
+    title = validatedData.title || '';
+    decisionContext = validatedData.decisionContext || '';
+    stakeholders = validatedData.stakeholders || '';
+    evidence = validatedData.evidence || '';
+    risks = validatedData.risks || '';
+    desiredOutput = validatedData.desiredOutput || 'full';
+    const inferredMode = validatedData.inferMode;
+
+    // Generate title and slug based on mode
+    if (!title.trim()) {
+      if (inferredMode) {
+        // Auto-generate title for infer mode
+        const dateStr = new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        title = `Untitled Decision Case - ${dateStr}`;
+      } else {
+        // Manual mode requires title (shouldn't reach here due to Zod validation)
+        title = 'Untitled Decision Case';
+      }
     }
+    
+    // Generate slug from title
+    slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 100) + '-' + Date.now().toString(36);
 
     // Create case (without report generation - that happens in /api/case/[id]/generate)
     // Use only in-scope variables - no shorthand object properties
@@ -139,8 +229,9 @@ export async function POST(request: NextRequest) {
       stakeholders: trimmedStakeholders,
       evidence: trimmedEvidence,
       risks: trimmedRisks,
-      desiredOutput: desiredOutput, // Explicit mapping from function-scoped variable (line 25, assigned line 49)
+      desiredOutput: desiredOutput,
       documentId: documentId, // Include document ID if file was uploaded
+      fileUri: fileUri || null, // Include file URI if provided
       inferredMode: inferredMode, // Flag for inferred decision mode
       createdAt: new Date().toISOString(),
     };

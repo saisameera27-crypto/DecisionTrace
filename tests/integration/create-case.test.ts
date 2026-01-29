@@ -26,8 +26,9 @@ describe('Create Case API', () => {
   });
 
   describe('Success path', () => {
-    it('should create a case and return 201 with caseId', async () => {
+    it('should create a case and return 201 with caseId (manual mode)', async () => {
       const requestBody = {
+        inferMode: false,
         title: 'Test Decision Case',
         decisionContext: 'This is a test decision context',
         stakeholders: 'Team A, Team B',
@@ -65,9 +66,11 @@ describe('Create Case API', () => {
       expect(data).toHaveProperty('message');
     });
 
-    it('should create a case with minimal required fields', async () => {
+    it('should create a case with minimal required fields (manual mode)', async () => {
       const requestBody = {
+        inferMode: false,
         title: 'Minimal Test Case',
+        decisionContext: 'Test context',
       };
 
       const request = new NextRequest('http://localhost:3000/api/case/create', {
@@ -98,7 +101,8 @@ describe('Create Case API', () => {
   describe('Failure path - validation errors', () => {
     it('should return 400 when title is missing', async () => {
       const requestBody = {
-        decisionContext: 'Some context',
+        inferMode: false,
+        decisionContext: 'x',
         // title is missing
       };
 
@@ -128,8 +132,73 @@ describe('Create Case API', () => {
       expect(data.error).toContain('Title is required');
     });
 
+    it('should return 400 when inferMode=true and no file uploaded', async () => {
+      const requestBody = {
+        inferMode: true,
+        // documentId and fileUri are both missing
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/case/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const response = await POST(request);
+      const data = await parseJsonResponse(response);
+
+      // Assert status is 400
+      await assertResponseStatus(response, 400);
+      expect(response.status).toBe(400);
+
+      // Assert Content-Type includes application/json
+      const contentType = response.headers.get('content-type');
+      expect(contentType).toContain('application/json');
+
+      // Assert JSON contains code and error
+      expect(data).toHaveProperty('code');
+      expect(data).toHaveProperty('error');
+      expect(data.code).toBe('VALIDATION_ERROR');
+      expect(data.error).toContain('File upload is required');
+    });
+
+    it('should return 400 when inferMode is omitted (defaults to true) and no file uploaded', async () => {
+      const requestBody = {
+        // inferMode omitted (defaults to true)
+        // documentId and fileUri are both missing
+      };
+
+      const request = new NextRequest('http://localhost:3000/api/case/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const response = await POST(request);
+      const data = await parseJsonResponse(response);
+
+      // Assert status is 400
+      await assertResponseStatus(response, 400);
+      expect(response.status).toBe(400);
+
+      // Assert Content-Type includes application/json
+      const contentType = response.headers.get('content-type');
+      expect(contentType).toContain('application/json');
+
+      // Assert JSON contains code and error
+      expect(data).toHaveProperty('code');
+      expect(data).toHaveProperty('error');
+      expect(data.code).toBe('VALIDATION_ERROR');
+      expect(data.error).toContain('File upload is required');
+    });
+
     it('should return 400 when title is empty string', async () => {
       const requestBody = {
+        inferMode: false,
         title: '',
         decisionContext: 'Some context',
       };
@@ -157,6 +226,7 @@ describe('Create Case API', () => {
 
     it('should return 400 when title is only whitespace', async () => {
       const requestBody = {
+        inferMode: false,
         title: '   ',
         decisionContext: 'Some context',
       };
@@ -231,7 +301,9 @@ describe('Create Case API', () => {
 
       try {
         const requestBody = {
+          inferMode: false,
           title: 'Test Case',
+          decisionContext: 'Test context',
         };
 
         const request = new NextRequest('http://localhost:3000/api/case/create', {
