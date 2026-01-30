@@ -5,22 +5,31 @@
  */
 
 import { test, expect } from './fixtures';
-import * as path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join, resolve } from 'path';
+
+// ESM-safe __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 test.describe('Golden Path', () => {
   test('should complete QuickStart workflow and verify report @smoke', async ({ page }) => {
     // Navigate to landing page
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // Navigate to QuickStart page
     await page.goto('/quick');
-    await page.waitForLoadState('networkidle');
+    
+    // Wait for QuickStart page to be ready (wait for upload button to be visible)
+    await expect(page.locator('[data-testid="qs-upload"]')).toBeVisible({ timeout: 10000 });
 
     // Upload fixture file - set file directly on the hidden file input
     // The file input is hidden but we can set files on it directly
     const fileInput = page.locator('input[type="file"]');
-    const fixturePath = path.join(__dirname, '../../fixtures/messy-hiring-thread.txt');
+    // Wait for file input to be attached to DOM
+    await expect(fileInput).toBeAttached({ timeout: 5000 });
+    // Resolve to absolute path: from tests/e2e/ go up to project root, then to fixtures/
+    const fixturePath = resolve(__dirname, '../../fixtures/messy-hiring-thread.txt');
     await fileInput.setInputFiles(fixturePath);
 
     // Wait for upload status to appear
@@ -29,13 +38,16 @@ test.describe('Golden Path', () => {
     // Click run button
     await page.click('[data-testid="qs-run"]');
 
-    // Wait for navigation to report page
-    await page.waitForURL(/\/case\/[^/]+\/report/, { timeout: 30000 });
-    await page.waitForLoadState('networkidle');
+    // Wait for navigation to case page (report is shown at /case/:id)
+    await page.waitForURL(/\/case\/[^/]+/, { timeout: 30000 });
 
-    // Verify report page renders with stable UI assertions
-    await expect(page.locator('[data-testid="report-root"]')).toBeVisible();
+    // Verify report page renders with stable UI assertions (wait for specific elements, not networkidle)
+    await expect(page.locator('[data-testid="report-root"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="report-header"]')).toBeVisible();
+    await expect(page.locator('text=Decision Trace Report')).toBeVisible();
+    
+    // Assert Overview tab is visible (default active tab)
+    await expect(page.locator('[data-testid="tab-overview"]')).toBeVisible();
     
     // Assert Evidence tab is visible (stable marker)
     await expect(page.locator('[data-testid="tab-evidence"]')).toBeVisible();
@@ -52,21 +64,25 @@ test.describe('Golden Path', () => {
   test('should complete demo path via QuickStart @smoke', async ({ page }) => {
     // Navigate to landing page
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
 
     // Navigate to QuickStart page
     await page.goto('/quick');
-    await page.waitForLoadState('networkidle');
+    
+    // Wait for QuickStart page to be ready (wait for demo link to be visible)
+    await expect(page.locator('[data-testid="qs-demo-link"]')).toBeVisible({ timeout: 10000 });
 
     // Click demo link
     await page.click('[data-testid="qs-demo-link"]');
 
-    // Wait for navigation to report page
-    await page.waitForURL(/\/case\/[^/]+\/report/, { timeout: 30000 });
-    await page.waitForLoadState('networkidle');
+    // Wait for navigation to case page (report is shown at /case/:id)
+    await page.waitForURL(/\/case\/[^/]+/, { timeout: 30000 });
 
-    // Verify report page renders
-    await expect(page.locator('[data-testid="report-root"]')).toBeVisible();
+    // Verify report page renders using stable UI assertions (wait for specific elements, not networkidle)
+    await expect(page.locator('[data-testid="report-root"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="report-header"]')).toBeVisible();
+    await expect(page.locator('text=Decision Trace Report')).toBeVisible();
+    
+    // Assert Overview tab is visible (default active tab)
+    await expect(page.locator('[data-testid="tab-overview"]')).toBeVisible();
   });
 });
