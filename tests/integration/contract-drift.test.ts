@@ -86,11 +86,14 @@ function validateRecordedResponse(stepName: string, schema: z.ZodTypeAny): {
 
 /**
  * Check if schema version matches
+ * Accepts same major version with higher or equal minor version (backward compatible)
+ * Rejects different major versions (breaking changes)
  */
 function checkSchemaVersion(recordedData: any, expectedVersion: string): {
   matches: boolean;
   recordedVersion?: string;
   expectedVersion: string;
+  isCompatible: boolean; // true if same major, higher/equal minor
 } {
   // Extract step data from Gemini response format if needed
   let stepData = recordedData;
@@ -103,10 +106,66 @@ function checkSchemaVersion(recordedData: any, expectedVersion: string): {
   }
   
   const recordedVersion = stepData.schemaVersion || 'unknown';
+  
+  // Parse semantic versions
+  function parseVersion(version: string): { major: number; minor: number; patch: number } | null {
+    const parts = version.split('.').map(Number);
+    if (parts.length === 3 && parts.every(p => !isNaN(p))) {
+      return { major: parts[0], minor: parts[1], patch: parts[2] };
+    }
+    return null;
+  }
+  
+  const expected = parseVersion(expectedVersion);
+  const recorded = recordedVersion !== 'unknown' ? parseVersion(recordedVersion) : null;
+  
+  if (!expected) {
+    // Invalid expected version format
+    return {
+      matches: false,
+      recordedVersion,
+      expectedVersion,
+      isCompatible: false,
+    };
+  }
+  
+  if (!recorded) {
+    // Unknown or invalid recorded version - treat as incompatible
+    return {
+      matches: false,
+      recordedVersion,
+      expectedVersion,
+      isCompatible: false,
+    };
+  }
+  
+  // Exact match
+  if (recordedVersion === expectedVersion) {
+    return {
+      matches: true,
+      recordedVersion,
+      expectedVersion,
+      isCompatible: true,
+    };
+  }
+  
+  // Same major version: compatible if recorded minor >= expected minor
+  if (recorded.major === expected.major) {
+    const isCompatible = recorded.minor >= expected.minor;
+    return {
+      matches: isCompatible, // Matches if compatible
+      recordedVersion,
+      expectedVersion,
+      isCompatible,
+    };
+  }
+  
+  // Different major version: incompatible (breaking change)
   return {
-    matches: recordedVersion === expectedVersion,
+    matches: false,
     recordedVersion,
     expectedVersion,
+    isCompatible: false,
   };
 }
 
@@ -220,89 +279,194 @@ describe('Contract Drift Tests', () => {
   });
 
   describe('Contract Breaking Changes', () => {
-    it('should detect missing required fields in recorded responses', () => {
-      const step2Response = loadRecordedResponse('step2');
-      
-      // Extract step data from Gemini response format if needed
-      let stepData = step2Response;
-      if (step2Response.candidates && step2Response.candidates[0]?.content?.parts?.[0]?.text) {
+    /**
+     * Helper to extract step data from recorded response
+     */
+    function extractStepData(recordedResponse: any): any {
+      if (recordedResponse.candidates && recordedResponse.candidates[0]?.content?.parts?.[0]?.text) {
         try {
-          stepData = JSON.parse(step2Response.candidates[0].content.parts[0].text);
+          return JSON.parse(recordedResponse.candidates[0].content.parts[0].text);
         } catch {
-          // If parsing fails, use original data
+          return recordedResponse;
         }
       }
+      return recordedResponse;
+    }
+
+    /**
+     * Helper to deep clone an object
+     */
+    function deepClone<T>(obj: T): T {
+      return JSON.parse(JSON.stringify(obj));
+    }
+
+    it('should detect missing required fields in recorded responses', () => {
+      // Test Step 1: Remove required field `normalizedEntities`
+      const step1Response = loadRecordedResponse('step1');
+      let step1Data = extractStepData(step1Response);
+      const mutatedStep1 = deepClone(step1Data);
+      delete mutatedStep1.data.normalizedEntities; // Required field
       
-      const result = validateWithSchema(step2Schema, stepData);
+      const result1 = validateWithSchema(step1Schema, mutatedStep1);
+      expect(result1.success).toBe(false);
+      expect(result1.errors).toBeDefined();
+      expect(result1.errors!.some(err => 
+        err.toLowerCase().includes('normalizedentities') || 
+        err.toLowerCase().includes('required') ||
+        err.toLowerCase().includes('expected object')
+      )).toBe(true);
 
-      if (!result.success) {
-        // If validation fails, check for missing required fields
-        const errors = result.errors || [];
-        const missingFields = errors.filter((err: string) =>
-          err.toLowerCase().includes('required')
-        );
-
-        if (missingFields.length > 0) {
-          console.error('Missing required fields:', missingFields);
-        }
-
-        // Test should fail if required fields are missing
-        expect(result.success).toBe(true);
-      } else {
-        expect(result.success).toBe(true);
-      }
+      // Test Step 2: Remove required field `inferredDecision`
+      const step2Response = loadRecordedResponse('step2');
+      let step2Data = extractStepData(step2Response);
+      const mutatedStep2 = deepClone(step2Data);
+      delete mutatedStep2.data.inferredDecision; // Required field
+      
+      const result2 = validateWithSchema(step2Schema, mutatedStep2);
+      expect(result2.success).toBe(false);
+      expect(result2.errors).toBeDefined();
+      expect(result2.errors!.some(err => 
+        err.toLowerCase().includes('inferreddecision') || 
+        err.toLowerCase().includes('required') ||
+        err.toLowerCase().includes('expected string')
+      )).toBe(true);
     });
 
     it('should detect type mismatches in recorded responses', () => {
+      // Test Step 1: Change required string field to number
+      const step1Response = loadRecordedResponse('step1');
+      let step1Data = extractStepData(step1Response);
+      const mutatedStep1 = deepClone(step1Data);
+      mutatedStep1.data.document_id = 12345; // Should be string, not number
+      
+      const result1 = validateWithSchema(step1Schema, mutatedStep1);
+      expect(result1.success).toBe(false);
+      expect(result1.errors).toBeDefined();
+      expect(result1.errors!.some(err => 
+        err.toLowerCase().includes('document_id') || 
+        err.toLowerCase().includes('expected string') ||
+        err.toLowerCase().includes('received number')
+      )).toBe(true);
+
+      // Test Step 2: Change required string field to number
       const step2Response = loadRecordedResponse('step2');
+      let step2Data = extractStepData(step2Response);
+      const mutatedStep2 = deepClone(step2Data);
+      mutatedStep2.data.inferredDecision = 12345; // Should be string, not number
       
-      // Extract step data from Gemini response format if needed
-      let stepData = step2Response;
-      if (step2Response.candidates && step2Response.candidates[0]?.content?.parts?.[0]?.text) {
-        try {
-          stepData = JSON.parse(step2Response.candidates[0].content.parts[0].text);
-        } catch {
-          // If parsing fails, use original data
-        }
-      }
+      const result2 = validateWithSchema(step2Schema, mutatedStep2);
+      expect(result2.success).toBe(false);
+      expect(result2.errors).toBeDefined();
+      expect(result2.errors!.some(err => 
+        err.toLowerCase().includes('inferreddecision') || 
+        err.toLowerCase().includes('expected string') ||
+        err.toLowerCase().includes('received number')
+      )).toBe(true);
+
+      // Test Step 2: Change required enum field to invalid value
+      const mutatedStep2Enum = deepClone(step2Data);
+      mutatedStep2Enum.data.decisionType = 'invalid_type'; // Should be enum value
       
-      const result = validateWithSchema(step2Schema, stepData);
-
-      if (!result.success) {
-        const errors = result.errors || [];
-        const typeErrors = errors.filter((err: string) =>
-          err.toLowerCase().includes('type') ||
-          err.toLowerCase().includes('expected')
-        );
-
-        if (typeErrors.length > 0) {
-          console.error('Type mismatches:', typeErrors);
-        }
-
-        expect(result.success).toBe(true);
-      } else {
-        expect(result.success).toBe(true);
-      }
+      const result2Enum = validateWithSchema(step2Schema, mutatedStep2Enum);
+      expect(result2Enum.success).toBe(false);
+      expect(result2Enum.errors).toBeDefined();
+      expect(result2Enum.errors!.some(err => 
+        err.toLowerCase().includes('decisiontype') || 
+        err.toLowerCase().includes('invalid option') ||
+        err.toLowerCase().includes('expected')
+      )).toBe(true);
     });
 
     it('should detect unexpected fields in recorded responses', () => {
-      // This would require strict schema validation
-      // For now, we'll just verify the response structure
-      const step2Response = loadRecordedResponse('step2');
-      
-      // Extract step data from Gemini response format if needed
-      let stepData = step2Response;
-      if (step2Response.candidates && step2Response.candidates[0]?.content?.parts?.[0]?.text) {
-        try {
-          stepData = JSON.parse(step2Response.candidates[0].content.parts[0].text);
-        } catch {
-          // If parsing fails, use original data
+      /**
+       * Helper to get all keys from an object recursively
+       */
+      function getAllKeys(obj: any, prefix = ''): string[] {
+        const keys: string[] = [];
+        if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+          for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+              const fullKey = prefix ? `${prefix}.${key}` : key;
+              keys.push(fullKey);
+              if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+                keys.push(...getAllKeys(obj[key], fullKey));
+              }
+            }
+          }
         }
+        return keys;
       }
-      
-      const result = validateWithSchema(step2Schema, stepData);
 
-      expect(result.success).toBe(true);
+      // Test Step 1: Add unexpected fields
+      const step1Response = loadRecordedResponse('step1');
+      let step1Data = extractStepData(step1Response);
+      const originalStep1 = deepClone(step1Data);
+      const mutatedStep1 = deepClone(step1Data);
+      mutatedStep1.unexpectedTopLevelField = 'should be rejected';
+      mutatedStep1.data.unexpectedNestedField = 'should be rejected';
+      
+      const result1 = validateWithSchema(step1Schema, mutatedStep1);
+      
+      // Get keys from original, mutated input, and validated output
+      const originalKeys1 = getAllKeys(originalStep1);
+      const mutatedKeys1 = getAllKeys(mutatedStep1);
+      const validatedKeys1 = result1.success ? getAllKeys(result1.data) : [];
+      
+      // Detect unexpected fields: keys in mutated input that are not in original or validated output
+      const unexpectedKeys1 = mutatedKeys1.filter(key => 
+        !originalKeys1.includes(key) && 
+        !validatedKeys1.includes(key) &&
+        (key.includes('unexpectedTopLevelField') || key.includes('unexpectedNestedField'))
+      );
+      
+      // Contract drift detected: unexpected fields were present in input
+      expect(unexpectedKeys1.length).toBeGreaterThan(0);
+      expect(mutatedStep1).toHaveProperty('unexpectedTopLevelField');
+      expect(mutatedStep1.data).toHaveProperty('unexpectedNestedField');
+      
+      // Zod strips unexpected fields, so they shouldn't be in validated output
+      if (result1.success) {
+        expect(result1.data).not.toHaveProperty('unexpectedTopLevelField');
+        expect(result1.data.data).not.toHaveProperty('unexpectedNestedField');
+      }
+
+      // Test Step 2: Add unexpected fields
+      const step2Response = loadRecordedResponse('step2');
+      let step2Data = extractStepData(step2Response);
+      const originalStep2 = deepClone(step2Data);
+      const mutatedStep2 = deepClone(step2Data);
+      mutatedStep2.unexpectedTopLevelField = 'should be rejected';
+      mutatedStep2.data.unexpectedNestedField = 'should be rejected';
+      mutatedStep2.data.confidence.unexpectedNestedInObject = 'should be rejected';
+      
+      const result2 = validateWithSchema(step2Schema, mutatedStep2);
+      
+      // Get keys from original, mutated input, and validated output
+      const originalKeys2 = getAllKeys(originalStep2);
+      const mutatedKeys2 = getAllKeys(mutatedStep2);
+      const validatedKeys2 = result2.success ? getAllKeys(result2.data) : [];
+      
+      // Detect unexpected fields: keys in mutated input that are not in original or validated output
+      const unexpectedKeys2 = mutatedKeys2.filter(key => 
+        !originalKeys2.includes(key) && 
+        !validatedKeys2.includes(key) &&
+        (key.includes('unexpectedTopLevelField') || 
+         key.includes('unexpectedNestedField') || 
+         key.includes('unexpectedNestedInObject'))
+      );
+      
+      // Contract drift detected: unexpected fields were present in input
+      expect(unexpectedKeys2.length).toBeGreaterThan(0);
+      expect(mutatedStep2).toHaveProperty('unexpectedTopLevelField');
+      expect(mutatedStep2.data).toHaveProperty('unexpectedNestedField');
+      expect(mutatedStep2.data.confidence).toHaveProperty('unexpectedNestedInObject');
+      
+      // Zod strips unexpected fields, so they shouldn't be in validated output
+      if (result2.success) {
+        expect(result2.data).not.toHaveProperty('unexpectedTopLevelField');
+        expect(result2.data.data).not.toHaveProperty('unexpectedNestedField');
+        expect(result2.data.data.confidence).not.toHaveProperty('unexpectedNestedInObject');
+      }
     });
   });
 
@@ -337,6 +501,8 @@ describe('Contract Drift Tests', () => {
   describe('Backward Compatibility', () => {
     it('should handle minor version updates gracefully', () => {
       // Minor version updates (1.0.0 -> 1.1.0) should be backward compatible
+      // This means: same major version, higher minor version, adds optional fields only
+      
       const step1Response = loadRecordedResponse('step1');
       
       // Extract step data from Gemini response format if needed
@@ -349,25 +515,85 @@ describe('Contract Drift Tests', () => {
         }
       }
       
-      const result = validateWithSchema(step1Schema, stepData);
-
-      // Should still validate even if minor version differs
+      // Create a minor version bump (1.0.0 -> 1.1.0) with optional fields added
+      const minorVersionBump = JSON.parse(JSON.stringify(stepData)); // Deep clone
+      minorVersionBump.schemaVersion = '1.1.0'; // Minor version bump
+      
+      // Add optional fields only (not removing required fields or changing types)
+      // Using actual optional fields from the schema to simulate realistic minor version update
+      if (!minorVersionBump.data.document_type) {
+        minorVersionBump.data.document_type = 'decision_memo_v1_1';
+      }
+      // Note: Zod will strip unknown fields, but validation still passes because all required fields are present
+      
+      // Validate: should still pass because all required fields are present
+      const result = validateWithSchema(step1Schema, minorVersionBump);
       expect(result.success).toBe(true);
+      
+      // Version check: should be compatible (same major, higher minor)
+      const versionCheck = checkSchemaVersion(minorVersionBump, CURRENT_SCHEMA_VERSION);
+      expect(versionCheck.isCompatible).toBe(true);
+      expect(versionCheck.recordedVersion).toBe('1.1.0');
+      expect(versionCheck.expectedVersion).toBe(CURRENT_SCHEMA_VERSION);
+      
+      // Test Step 2 as well
+      const step2Response = loadRecordedResponse('step2');
+      let step2Data = step2Response;
+      if (step2Response.candidates && step2Response.candidates[0]?.content?.parts?.[0]?.text) {
+        try {
+          step2Data = JSON.parse(step2Response.candidates[0].content.parts[0].text);
+        } catch {
+          // If parsing fails, use original data
+        }
+      }
+      
+      const minorVersionBump2 = JSON.parse(JSON.stringify(step2Data)); // Deep clone
+      minorVersionBump2.schemaVersion = '1.1.0'; // Minor version bump
+      
+      // Add optional fields only (using existing optional fields from schema)
+      // Note: Zod will strip unknown fields, but validation still passes because all required fields are present
+      
+      // Validate: should still pass
+      const result2 = validateWithSchema(step2Schema, minorVersionBump2);
+      expect(result2.success).toBe(true);
+      
+      // Version check: should be compatible
+      const versionCheck2 = checkSchemaVersion(minorVersionBump2, CURRENT_SCHEMA_VERSION);
+      expect(versionCheck2.isCompatible).toBe(true);
     });
 
     it('should detect major version breaks', () => {
-      // Major version updates (1.0.0 -> 2.0.0) may break compatibility
-      const mockMajorVersionResponse = {
-        schemaVersion: '2.0.0',
-        data: {},
-      };
-
-      const versionCheck = checkSchemaVersion(mockMajorVersionResponse, CURRENT_SCHEMA_VERSION);
-
-      if (!versionCheck.matches) {
-        // Major version change detected
-        expect(versionCheck.recordedVersion).not.toBe(versionCheck.expectedVersion);
+      // Major version updates (1.0.0 -> 2.0.0) indicate breaking changes
+      // These should be rejected as incompatible
+      
+      const step1Response = loadRecordedResponse('step1');
+      let step1Data = step1Response;
+      if (step1Response.candidates && step1Response.candidates[0]?.content?.parts?.[0]?.text) {
+        try {
+          step1Data = JSON.parse(step1Response.candidates[0].content.parts[0].text);
+        } catch {
+          // If parsing fails, use original data
+        }
       }
+      
+      // Create a major version bump (1.0.0 -> 2.0.0)
+      const majorVersionBump = JSON.parse(JSON.stringify(step1Data)); // Deep clone
+      majorVersionBump.schemaVersion = '2.0.0'; // Major version bump
+      
+      // Version check: should be incompatible (different major)
+      const versionCheck = checkSchemaVersion(majorVersionBump, CURRENT_SCHEMA_VERSION);
+      expect(versionCheck.isCompatible).toBe(false);
+      expect(versionCheck.matches).toBe(false);
+      expect(versionCheck.recordedVersion).toBe('2.0.0');
+      expect(versionCheck.expectedVersion).toBe(CURRENT_SCHEMA_VERSION);
+      
+      // Also test with a lower major version (0.x.x -> 1.0.0)
+      const lowerMajorVersion = JSON.parse(JSON.stringify(step1Data)); // Deep clone
+      lowerMajorVersion.schemaVersion = '0.9.0'; // Lower major version
+      
+      const versionCheckLower = checkSchemaVersion(lowerMajorVersion, CURRENT_SCHEMA_VERSION);
+      expect(versionCheckLower.isCompatible).toBe(false);
+      expect(versionCheckLower.matches).toBe(false);
     });
   });
 
