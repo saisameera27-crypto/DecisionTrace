@@ -83,7 +83,7 @@ function validateRecordedResponse(stepName: string, schema: z.ZodTypeAny): {
     } else {
       return {
         valid: false,
-        errors: result.errors || [],
+        errors: collectErrors(result),
       };
     }
   } catch (error: any) {
