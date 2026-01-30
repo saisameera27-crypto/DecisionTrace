@@ -21,16 +21,17 @@ export const step1Schema = z.object({
   data: z.object({
     document_id: z.string().min(1, 'Document ID is required'),
     // Document Digest structure
+    // normalizedEntities is required but can have empty arrays (messy docs may have no entities)
     normalizedEntities: z.object({
       people: z.array(z.string()).default([]),
       organizations: z.array(z.string()).default([]),
       products: z.array(z.string()).default([]),
       dates: z.array(z.string()).default([]),
-    }),
+    }), // Required object, but arrays inside have defaults (can be empty)
     extractedClaims: z.array(z.object({
       claim: z.string().min(1, 'Claim description is required'),
       evidenceAnchor: z.object({
-        excerpt: z.string().max(20, 'Excerpt must be <= 20 words').optional(), // Source excerpt (<= 20 words)
+        excerpt: z.string().max(20, 'Excerpt must be <= 20 characters').optional(), // Source excerpt (<= 20 characters)
         chunkIndex: z.number().optional(), // Stable identifier like chunk index
         page: z.number().optional(), // Page number if available
         line: z.number().optional(), // Line number if available

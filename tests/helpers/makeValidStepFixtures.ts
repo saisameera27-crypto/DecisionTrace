@@ -38,7 +38,7 @@ export function makeValidStep1(overrides?: Partial<Step1Data['data']>): Step1Dat
       {
         claim: 'Market research indicates strong demand for healthcare mobile applications',
         evidenceAnchor: {
-          excerpt: 'Market research shows strong demand',
+          excerpt: 'Market research',
           chunkIndex: 0,
           page: 1,
           line: 5,
@@ -48,7 +48,7 @@ export function makeValidStep1(overrides?: Partial<Step1Data['data']>): Step1Dat
       {
         claim: 'Engineering team has available capacity for new project',
         evidenceAnchor: {
-          excerpt: 'Engineering team has capacity',
+          excerpt: 'Team capacity',
           chunkIndex: 1,
         },
         category: 'assumption' as const,
@@ -60,11 +60,11 @@ export function makeValidStep1(overrides?: Partial<Step1Data['data']>): Step1Dat
         statement2: 'Budget constraints require $1.5M maximum',
         description: 'Budget allocation conflicts with stated constraints',
         evidenceAnchor1: {
-          excerpt: 'Budget allocated is $2.5M',
+          excerpt: 'Budget $2.5M',
           chunkIndex: 2,
         },
         evidenceAnchor2: {
-          excerpt: 'Budget constraints require $1.5M',
+          excerpt: 'Budget $1.5M max',
           chunkIndex: 3,
         },
       },
@@ -128,7 +128,7 @@ export function makeValidStep2(overrides?: Partial<Step2Data['data']>): Step2Dat
         role: 'VP of Product',
         confidence: 0.85,
         evidenceAnchor: {
-          excerpt: 'Sarah Chen, VP of Product',
+          excerpt: 'Sarah Chen VP',
           chunkIndex: 0,
           page: 1,
         },
@@ -139,7 +139,7 @@ export function makeValidStep2(overrides?: Partial<Step2Data['data']>): Step2Dat
         criterion: 'Market demand and opportunity size',
         inferredFrom: 'Extracted claims about market research and addressable market',
         evidenceAnchor: {
-          excerpt: 'Market research shows strong demand',
+          excerpt: 'Market research',
           chunkIndex: 0,
         },
       },
@@ -147,7 +147,7 @@ export function makeValidStep2(overrides?: Partial<Step2Data['data']>): Step2Dat
         criterion: 'Team capacity and readiness',
         inferredFrom: 'Claims about engineering team availability',
         evidenceAnchor: {
-          excerpt: 'Engineering team has capacity',
+          excerpt: 'Team capacity',
           chunkIndex: 1,
         },
       },
