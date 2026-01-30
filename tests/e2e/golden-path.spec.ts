@@ -14,11 +14,11 @@ const __dirname = dirname(__filename);
 
 test.describe('Golden Path', () => {
   test('should complete QuickStart workflow and verify report @smoke', async ({ page }) => {
-    // Navigate to landing page
-    await page.goto('/');
-
-    // Navigate to QuickStart page
-    await page.goto('/quick');
+    // Navigate directly to QuickStart page
+    await page.goto('/quick', { waitUntil: 'domcontentloaded' });
+    
+    // Wait for page title to ensure page is loaded
+    await expect(page.locator('h1:has-text("Quick Start")')).toBeVisible({ timeout: 10000 });
     
     // Wait for QuickStart page to be ready (wait for upload button to be visible)
     await expect(page.locator('[data-testid="qs-upload"]')).toBeVisible({ timeout: 10000 });
@@ -44,7 +44,8 @@ test.describe('Golden Path', () => {
     // Verify report page renders with stable UI assertions (wait for specific elements, not networkidle)
     await expect(page.locator('[data-testid="report-root"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="report-header"]')).toBeVisible();
-    await expect(page.locator('text=Decision Trace Report')).toBeVisible();
+    // Verify "Decision Trace Report" heading exists in header (use getByRole for more specific matching)
+    await expect(page.locator('[data-testid="report-header"]').getByRole('heading', { name: 'Decision Trace Report' }).first()).toBeVisible();
     
     // Assert Overview tab is visible (default active tab)
     await expect(page.locator('[data-testid="tab-overview"]')).toBeVisible();
@@ -62,11 +63,11 @@ test.describe('Golden Path', () => {
   });
 
   test('should complete demo path via QuickStart @smoke', async ({ page }) => {
-    // Navigate to landing page
-    await page.goto('/');
-
-    // Navigate to QuickStart page
-    await page.goto('/quick');
+    // Navigate directly to QuickStart page
+    await page.goto('/quick', { waitUntil: 'domcontentloaded' });
+    
+    // Wait for page title to ensure page is loaded
+    await expect(page.locator('h1:has-text("Quick Start")')).toBeVisible({ timeout: 10000 });
     
     // Wait for QuickStart page to be ready (wait for demo link to be visible)
     await expect(page.locator('[data-testid="qs-demo-link"]')).toBeVisible({ timeout: 10000 });
@@ -80,7 +81,8 @@ test.describe('Golden Path', () => {
     // Verify report page renders using stable UI assertions (wait for specific elements, not networkidle)
     await expect(page.locator('[data-testid="report-root"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="report-header"]')).toBeVisible();
-    await expect(page.locator('text=Decision Trace Report')).toBeVisible();
+    // Verify "Decision Trace Report" heading exists in header (use getByRole for more specific matching)
+    await expect(page.locator('[data-testid="report-header"]').getByRole('heading', { name: 'Decision Trace Report' }).first()).toBeVisible();
     
     // Assert Overview tab is visible (default active tab)
     await expect(page.locator('[data-testid="tab-overview"]')).toBeVisible();
