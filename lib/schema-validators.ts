@@ -6,31 +6,59 @@
 import { z } from 'zod';
 
 /**
- * Step 1 Schema: Decision Inference + Categorization (Forensic Analysis)
- * Validates forensic analysis results with verbatim quotes and fragment classification
+ * Step 1 Schema: Document Digest
+ * Produces structured analysis without mirroring user input
  * 
  * Step 1 performs:
- * - Decision inference (identifies all decision candidates)
- * - Fragment categorization (evidence, assumptions, risks, stakeholder signals)
- * - Verbatim quote extraction (no summarization)
+ * - Normalizes entities (people, orgs, products, dates)
+ * - Extracts claims with evidence anchors (citations)
+ * - Identifies contradictions
+ * - Lists missing information
  */
 export const step1Schema = z.object({
   step: z.literal(1),
   status: z.enum(['success', 'error', 'partial_success']),
   data: z.object({
     document_id: z.string().min(1, 'Document ID is required'),
-    // Forensic analysis results
-    has_clear_decision: z.boolean(),
-    decision_candidates: z.array(z.object({
-      decision_text: z.string().min(1, 'Decision text must be verbatim quote'),
-      type: z.enum(['explicit', 'implicit']),
+    // Document Digest structure
+    normalizedEntities: z.object({
+      people: z.array(z.string()).default([]),
+      organizations: z.array(z.string()).default([]),
+      products: z.array(z.string()).default([]),
+      dates: z.array(z.string()).default([]),
+    }),
+    extractedClaims: z.array(z.object({
+      claim: z.string().min(1, 'Claim description is required'),
+      evidenceAnchor: z.object({
+        excerpt: z.string().max(20, 'Excerpt must be <= 20 words').optional(), // Source excerpt (<= 20 words)
+        chunkIndex: z.number().optional(), // Stable identifier like chunk index
+        page: z.number().optional(), // Page number if available
+        line: z.number().optional(), // Line number if available
+      }).optional(),
+      category: z.enum(['fact', 'assumption', 'requirement', 'constraint']).optional(),
     })).default([]),
-    fragments: z.array(z.object({
-      quote: z.string().min(1, 'Quote must be verbatim from document'),
-      classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
-      context: z.string().optional(), // Optional surrounding text (verbatim)
+    contradictions: z.array(z.object({
+      statement1: z.string().min(1, 'First statement is required'),
+      statement2: z.string().min(1, 'Second statement is required'),
+      description: z.string().optional(), // Explanation of the contradiction
+      evidenceAnchor1: z.object({
+        excerpt: z.string().max(20).optional(),
+        chunkIndex: z.number().optional(),
+        page: z.number().optional(),
+        line: z.number().optional(),
+      }).optional(),
+      evidenceAnchor2: z.object({
+        excerpt: z.string().max(20).optional(),
+        chunkIndex: z.number().optional(),
+        page: z.number().optional(),
+        line: z.number().optional(),
+      }).optional(),
     })).default([]),
-    no_decision_message: z.string().optional(), // Only present if has_clear_decision is false
+    missingInfo: z.array(z.object({
+      information: z.string().min(1, 'Missing information description is required'),
+      whyNeeded: z.string().optional(), // Why this information is needed
+      category: z.enum(['context', 'evidence', 'stakeholder', 'timeline', 'outcome', 'other']).optional(),
+    })).default([]),
     extracted_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
     // Legacy metadata fields (optional for backward compatibility)
     document_type: z.string().optional(),
@@ -43,14 +71,15 @@ export const step1Schema = z.object({
 });
 
 /**
- * Step 2 Schema: Decision Extraction (Forensic Analysis)
- * Validates forensic analysis results with verbatim quotes and fragment classification
+ * Step 2 Schema: Decision Hypothesis
+ * Produces structured decision analysis without mirroring user input
  * 
  * This schema enforces:
- * - ALL decision candidates identified (explicit or implicit)
- * - Evidence fragments as verbatim quotes (no summarization)
- * - Classification into: evidence, assumptions, risks, stakeholder signals
- * - Explicit statement if no clear decision exists
+ * - Inferred decision (not copy-paste)
+ * - Decision type classification
+ * - Decision owner candidates
+ * - Inferred decision criteria
+ * - Confidence with reasons
  */
 export const step2Schema = z.object({
   step: z.literal(2),
@@ -58,31 +87,47 @@ export const step2Schema = z.object({
   data: z.object({
     case_id: z.string().min(1, 'Case ID is required'),
     document_id: z.string().min(1, 'Document ID is required'),
-    // Forensic analysis results
-    has_clear_decision: z.boolean(),
-    decision_candidates: z.array(z.object({
-      decision_text: z.string().min(1, 'Decision text must be verbatim quote'),
-      type: z.enum(['explicit', 'implicit']),
+    // Decision Hypothesis structure
+    inferredDecision: z.string().min(1, 'Inferred decision description is required'),
+    decisionType: z.enum(['hiring', 'product_launch', 'procurement', 'policy', 'incident', 'other']),
+    decisionOwnerCandidates: z.array(z.object({
+      name: z.string().min(1, 'Name is required'),
+      role: z.string().optional(),
+      confidence: z.number().min(0).max(1).optional(), // Confidence this person is the decision owner
+      evidenceAnchor: z.object({
+        excerpt: z.string().max(20).optional(),
+        chunkIndex: z.number().optional(),
+        page: z.number().optional(),
+        line: z.number().optional(),
+      }).optional(),
     })).default([]),
-    fragments: z.array(z.object({
-      quote: z.string().min(1, 'Quote must be verbatim from document'),
-      classification: z.enum(['evidence', 'assumption', 'risk', 'stakeholder_signal']),
-      context: z.string().optional(), // Optional surrounding text (verbatim)
+    decisionCriteria: z.array(z.object({
+      criterion: z.string().min(1, 'Criterion description is required'),
+      inferredFrom: z.string().optional(), // What evidence led to inferring this criterion
+      evidenceAnchor: z.object({
+        excerpt: z.string().max(20).optional(),
+        chunkIndex: z.number().optional(),
+        page: z.number().optional(),
+        line: z.number().optional(),
+      }).optional(),
     })).default([]),
-    no_decision_message: z.string().optional(), // Only present if has_clear_decision is false
-    // Legacy fields for backward compatibility (derived from forensic analysis)
-    decision_title: z.string().nullable().optional(), // Derived from first decision_candidate if exists
+    confidence: z.object({
+      score: z.number().min(0).max(1, 'Confidence score must be between 0 and 1'),
+      reasons: z.array(z.string()).default([]), // Reasons for the confidence level
+    }),
+    extracted_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
+    // Legacy fields for backward compatibility (optional)
+    decision_title: z.string().nullable().optional(),
     decision_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').optional(),
-    decision_maker: z.string().optional(), // Extracted from stakeholder_signal fragments
+    decision_maker: z.string().optional(),
     decision_maker_role: z.string().nullable().optional(),
     decision_status: z.string().optional(),
-    decision_summary: z.string().nullable().optional(), // Can be null if no clear decision
+    decision_summary: z.string().nullable().optional(),
     context: z.record(z.string(), z.unknown()).default({}),
-    rationale: z.array(z.string()).default([]), // Derived from evidence fragments
-    risks_identified: z.array(z.string()).default([]), // Derived from risk fragments
+    rationale: z.array(z.string()).default([]),
+    risks_identified: z.array(z.string()).default([]),
     mitigation_strategies: z.array(z.string()).default([]),
     expected_outcomes: z.record(z.string(), z.unknown()).nullable().optional(),
-    extracted_at: z.string().datetime({ message: 'Invalid ISO datetime format' }),
   }),
   errors: z.array(z.string()).default([]),
   warnings: z.array(z.string()).default([]),

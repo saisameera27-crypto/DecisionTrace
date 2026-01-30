@@ -9,62 +9,93 @@
  */
 
 /**
- * Build prompt for forensic decision analysis
+ * Build prompt for Step 1: Document Digest
  * 
  * This prompt instructs Gemini to:
- * - Identify ALL decision candidates (explicit or implicit)
- * - Extract verbatim quotes (no summarization or paraphrasing)
- * - Classify fragments into evidence, assumptions, risks, stakeholder signals
- * - Return structured JSON only
- * - Explicitly state if no clear decision exists
+ * - Normalize entities (people, orgs, products, dates)
+ * - Extract claims with evidence anchors (citations)
+ * - Identify contradictions
+ * - List missing information
+ * - Generate NEW structure and reasoning, NOT copy-paste paragraphs
+ * - Use citations/anchors with source excerpts (<= 20 words) and stable identifiers
  */
 export function buildForensicAnalysisPrompt(documentText: string): string {
-  return `You are a decision forensic analyst.
+  return `You are a document analysis expert. Your task is to create a structured "Document Digest" that synthesizes and analyzes the input document WITHOUT copying or paraphrasing large sections.
 
-Input is an unstructured document containing notes, emails, fragments, or partial thoughts.
-
-There may or may not be a clearly stated decision.
-
-Your task:
-
-1. Identify ALL decision candidates (explicit or implicit).
-
-2. Extract evidence fragments as verbatim quotes.
-
-3. Classify fragments into:
-   - evidence
-   - assumptions
-   - risks
-   - stakeholder signals
-
-4. If no clear decision exists, say so explicitly.
-
-DO NOT summarize.
-DO NOT paraphrase.
-DO NOT invent facts.
-
-Return structured JSON only.
+CRITICAL RULES:
+1. DO NOT copy-paste paragraphs from the input
+2. DO NOT paraphrase long sections (>30% overlap with input)
+3. Generate NEW structure, abstractions, and reasoning
+4. Use citations/anchors: for each claim include a source excerpt (<= 20 words) and stable identifier (chunkIndex, page, or line if available)
+5. If any field would contain >30% direct overlap with raw input, rewrite it with abstraction/summary instead
 
 Document text:
 ${documentText}
 
+Your task:
+
+1. Normalize entities:
+   - Extract and normalize people names (standardize format)
+   - Extract organizations (companies, departments, teams)
+   - Extract products/services mentioned
+   - Extract dates (normalize to ISO format or consistent format)
+
+2. Extract claims with evidence anchors:
+   - For each significant claim, provide a brief description (NOT a copy-paste)
+   - Include evidence anchor: source excerpt (<= 20 words) + stable identifier (chunkIndex, page, or line)
+   - Categorize: fact, assumption, requirement, or constraint
+
+3. Identify contradictions:
+   - Find conflicting statements
+   - Provide brief descriptions (NOT verbatim quotes)
+   - Include evidence anchors for both conflicting statements
+
+4. List missing information:
+   - What information is NOT present but would be needed for decision analysis
+   - Categorize: context, evidence, stakeholder, timeline, outcome, or other
+
 Return JSON in this exact format:
 {
-  "has_clear_decision": boolean,
-  "decision_candidates": [
+  "normalizedEntities": {
+    "people": ["normalized name 1", "normalized name 2"],
+    "organizations": ["org 1", "org 2"],
+    "products": ["product 1", "product 2"],
+    "dates": ["2024-03-15", "Q2 2024"]
+  },
+  "extractedClaims": [
     {
-      "decision_text": "verbatim quote from document",
-      "type": "explicit" | "implicit"
+      "claim": "Brief synthesized claim description (NOT copy-paste)",
+      "evidenceAnchor": {
+        "excerpt": "source excerpt <= 20 words",
+        "chunkIndex": 0,
+        "page": 1,
+        "line": 5
+      },
+      "category": "fact" | "assumption" | "requirement" | "constraint"
     }
   ],
-  "fragments": [
+  "contradictions": [
     {
-      "quote": "exact verbatim quote from document",
-      "classification": "evidence" | "assumption" | "risk" | "stakeholder_signal",
-      "context": "surrounding text (verbatim) if helpful for understanding"
+      "statement1": "Brief description of first statement",
+      "statement2": "Brief description of conflicting statement",
+      "description": "Explanation of contradiction",
+      "evidenceAnchor1": {
+        "excerpt": "source excerpt <= 20 words",
+        "chunkIndex": 0
+      },
+      "evidenceAnchor2": {
+        "excerpt": "source excerpt <= 20 words",
+        "chunkIndex": 1
+      }
     }
   ],
-  "no_decision_message": string (only if has_clear_decision is false)
+  "missingInfo": [
+    {
+      "information": "What information is missing",
+      "whyNeeded": "Why this information is needed",
+      "category": "context" | "evidence" | "stakeholder" | "timeline" | "outcome" | "other"
+    }
+  ]
 }`;
 }
 

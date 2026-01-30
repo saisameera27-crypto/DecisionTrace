@@ -18,7 +18,47 @@ interface ReportData {
     decisionTitle?: string;
   } | null;
   step1Analysis?: {
-    has_clear_decision: boolean;
+    // Document Digest structure
+    normalizedEntities?: {
+      people?: string[];
+      organizations?: string[];
+      products?: string[];
+      dates?: string[];
+    };
+    extractedClaims?: Array<{
+      claim: string;
+      evidenceAnchor?: {
+        excerpt?: string;
+        chunkIndex?: number;
+        page?: number;
+        line?: number;
+      };
+      category?: 'fact' | 'assumption' | 'requirement' | 'constraint';
+    }>;
+    contradictions?: Array<{
+      statement1: string;
+      statement2: string;
+      description?: string;
+      evidenceAnchor1?: {
+        excerpt?: string;
+        chunkIndex?: number;
+        page?: number;
+        line?: number;
+      };
+      evidenceAnchor2?: {
+        excerpt?: string;
+        chunkIndex?: number;
+        page?: number;
+        line?: number;
+      };
+    }>;
+    missingInfo?: Array<{
+      information: string;
+      whyNeeded?: string;
+      category?: 'context' | 'evidence' | 'stakeholder' | 'timeline' | 'outcome' | 'other';
+    }>;
+    // Legacy fields for backward compatibility
+    has_clear_decision?: boolean;
     decision_candidates?: Array<{
       decision_text: string;
       type: 'explicit' | 'implicit';
@@ -29,6 +69,36 @@ interface ReportData {
       context?: string;
     }>;
     no_decision_message?: string;
+  } | null;
+  step2Analysis?: {
+    // Decision Hypothesis structure
+    inferredDecision?: string;
+    decisionType?: 'hiring' | 'product_launch' | 'procurement' | 'policy' | 'incident' | 'other';
+    decisionOwnerCandidates?: Array<{
+      name: string;
+      role?: string;
+      confidence?: number;
+      evidenceAnchor?: {
+        excerpt?: string;
+        chunkIndex?: number;
+        page?: number;
+        line?: number;
+      };
+    }>;
+    decisionCriteria?: Array<{
+      criterion: string;
+      inferredFrom?: string;
+      evidenceAnchor?: {
+        excerpt?: string;
+        chunkIndex?: number;
+        page?: number;
+        line?: number;
+      };
+    }>;
+    confidence?: {
+      score: number;
+      reasons?: string[];
+    };
   } | null;
   step6Analysis?: {
     decision_candidates?: Array<{
@@ -710,6 +780,149 @@ export default function CaseReportPage() {
                         })}
                       </div>
                       
+                      {/* Delta from Document Panel */}
+                      {(() => {
+                        const step1Data = reportData.step1Analysis;
+                        const step2Data = reportData.step2Analysis;
+                        
+                        // Extract top 5 inferred insights from Step 2 decisionCriteria
+                        const inferredInsights = (step2Data?.decisionCriteria || [])
+                          .slice(0, 5)
+                          .map(c => c.criterion);
+                        
+                        // Extract top 5 conflicts from Step 1 contradictions
+                        const conflicts = (step1Data?.contradictions || [])
+                          .slice(0, 5)
+                          .map(c => `${c.statement1} vs ${c.statement2}`);
+                        
+                        // Extract top 5 missing evidence requests from Step 1 missingInfo
+                        const missingEvidence = (step1Data?.missingInfo || [])
+                          .slice(0, 5)
+                          .map(m => m.information);
+                        
+                        // Only show panel if we have at least one type of data
+                        if (inferredInsights.length === 0 && conflicts.length === 0 && missingEvidence.length === 0) {
+                          return null;
+                        }
+                        
+                        return (
+                          <div style={{
+                            marginBottom: theme.spacing.xl,
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                            gap: theme.spacing.md,
+                          }}>
+                            {/* Top 5 Inferred Insights */}
+                            {inferredInsights.length > 0 && (
+                              <div 
+                                data-testid="delta-insights"
+                                style={{
+                                  padding: theme.spacing.md,
+                                  backgroundColor: '#f0f7ff',
+                                  border: `1px solid ${theme.colors.border}`,
+                                  borderRadius: theme.borderRadius.md,
+                                }}
+                              >
+                                <h4 style={{
+                                  fontSize: theme.typography.fontSize.base,
+                                  fontWeight: theme.typography.fontWeight.semibold,
+                                  color: theme.colors.textPrimary,
+                                  marginBottom: theme.spacing.sm,
+                                  marginTop: 0,
+                                }}>
+                                  Top 5 Inferred Insights
+                                </h4>
+                                <ul style={{
+                                  margin: 0,
+                                  paddingLeft: theme.spacing.lg,
+                                  fontSize: theme.typography.fontSize.sm,
+                                  color: theme.colors.textSecondary,
+                                  lineHeight: theme.typography.lineHeight.relaxed,
+                                }}>
+                                  {inferredInsights.map((insight, idx) => (
+                                    <li key={idx} style={{ marginBottom: theme.spacing.xs }}>
+                                      {insight}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {/* Top 5 Conflicts */}
+                            {conflicts.length > 0 && (
+                              <div 
+                                data-testid="delta-conflicts"
+                                style={{
+                                  padding: theme.spacing.md,
+                                  backgroundColor: '#fff5f5',
+                                  border: `1px solid ${theme.colors.border}`,
+                                  borderRadius: theme.borderRadius.md,
+                                }}
+                              >
+                                <h4 style={{
+                                  fontSize: theme.typography.fontSize.base,
+                                  fontWeight: theme.typography.fontWeight.semibold,
+                                  color: theme.colors.textPrimary,
+                                  marginBottom: theme.spacing.sm,
+                                  marginTop: 0,
+                                }}>
+                                  Top 5 Conflicts Detected
+                                </h4>
+                                <ul style={{
+                                  margin: 0,
+                                  paddingLeft: theme.spacing.lg,
+                                  fontSize: theme.typography.fontSize.sm,
+                                  color: theme.colors.textSecondary,
+                                  lineHeight: theme.typography.lineHeight.relaxed,
+                                }}>
+                                  {conflicts.map((conflict, idx) => (
+                                    <li key={idx} style={{ marginBottom: theme.spacing.xs }}>
+                                      {conflict}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {/* Top 5 Missing Evidence Requests */}
+                            {missingEvidence.length > 0 && (
+                              <div 
+                                data-testid="delta-missing"
+                                style={{
+                                  padding: theme.spacing.md,
+                                  backgroundColor: '#fffbf0',
+                                  border: `1px solid ${theme.colors.border}`,
+                                  borderRadius: theme.borderRadius.md,
+                                }}
+                              >
+                                <h4 style={{
+                                  fontSize: theme.typography.fontSize.base,
+                                  fontWeight: theme.typography.fontWeight.semibold,
+                                  color: theme.colors.textPrimary,
+                                  marginBottom: theme.spacing.sm,
+                                  marginTop: 0,
+                                }}>
+                                  Top 5 Missing Evidence Requests
+                                </h4>
+                                <ul style={{
+                                  margin: 0,
+                                  paddingLeft: theme.spacing.lg,
+                                  fontSize: theme.typography.fontSize.sm,
+                                  color: theme.colors.textSecondary,
+                                  lineHeight: theme.typography.lineHeight.relaxed,
+                                }}>
+                                  {missingEvidence.map((missing, idx) => (
+                                    <li key={idx} style={{ marginBottom: theme.spacing.xs }}>
+                                      {missing}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      
                       {/* Overview content */}
                       {(() => {
                         const overviewContent = getSectionContent(markdownSections, 'overview') || 
@@ -728,15 +941,153 @@ export default function CaseReportPage() {
                 }
                 
                 // Single decision or no candidates - show normal overview
+                const step1Data = reportData.step1Analysis;
+                const step2Data = reportData.step2Analysis;
+                
+                // Extract top 5 inferred insights from Step 2 decisionCriteria
+                const inferredInsights = (step2Data?.decisionCriteria || [])
+                  .slice(0, 5)
+                  .map(c => c.criterion);
+                
+                // Extract top 5 conflicts from Step 1 contradictions
+                const conflicts = (step1Data?.contradictions || [])
+                  .slice(0, 5)
+                  .map(c => `${c.statement1} vs ${c.statement2}`);
+                
+                // Extract top 5 missing evidence requests from Step 1 missingInfo
+                const missingEvidence = (step1Data?.missingInfo || [])
+                  .slice(0, 5)
+                  .map(m => m.information);
+                
                 const overviewContent = getSectionContent(markdownSections, 'overview') || 
                                        getSectionContent(markdownSections, 'summary') ||
                                        reportData.report.finalNarrativeMarkdown;
                 return (
-                  <div 
-                    dangerouslySetInnerHTML={{ __html: renderMarkdown(overviewContent) }}
-                    style={markdownContentStyle}
-                    className="markdown-content"
-                  />
+                  <div>
+                    {/* Delta from Document Panel */}
+                    {(inferredInsights.length > 0 || conflicts.length > 0 || missingEvidence.length > 0) && (
+                      <div style={{
+                        marginBottom: theme.spacing.xl,
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                        gap: theme.spacing.md,
+                      }}>
+                        {/* Top 5 Inferred Insights */}
+                        {inferredInsights.length > 0 && (
+                          <div 
+                            data-testid="delta-insights"
+                            style={{
+                              padding: theme.spacing.md,
+                              backgroundColor: '#f0f7ff',
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: theme.borderRadius.md,
+                            }}
+                          >
+                            <h4 style={{
+                              fontSize: theme.typography.fontSize.base,
+                              fontWeight: theme.typography.fontWeight.semibold,
+                              color: theme.colors.textPrimary,
+                              marginBottom: theme.spacing.sm,
+                              marginTop: 0,
+                            }}>
+                              Top 5 Inferred Insights
+                            </h4>
+                            <ul style={{
+                              margin: 0,
+                              paddingLeft: theme.spacing.lg,
+                              fontSize: theme.typography.fontSize.sm,
+                              color: theme.colors.textSecondary,
+                              lineHeight: theme.typography.lineHeight.relaxed,
+                            }}>
+                              {inferredInsights.map((insight, idx) => (
+                                <li key={idx} style={{ marginBottom: theme.spacing.xs }}>
+                                  {insight}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {/* Top 5 Conflicts */}
+                        {conflicts.length > 0 && (
+                          <div 
+                            data-testid="delta-conflicts"
+                            style={{
+                              padding: theme.spacing.md,
+                              backgroundColor: '#fff5f5',
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: theme.borderRadius.md,
+                            }}
+                          >
+                            <h4 style={{
+                              fontSize: theme.typography.fontSize.base,
+                              fontWeight: theme.typography.fontWeight.semibold,
+                              color: theme.colors.textPrimary,
+                              marginBottom: theme.spacing.sm,
+                              marginTop: 0,
+                            }}>
+                              Top 5 Conflicts Detected
+                            </h4>
+                            <ul style={{
+                              margin: 0,
+                              paddingLeft: theme.spacing.lg,
+                              fontSize: theme.typography.fontSize.sm,
+                              color: theme.colors.textSecondary,
+                              lineHeight: theme.typography.lineHeight.relaxed,
+                            }}>
+                              {conflicts.map((conflict, idx) => (
+                                <li key={idx} style={{ marginBottom: theme.spacing.xs }}>
+                                  {conflict}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {/* Top 5 Missing Evidence Requests */}
+                        {missingEvidence.length > 0 && (
+                          <div 
+                            data-testid="delta-missing"
+                            style={{
+                              padding: theme.spacing.md,
+                              backgroundColor: '#fffbf0',
+                              border: `1px solid ${theme.colors.border}`,
+                              borderRadius: theme.borderRadius.md,
+                            }}
+                          >
+                            <h4 style={{
+                              fontSize: theme.typography.fontSize.base,
+                              fontWeight: theme.typography.fontWeight.semibold,
+                              color: theme.colors.textPrimary,
+                              marginBottom: theme.spacing.sm,
+                              marginTop: 0,
+                            }}>
+                              Top 5 Missing Evidence Requests
+                            </h4>
+                            <ul style={{
+                              margin: 0,
+                              paddingLeft: theme.spacing.lg,
+                              fontSize: theme.typography.fontSize.sm,
+                              color: theme.colors.textSecondary,
+                              lineHeight: theme.typography.lineHeight.relaxed,
+                            }}>
+                              {missingEvidence.map((missing, idx) => (
+                                <li key={idx} style={{ marginBottom: theme.spacing.xs }}>
+                                  {missing}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(overviewContent) }}
+                      style={markdownContentStyle}
+                      className="markdown-content"
+                    />
+                  </div>
                 );
               })()}
             </div>

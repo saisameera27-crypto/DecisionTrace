@@ -1,0 +1,92 @@
+PRODUCT LAUNCH MEETING NOTES - Project Phoenix
+Date: March 10, 2024
+Attendees: Sarah (PM), John (Eng), Mike (Finance), Lisa (Marketing)
+
+DECISION NEEDED: Should we launch Project Phoenix in Q2 2024?
+
+Sarah's Proposal:
+- Launch in Q2 (April-June)
+- Target: 10,000 users in first 3 months
+- Budget: $2.5M
+- Team: 8 engineers, 2 designers, 1 PM
+
+John's Concerns:
+- Engineering says we need 12 engineers, not 8. Current estimate is 3 months with 8 people, but that's optimistic.
+- The codebase needs refactoring. Sarah says it's "mostly done" but I've seen the backlog - there are 50+ critical bugs.
+- We can't launch in Q2 with only 8 engineers. Need at least 12, which means hiring 4 more people.
+- Timeline: Sarah says Q2, but engineering says Q3 is more realistic.
+
+Mike's Budget Analysis:
+- Sarah's budget: $2.5M
+- My calculation: $3.2M (includes marketing, support, infrastructure)
+- Sarah disputes this - she says marketing is separate and infrastructure is already covered.
+- I don't have the latest infrastructure costs. Need to check with DevOps.
+
+Lisa's Marketing Plan:
+- Target: 10,000 users in 3 months
+- Budget: $500k for ads
+- But wait - Sarah's $2.5M doesn't include marketing. So total is actually $3M, not $2.5M.
+- I think 10,000 users is aggressive. Market research shows similar products get 5,000-7,000 in first 3 months.
+- However, our competitor launched with 15,000 users in their first quarter. So maybe 10,000 is achievable?
+
+CONFLICTING METRICS:
+- User target: Sarah says 10,000, Lisa says 5,000-7,000 is realistic, competitor got 15,000
+- Budget: Sarah says $2.5M, Mike says $3.2M (or $3M if marketing separate)
+- Team size: Sarah says 8 engineers, John says 12 engineers needed
+- Timeline: Sarah says Q2, John says Q3
+
+MISSING INFORMATION:
+- What's the actual infrastructure cost? Mike needs to check with DevOps.
+- What's the competitor's marketing spend? Lisa doesn't have this data.
+- What's the real engineering capacity? John says 8 isn't enough, but we haven't verified current team workload.
+- What's the approval process? Sarah mentioned "board approval" but we don't know the timeline.
+- What are the success metrics? Sarah mentioned users, but what about revenue, retention, NPS?
+
+OPTIONS DISCUSSED:
+1. Launch Q2 with 8 engineers, $2.5M budget, 10k user target (Sarah's plan)
+2. Launch Q3 with 12 engineers, $3.2M budget, 7k user target (John's conservative plan)
+3. Launch Q2 with 8 engineers but reduce scope, $2M budget, 5k user target (compromise)
+4. Delay to Q4, hire more engineers, $3.5M budget, 15k user target (aggressive)
+
+Sarah's Argument:
+- Market window is closing. Competitor is gaining traction.
+- We've already invested $1M in development. Delaying means sunk cost.
+- Board expects Q2 launch based on last quarter's presentation.
+
+John's Counter-Argument:
+- Rushing will lead to technical debt and bugs.
+- We can't deliver quality with 8 engineers in Q2.
+- Better to delay and do it right than launch broken.
+
+Mike's Concern:
+- If we delay, do we lose the $1M already spent? Or can we recoup it?
+- What's the ROI if we launch broken vs. launch late?
+- I don't have the financial models for these scenarios.
+
+Lisa's Input:
+- Marketing needs 6 weeks lead time. If we launch Q2, we need to start campaigns by mid-April.
+- But we don't have final product screenshots yet. Design is still iterating.
+- Can we do a soft launch? Maybe 1,000 beta users first?
+
+ACTION ITEMS (unclear ownership):
+- [ ] Verify infrastructure costs (who? DevOps? Mike?)
+- [ ] Get competitor marketing spend data (Lisa?)
+- [ ] Assess current engineering capacity (John? HR?)
+- [ ] Clarify board approval process (Sarah? CEO?)
+- [ ] Define success metrics beyond user count (all?)
+
+NEXT STEPS:
+- Sarah wants decision by Friday
+- John says we need more data before deciding
+- Mike needs to run financial scenarios
+- Lisa needs product assets for marketing
+
+CONFLICT:
+Sarah: "We need to move fast. The market won't wait."
+John: "We need to move correctly. A bad launch will hurt us more than a delayed launch."
+Mike: "I need numbers to make a recommendation. Right now I have conflicting data."
+Lisa: "I can't plan marketing without knowing the launch date and product features."
+
+DECISION STATUS: PENDING
+Need to resolve conflicts and gather missing information before making final call.
+

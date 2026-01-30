@@ -28,6 +28,7 @@ export interface GeminiCallOptions {
   stepName?: string;
   prompt?: string;
   fileUri?: string;
+  documentText?: string; // Raw document text for non-echo validation
   model?: string;
   thinkingLevel?: 'low' | 'medium' | 'high';
 }

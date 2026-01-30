@@ -221,9 +221,10 @@ describe('Step 1 Schema Validator', () => {
       expect(result.data.step).toBe(1);
       expect(result.data.status).toBe('success');
       expect(result.data.data.document_id).toBe('doc_12345');
-      expect(result.data.data.has_clear_decision).toBe(true);
-      expect(Array.isArray(result.data.data.decision_candidates)).toBe(true);
-      expect(Array.isArray(result.data.data.fragments)).toBe(true);
+      expect(result.data.data.normalizedEntities).toBeDefined();
+      expect(Array.isArray(result.data.data.extractedClaims)).toBe(true);
+      expect(Array.isArray(result.data.data.contradictions)).toBe(true);
+      expect(Array.isArray(result.data.data.missingInfo)).toBe(true);
     }
   });
 
@@ -251,7 +252,7 @@ describe('Step 1 Schema Validator', () => {
       expect(formattedErrors.length).toBeGreaterThan(0);
       // Check that errors mention missing required fields
       const errorMessages = formattedErrors.join(' ');
-      expect(errorMessages).toMatch(/document_id|has_clear_decision|extracted_at/i);
+      expect(errorMessages).toMatch(/document_id|normalizedEntities|extracted_at/i);
     }
   });
 
@@ -303,10 +304,13 @@ describe('Step 2 Schema Validator', () => {
       expect(result.data.step).toBe(2);
       expect(result.data.status).toBe('success');
       expect(result.data.data.case_id).toBe('case_67890');
-      expect(result.data.data.has_clear_decision).toBe(true);
-      expect(Array.isArray(result.data.data.decision_candidates)).toBe(true);
-      expect(Array.isArray(result.data.data.fragments)).toBe(true);
-      expect(Array.isArray(result.data.data.rationale)).toBe(true);
+      expect(result.data.data.inferredDecision).toBeDefined();
+      expect(result.data.data.decisionType).toBeDefined();
+      expect(Array.isArray(result.data.data.decisionOwnerCandidates)).toBe(true);
+      expect(Array.isArray(result.data.data.decisionCriteria)).toBe(true);
+      expect(result.data.data.confidence).toBeDefined();
+      expect(result.data.data.confidence.score).toBeGreaterThanOrEqual(0);
+      expect(result.data.data.confidence.score).toBeLessThanOrEqual(1);
     }
   });
 
@@ -340,7 +344,7 @@ describe('Step 2 Schema Validator', () => {
       expect(formattedErrors.length).toBeGreaterThan(0);
       // Check for friendly error messages
       const errorMessages = formattedErrors.join(' ');
-      expect(errorMessages).toMatch(/document_id|has_clear_decision|extracted_at/i);
+      expect(errorMessages).toMatch(/document_id|normalizedEntities|extracted_at/i);
     }
   });
 

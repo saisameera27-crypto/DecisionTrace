@@ -16,9 +16,10 @@ type Step2Data = z.infer<typeof step2Schema>;
  * 
  * Step 1 Schema requires:
  * - document_id (string)
- * - has_clear_decision (boolean)
- * - decision_candidates (array, default [])
- * - fragments (array, default [])
+ * - normalizedEntities (people, organizations, products, dates)
+ * - extractedClaims (array with evidence anchors)
+ * - contradictions (array)
+ * - missingInfo (array)
  * - extracted_at (ISO datetime string)
  * - Optional: document_type, file_name, file_size, mime_type
  */
@@ -27,38 +28,57 @@ export function makeValidStep1(overrides?: Partial<Step1Data['data']>): Step1Dat
   
   const defaultData: Step1Data['data'] = {
     document_id: 'doc_12345',
-    has_clear_decision: true,
-    decision_candidates: [
+    normalizedEntities: {
+      people: ['Sarah Chen', 'John Smith'],
+      organizations: ['Acme Corp', 'Healthcare Partners'],
+      products: ['Project Phoenix', 'Mobile App Platform'],
+      dates: ['2024-03-15', 'Q2 2024'],
+    },
+    extractedClaims: [
       {
-        decision_text: "We have decided to launch 'Project Phoenix' - a new mobile application targeting the healthcare sector in Q2 2024",
-        type: 'explicit' as const,
+        claim: 'Market research indicates strong demand for healthcare mobile applications',
+        evidenceAnchor: {
+          excerpt: 'Market research shows strong demand',
+          chunkIndex: 0,
+          page: 1,
+          line: 5,
+        },
+        category: 'fact' as const,
+      },
+      {
+        claim: 'Engineering team has available capacity for new project',
+        evidenceAnchor: {
+          excerpt: 'Engineering team has capacity',
+          chunkIndex: 1,
+        },
+        category: 'assumption' as const,
       },
     ],
-    fragments: [
+    contradictions: [
       {
-        quote: 'Market research shows strong demand for healthcare mobile apps',
-        classification: 'evidence' as const,
-        context: 'Market research shows strong demand for healthcare mobile apps, with 15 pilot customers expressing strong interest',
+        statement1: 'Budget allocated is $2.5M',
+        statement2: 'Budget constraints require $1.5M maximum',
+        description: 'Budget allocation conflicts with stated constraints',
+        evidenceAnchor1: {
+          excerpt: 'Budget allocated is $2.5M',
+          chunkIndex: 2,
+        },
+        evidenceAnchor2: {
+          excerpt: 'Budget constraints require $1.5M',
+          chunkIndex: 3,
+        },
+      },
+    ],
+    missingInfo: [
+      {
+        information: 'Detailed timeline for regulatory compliance review',
+        whyNeeded: 'Required to assess project feasibility and timeline',
+        category: 'timeline' as const,
       },
       {
-        quote: '$50B addressable market',
-        classification: 'evidence' as const,
-        context: 'Market opportunity: $50B addressable market',
-      },
-      {
-        quote: 'Engineering team has capacity',
-        classification: 'assumption' as const,
-        context: 'Team readiness: Engineering team has capacity',
-      },
-      {
-        quote: 'Regulatory compliance requirements (HIPAA)',
-        classification: 'risk' as const,
-        context: 'Regulatory compliance requirements (HIPAA) must be addressed',
-      },
-      {
-        quote: 'Sarah Chen, VP of Product',
-        classification: 'stakeholder_signal' as const,
-        context: 'Decision Maker: Sarah Chen, VP of Product',
+        information: 'Stakeholder approval status',
+        whyNeeded: 'Needed to confirm decision authority',
+        category: 'stakeholder' as const,
       },
     ],
     extracted_at: now,
@@ -86,9 +106,11 @@ export function makeValidStep1(overrides?: Partial<Step1Data['data']>): Step1Dat
  * Step 2 Schema requires:
  * - case_id (string)
  * - document_id (string)
- * - has_clear_decision (boolean)
- * - decision_candidates (array, default [])
- * - fragments (array, default [])
+ * - inferredDecision (string)
+ * - decisionType (enum)
+ * - decisionOwnerCandidates (array)
+ * - decisionCriteria (array)
+ * - confidence (object with score and reasons)
  * - extracted_at (ISO datetime string)
  * - Optional legacy fields: decision_title, decision_date, decision_maker, etc.
  */
@@ -98,40 +120,46 @@ export function makeValidStep2(overrides?: Partial<Step2Data['data']>): Step2Dat
   const defaultData: Step2Data['data'] = {
     case_id: 'case_67890',
     document_id: 'doc_12345',
-    has_clear_decision: true,
-    decision_candidates: [
+    inferredDecision: 'Launch of a new mobile application targeting the healthcare sector in Q2 2024',
+    decisionType: 'product_launch' as const,
+    decisionOwnerCandidates: [
       {
-        decision_text: "We have decided to launch 'Project Phoenix' - a new mobile application targeting the healthcare sector in Q2 2024",
-        type: 'explicit' as const,
+        name: 'Sarah Chen',
+        role: 'VP of Product',
+        confidence: 0.85,
+        evidenceAnchor: {
+          excerpt: 'Sarah Chen, VP of Product',
+          chunkIndex: 0,
+          page: 1,
+        },
       },
     ],
-    fragments: [
+    decisionCriteria: [
       {
-        quote: 'Market research shows strong demand for healthcare mobile apps',
-        classification: 'evidence' as const,
-        context: 'Market research shows strong demand for healthcare mobile apps, with 15 pilot customers expressing strong interest',
+        criterion: 'Market demand and opportunity size',
+        inferredFrom: 'Extracted claims about market research and addressable market',
+        evidenceAnchor: {
+          excerpt: 'Market research shows strong demand',
+          chunkIndex: 0,
+        },
       },
       {
-        quote: '$50B addressable market',
-        classification: 'evidence' as const,
-        context: 'Market opportunity: $50B addressable market',
-      },
-      {
-        quote: 'Engineering team has capacity',
-        classification: 'assumption' as const,
-        context: 'Team readiness: Engineering team has capacity',
-      },
-      {
-        quote: 'Regulatory compliance requirements (HIPAA)',
-        classification: 'risk' as const,
-        context: 'Regulatory compliance requirements (HIPAA) must be addressed',
-      },
-      {
-        quote: 'Sarah Chen, VP of Product',
-        classification: 'stakeholder_signal' as const,
-        context: 'Decision Maker: Sarah Chen, VP of Product',
+        criterion: 'Team capacity and readiness',
+        inferredFrom: 'Claims about engineering team availability',
+        evidenceAnchor: {
+          excerpt: 'Engineering team has capacity',
+          chunkIndex: 1,
+        },
       },
     ],
+    confidence: {
+      score: 0.75,
+      reasons: [
+        'Clear market opportunity identified',
+        'Decision owner clearly identified',
+        'Some missing information about timeline and approval status',
+      ],
+    },
     extracted_at: now,
     // Legacy fields (optional)
     decision_title: 'Q2 2024 Product Launch - Project Phoenix',

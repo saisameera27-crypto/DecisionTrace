@@ -114,7 +114,7 @@ Return JSON in this exact format:
 }
 
 /**
- * Build prompt for Steps 2-6 that reference Step 1 output
+ * Build prompt for Steps 2-6 that reference Step 1 Document Digest
  * These prompts explicitly forbid repeating raw text
  */
 function buildStepPrompt(
@@ -122,41 +122,87 @@ function buildStepPrompt(
   step1Data: any,
   previousSteps?: StepResult[]
 ): string {
+  // Step 1 now produces Document Digest structure
   const step1Summary = {
-    has_clear_decision: step1Data.has_clear_decision,
-    decision_candidates: step1Data.decision_candidates || [],
-    fragments_by_classification: {
-      evidence: (step1Data.fragments || []).filter((f: any) => f.classification === 'evidence'),
-      assumptions: (step1Data.fragments || []).filter((f: any) => f.classification === 'assumption'),
-      risks: (step1Data.fragments || []).filter((f: any) => f.classification === 'risk'),
-      stakeholder_signals: (step1Data.fragments || []).filter((f: any) => f.classification === 'stakeholder_signal'),
-    },
+    normalizedEntities: step1Data.normalizedEntities || {},
+    extractedClaims: step1Data.extractedClaims || [],
+    contradictions: step1Data.contradictions || [],
+    missingInfo: step1Data.missingInfo || [],
   };
 
   const step1Json = JSON.stringify(step1Summary, null, 2);
 
   switch (stepNumber) {
     case 2:
-      return `You are analyzing a decision based on structured forensic analysis results.
+      return `You are a decision analysis expert. Your task is to create a "Decision Hypothesis" based on the Step 1 Document Digest.
 
 CRITICAL RULES:
-1. You MUST reference ONLY the Step 1 analysis results below
+1. You MUST reference ONLY the Step 1 Document Digest results below
 2. DO NOT repeat raw document text
 3. DO NOT quote or paraphrase the original document
 4. DO NOT access the original document file
-5. Only use the categorized fragments and decision candidates from Step 1
+5. Generate NEW structure and reasoning, NOT copy-paste paragraphs
+6. If any field would contain >30% direct overlap with raw input, rewrite it with abstraction/summary
+7. Use citations/anchors: include source excerpts (<= 20 words) and stable identifiers where relevant
 
-Step 1 Analysis Results:
+Step 1 Document Digest:
 ${step1Json}
 
 Your task:
-- Extract decision details (title, date, maker, status) from the decision candidates
-- Build rationale from evidence fragments (reference fragments, don't quote raw text)
-- Identify risks from risk fragments (reference fragments, don't quote raw text)
-- Extract stakeholder information from stakeholder_signal fragments
 
-Return structured JSON matching step2Schema format.
-FORBIDDEN: Including verbatim quotes from the original document. Only reference categorized fragments.`;
+1. Infer the decision:
+   - What decision is likely being made? (synthesize from claims, entities, contradictions)
+   - Provide a brief synthesized description (NOT copy-paste)
+
+2. Classify decision type:
+   - hiring, product_launch, procurement, policy, incident, or other
+
+3. Identify decision owner candidates:
+   - Who is likely making this decision? (from normalized entities - people)
+   - Include confidence score (0-1) for each candidate
+   - Include evidence anchors (excerpt + identifier) supporting each candidate
+
+4. Infer decision criteria:
+   - What criteria are being used to make this decision? (infer from claims, contradictions, missing info)
+   - For each criterion, explain what evidence led to inferring it
+   - Include evidence anchors where relevant
+
+5. Assess confidence:
+   - Confidence score (0-1) in the decision hypothesis
+   - List reasons for this confidence level (based on quality of evidence, contradictions, missing info)
+
+Return JSON in this exact format:
+{
+  "inferredDecision": "Brief synthesized description of the decision (NOT copy-paste)",
+  "decisionType": "hiring" | "product_launch" | "procurement" | "policy" | "incident" | "other",
+  "decisionOwnerCandidates": [
+    {
+      "name": "normalized name",
+      "role": "role if available",
+      "confidence": 0.85,
+      "evidenceAnchor": {
+        "excerpt": "source excerpt <= 20 words",
+        "chunkIndex": 0
+      }
+    }
+  ],
+  "decisionCriteria": [
+    {
+      "criterion": "Brief description of criterion",
+      "inferredFrom": "What evidence led to inferring this",
+      "evidenceAnchor": {
+        "excerpt": "source excerpt <= 20 words",
+        "chunkIndex": 0
+      }
+    }
+  ],
+  "confidence": {
+    "score": 0.75,
+    "reasons": ["reason 1", "reason 2"]
+  }
+}
+
+FORBIDDEN: Copy-pasting paragraphs from the original document. Generate new structure and reasoning.`;
 
     case 3:
       return `You are analyzing context based on Step 1 forensic analysis.
@@ -262,7 +308,7 @@ export async function runOrchestrator(
 
   let step1Data: any = null;
 
-  // Step 1: Decision Inference + Categorization (Forensic Analysis)
+  // Step 1: Document Digest
   try {
     const step1Start = Date.now();
     const step1Prompt = buildStep1Prompt(documentText);
@@ -272,19 +318,52 @@ export async function runOrchestrator(
       stepName: 'step1',
       prompt: step1Prompt,
       fileUri, // Document will be read from Gemini Files if fileUri provided
+      documentText, // Also pass documentText for non-echo validation
       model: GEMINI_MODEL,
     });
 
     const step1ResponseText = step1Response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    const step1Parsed = JSON.parse(step1ResponseText);
+    let step1Parsed: any;
+    try {
+      step1Parsed = JSON.parse(step1ResponseText);
+    } catch (parseError: any) {
+      throw new Error(`Step 1 JSON parse failed: ${parseError.message}`);
+    }
+    
+    // Wrap in step1Schema format
+    const step1Wrapped = {
+      step: 1,
+      status: 'success',
+      data: {
+        document_id: documentId,
+        ...step1Parsed,
+        extracted_at: new Date().toISOString(),
+      },
+      errors: [],
+      warnings: [],
+    };
     
     // Validate Step 1 response
-    const step1Validation = step1Schema.safeParse(step1Parsed);
+    const step1Validation = step1Schema.safeParse(step1Wrapped);
     if (!step1Validation.success) {
       throw new Error(`Step 1 validation failed: ${step1Validation.error.message}`);
     }
 
     step1Data = step1Validation.data.data;
+    
+    // Non-echo guard: Check for excessive overlap with raw input
+    if (documentText) {
+      const { validateNonEcho } = await import('./non-echo-guard');
+      const echoViolations = validateNonEcho(step1Data, documentText, 30);
+      if (echoViolations.length > 0) {
+        step1Parsed.warnings = step1Parsed.warnings || [];
+        step1Parsed.warnings.push(
+          `Non-echo violation detected in fields: ${echoViolations.join(', ')}. ` +
+          `These fields contain >30% overlap with input text.`
+        );
+      }
+    }
+    
     const step1Duration = Date.now() - step1Start;
     const step1Tokens = step1Response.usageMetadata?.totalTokenCount || 0;
     

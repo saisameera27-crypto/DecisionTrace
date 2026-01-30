@@ -1,0 +1,116 @@
+Subject: Re: Hiring Decision - Engineering Manager Position
+
+Hey team,
+
+I've been reviewing the candidates and I think we should go with Sarah Chen. She has 10 years of experience and her references were glowing. The recruiter said she's the top candidate with a 95% match score.
+
+But wait - John mentioned that we need someone who can start immediately. Sarah said she needs 2 months notice at her current job.
+
+Also, the budget is tight. HR said we can only offer $150k max, but Sarah's asking for $180k. However, I heard from someone that the market rate is actually $200k for this role.
+
+Mike from Finance said we have flexibility if it's the right candidate, but I'm not sure that's accurate given the Q4 budget review. The budget document shows $150k, but Mike claims we can go higher.
+
+What do you all think? Should we:
+1. Wait for Sarah (2 months) - best candidate but delayed start
+2. Go with David Kim who can start next week - less experience (5 years vs 10)
+3. Reopen the search and look for more candidates
+4. Consider the internal candidate (Lisa) - she's been asking about the role
+
+I'm leaning toward option 2, but I want to make sure we're not making a mistake. We're missing some key info:
+- What's the actual budget approval process?
+- How urgent is the need? (John says urgent, but I haven't seen the project timeline)
+- What are the exact requirements? The job description is vague.
+
+Thoughts?
+
+- Alex
+
+---
+
+From: John <john@company.com>
+To: Engineering Team
+Subject: Re: Hiring Decision
+
+Alex - I think we need to move fast. The team is overloaded and we can't wait 2 months. We have 3 projects starting in Q1 and need someone NOW.
+
+The other candidate (David Kim) seems solid. Less experience but he's available now and within budget. His references said he's a "fast learner" which is good.
+
+However, I'm concerned about his lack of management experience. He's only managed 2 people before, and we need someone who can handle a team of 8.
+
+Let's make a decision by Friday. No exceptions.
+
+- John
+
+---
+
+From: Sarah Chen <sarah@example.com>
+To: Alex
+Subject: Re: Position Offer
+
+Hi Alex,
+
+Thank you for the offer! I'm very interested. However, I would need to give my current employer 2 months notice as per my contract.
+
+I'm also hoping we can discuss the compensation package. I was looking for something in the $180k range based on my experience and the market rate. I've seen similar roles paying $200k, but I'm flexible.
+
+One thing - I noticed the job description mentions "5+ years experience" but I have 10 years. Should we discuss a more senior title or additional responsibilities?
+
+Let me know if we can work something out.
+
+Best,
+Sarah
+
+---
+
+From: Mike <mike@finance.com>
+To: Alex
+Subject: Budget for Engineering Manager
+
+Alex,
+
+Just to clarify - we have some flexibility in the budget for Q4. The $150k is a guideline, not a hard cap. If you find the right candidate, we can go up to $180k with VP approval.
+
+Actually, wait - I need to check the latest budget numbers. The Q4 review might have changed things. Let me get back to you.
+
+- Mike
+
+---
+
+From: Lisa <lisa@company.com>
+To: Alex
+Subject: Internal Candidate Interest
+
+Hi Alex,
+
+I heard about the Engineering Manager opening and I'm very interested. I've been with the company for 3 years and know the team well.
+
+I know I don't have the exact experience listed (I have 4 years in engineering, not 5+), but I've been acting as a de facto team lead for the past year. The team respects me and I understand our processes.
+
+I'd be willing to take a lower salary - maybe $140k? I'm already here, so no notice period needed.
+
+Just wanted to throw my hat in the ring.
+
+- Lisa
+
+---
+
+From: Recruiter <recruiter@agency.com>
+To: Alex
+Subject: Candidate Comparison
+
+Alex,
+
+Quick update on the candidates:
+
+Sarah Chen: 95% match, 10 years exp, $180k ask, 2 months notice
+David Kim: 78% match, 5 years exp, $150k ask, immediate start
+Lisa (internal): 65% match, 4 years exp, $140k ask, immediate start
+
+However, I should note that our matching algorithm might be off. Sarah's experience is more in product management than pure engineering management, which could affect the match score.
+
+Also, I don't have complete reference checks for David yet. Should be done by Thursday.
+
+Let me know if you need anything else.
+
+- Recruiter
+

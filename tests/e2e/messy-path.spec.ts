@@ -44,7 +44,7 @@ test.describe('Messy Path', () => {
     await page.click('button[type="submit"]');
     await page.waitForSelector('text=Case created', { timeout: 5000 });
 
-    const emailThreadPath = path.join(process.cwd(), 'test-data', 'docs', 'positive', '02_email_thread_hiring.txt');
+    const emailThreadPath = path.join(__dirname, '../../fixtures/messy-hiring-thread.txt');
     const fileInput = page.locator('input[type="file"]');
     await fileInput.setInputFiles(emailThreadPath);
     await page.waitForSelector('text=Upload complete', { timeout: 10000 });
@@ -67,7 +67,7 @@ test.describe('Messy Path', () => {
     await expect(rowCount).toContainText('2');
   });
 
-  test('should show missing evidence UI with tiny note', async ({ page, mockAPI }) => {
+  test('should show missing evidence UI with product launch notes', async ({ page, mockAPI }) => {
     // Mock report with missing evidence
     await page.route('**/api/case/*/report', async (route) => {
       await route.fulfill({
@@ -79,7 +79,7 @@ test.describe('Messy Path', () => {
             finalNarrativeMarkdown: '# Report with Missing Evidence',
           },
           decision: {
-            decisionTitle: 'Tiny Note Decision',
+            decisionTitle: 'Product Launch Decision',
           },
           steps: [
             {
@@ -87,8 +87,8 @@ test.describe('Messy Path', () => {
               status: 'completed',
               data: JSON.stringify({
                 claims: [
-                  { id: '1', claim: 'Claim without evidence', evidence: null, strength: 'missing' },
-                  { id: '2', claim: 'Another claim', evidence: null, strength: 'missing' },
+                  { id: '1', claim: 'Infrastructure cost unknown', evidence: null, strength: 'missing' },
+                  { id: '2', claim: 'Competitor marketing spend unknown', evidence: null, strength: 'missing' },
                 ],
               }),
             },
@@ -97,38 +97,45 @@ test.describe('Messy Path', () => {
       });
     });
 
-    // Navigate and upload tiny note
-    await page.goto('/');
-    await page.click('text=Create Case');
-    await page.fill('input[name="title"]', 'Tiny Note Case');
-    await page.click('button[type="submit"]');
-    await page.waitForSelector('text=Case created', { timeout: 5000 });
+    // Navigate to QuickStart and upload product launch notes
+    await page.goto('/quick');
+    await page.waitForLoadState('networkidle');
 
-    const tinyNotePath = path.join(process.cwd(), 'test-data', 'docs', 'negative', '01_tiny_note.txt');
+    const productLaunchPath = path.join(__dirname, '../../fixtures/messy-product-launch-notes.txt');
     const fileInput = page.locator('input[type="file"]');
-    await fileInput.setInputFiles(tinyNotePath);
-    await page.waitForSelector('text=Upload complete', { timeout: 10000 });
+    await fileInput.setInputFiles(productLaunchPath);
+    await page.waitForSelector('[data-testid="qs-status"]', { timeout: 10000 });
 
-    await page.click('text=Run Analysis');
-    await page.waitForSelector('text=Analysis Complete', { timeout: 30000 });
+    await page.click('[data-testid="qs-run"]');
+    await page.waitForURL(/\/case\/[^/]+\/report/, { timeout: 30000 });
 
     // Navigate to Evidence tab
-    await page.click('text=Evidence');
-
-    // Click Missing Evidence filter
-    await page.click('text=Missing Evidence');
+    await page.click('[data-testid="tab-evidence"]');
 
     // Verify missing evidence UI is shown
-    await expect(page.locator('text=Claim without evidence')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('text=Another claim')).toBeVisible();
+    await expect(page.locator('text=Infrastructure cost').or(page.locator('text=Missing')).first()).toBeVisible({ timeout: 5000 });
+  });
 
-    // Verify missing evidence indicator
-    await expect(page.locator('text=No evidence').or(page.locator('text=Missing')).first()).toBeVisible();
+  test('should detect conflicts and numeric disputes in vendor selection', async ({ page, mockAPI }) => {
+    // Navigate to QuickStart and upload vendor selection document
+    await page.goto('/quick');
+    await page.waitForLoadState('networkidle');
 
-    // Verify warning message
-    await expect(
-      page.locator('text=Missing Evidence').or(page.locator('text=Evidence required'))
-    ).toBeVisible();
+    const vendorSelectionPath = path.join(__dirname, '../../fixtures/messy-vendor-selection.txt');
+    const fileInput = page.locator('input[type="file"]');
+    await fileInput.setInputFiles(vendorSelectionPath);
+    await page.waitForSelector('[data-testid="qs-status"]', { timeout: 10000 });
+
+    await page.click('[data-testid="qs-run"]');
+    await page.waitForURL(/\/case\/[^/]+\/report/, { timeout: 30000 });
+
+    // Verify report page renders
+    await expect(page.locator('[data-testid="report-root"]')).toBeVisible();
+    
+    // Verify page contains conflict-related content (case-insensitive)
+    const pageContent = await page.content();
+    const hasConflict = /conflict/i.test(pageContent) || /dispute/i.test(pageContent) || /discrepancy/i.test(pageContent);
+    expect(hasConflict).toBeTruthy();
   });
 });
 

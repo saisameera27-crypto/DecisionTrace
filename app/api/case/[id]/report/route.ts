@@ -90,10 +90,14 @@ export async function GET(
 
     // Extract decision data from step 2 (optional - don't fail if missing)
     let decision = null;
+    let step2Data = null;
     try {
       const step2 = case_.steps.find((s: { stepNumber: number }) => s.stepNumber === 2);
       if (step2 && step2.data) {
-        decision = normalizeDecisionData(JSON.parse(step2.data));
+        const parsedStep2 = JSON.parse(step2.data);
+        decision = normalizeDecisionData(parsedStep2);
+        // Also include raw Step 2 data for Delta panel
+        step2Data = parsedStep2.data || parsedStep2;
       }
     } catch (stepError) {
       // Don't fail if step2 data is missing or invalid (demo-safe)
@@ -111,7 +115,8 @@ export async function GET(
         createdAt: case_.report.createdAt.toISOString(),
       },
       decision,
-      step1Analysis: step1Data, // Include Step 1 forensic analysis data
+      step1Analysis: step1Data?.data || step1Data, // Include Step 1 Document Digest data
+      step2Analysis: step2Data, // Include Step 2 Decision Hypothesis data
       step6Analysis: step6Data?.data || null, // Include Step 6 final report data (with confidence)
     });
   } catch (error: any) {

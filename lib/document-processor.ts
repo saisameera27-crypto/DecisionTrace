@@ -1,18 +1,20 @@
 /**
- * Document Processor with Forensic Analysis
+ * Document Processor for Step 1: Document Digest
  * 
- * Processes unstructured documents using forensic analysis approach:
- * - Identifies ALL decision candidates (explicit or implicit)
- * - Extracts evidence fragments as verbatim quotes
- * - Classifies fragments into: evidence, assumptions, risks, stakeholder signals
- * - Returns structured JSON only (no summaries, paraphrasing, or invented facts)
+ * Processes unstructured documents to create a structured Document Digest:
+ * - Normalizes entities (people, orgs, products, dates)
+ * - Extracts claims with evidence anchors (citations)
+ * - Identifies contradictions
+ * - Lists missing information
+ * - Generates NEW structure and reasoning, NOT copy-paste
  */
 
 import { callGeminiAPI } from './gemini';
 import { uploadFileToGemini } from './gemini';
-import { forensicAnalysisSchema, type ForensicAnalysisResult } from './forensic-analysis';
-import { step2Schema } from './schema-validators';
+import { buildForensicAnalysisPrompt } from './forensic-analysis';
+import { step1Schema } from './schema-validators';
 import { GEMINI_MODEL } from './gemini/config';
+import { validateNonEcho } from './non-echo-guard';
 
 export interface ProcessDocumentOptions {
   caseId: string;
@@ -23,24 +25,35 @@ export interface ProcessDocumentOptions {
 }
 
 /**
- * Process a document using forensic analysis
+ * Process a document to create Document Digest (Step 1)
  * 
  * This function:
- * 1. Calls Gemini with forensic analysis prompt
- * 2. Validates response against forensicAnalysisSchema
- * 3. Returns structured JSON with verbatim quotes and classifications
+ * 1. Calls Gemini with Document Digest prompt
+ * 2. Validates response against step1Schema
+ * 3. Checks for non-echo violations (>30% overlap with input)
+ * 4. Returns structured Document Digest
  */
 export async function processDocumentForensically(
   options: ProcessDocumentOptions
-): Promise<ForensicAnalysisResult & { step: number; status: string; errors: string[]; warnings: string[] }> {
-  const { caseId, documentId, documentText, fileUri, fileName } = options;
+): Promise<{ step: number; status: string; data: any; errors: string[]; warnings: string[] }> {
+  const { caseId, documentId, documentText, fileUri } = options;
 
-  // Call Gemini API with forensic analysis prompt
+  if (!documentText && !fileUri) {
+    throw new Error('Either documentText or fileUri must be provided');
+  }
+
+  // Build prompt for Document Digest
+  const prompt = documentText 
+    ? buildForensicAnalysisPrompt(documentText)
+    : buildForensicAnalysisPrompt(''); // Will use fileUri if documentText not available
+
+  // Call Gemini API
   const geminiResponse = await callGeminiAPI({
     caseId,
-    stepName: 'step2',
-    prompt: documentText, // If documentText provided, it will be used in prompt
-    fileUri, // If fileUri provided, document will be read from Gemini Files
+    stepName: 'step1',
+    prompt,
+    fileUri,
+    documentText,
     model: GEMINI_MODEL,
   });
 
@@ -52,38 +65,64 @@ export async function processDocumentForensically(
   try {
     parsedResponse = JSON.parse(responseText);
   } catch (parseError: any) {
-    throw new Error(`Failed to parse Gemini response as JSON: ${parseError.message}`);
+    return {
+      step: 1,
+      status: 'error',
+      data: {},
+      errors: [`Failed to parse Gemini response as JSON: ${parseError.message}`],
+      warnings: [],
+    };
   }
 
-  // Validate against step2Schema (which includes forensic analysis fields)
-  const validationResult = step2Schema.safeParse(parsedResponse);
+  // Validate against step1Schema
+  const validationResult = step1Schema.safeParse({
+    step: 1,
+    status: 'success',
+    data: {
+      document_id: documentId,
+      ...parsedResponse,
+      extracted_at: new Date().toISOString(),
+    },
+    errors: [],
+    warnings: [],
+  });
   
   if (!validationResult.success) {
-    // Return partial success with errors
     return {
-      step: 2,
+      step: 1,
       status: 'partial_success',
-      has_clear_decision: false,
-      decision_candidates: [],
-      fragments: [],
-      no_decision_message: 'Failed to validate forensic analysis response',
+      data: {},
       errors: validationResult.error.issues.map((e: any) => e.message || 'Validation error'),
-      warnings: [],
+      warnings: ['Schema validation failed'],
     };
   }
 
   const validatedData = validationResult.data.data;
 
-  // Return forensic analysis result
+  // Non-echo guard: Check for excessive overlap with raw input
+  if (documentText) {
+    const echoViolations = validateNonEcho(validatedData, documentText, 30);
+    if (echoViolations.length > 0) {
+      return {
+        step: 1,
+        status: 'partial_success',
+        data: validatedData,
+        errors: [],
+        warnings: [
+          `Non-echo violation detected in fields: ${echoViolations.join(', ')}. ` +
+          `These fields contain >30% overlap with input text and should be rewritten with abstraction.`
+        ],
+      };
+    }
+  }
+
+  // Success
   return {
-    step: 2,
-    status: validatedData.has_clear_decision ? 'success' : 'partial_success',
-    has_clear_decision: validatedData.has_clear_decision,
-    decision_candidates: validatedData.decision_candidates || [],
-    fragments: validatedData.fragments || [],
-    no_decision_message: validatedData.no_decision_message,
-    errors: parsedResponse.errors || [],
-    warnings: parsedResponse.warnings || [],
+    step: 1,
+    status: 'success',
+    data: validatedData,
+    errors: [],
+    warnings: [],
   };
 }
 

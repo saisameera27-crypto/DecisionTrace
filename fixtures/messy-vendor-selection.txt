@@ -1,0 +1,147 @@
+VENDOR SELECTION - CRM Platform Decision
+Date: February 28, 2024
+Team: Procurement, IT, Sales, Finance
+
+BACKGROUND:
+We need to select a new CRM platform. Current system is outdated and causing issues.
+Budget: $200k/year (according to Finance)
+Timeline: Need to decide by March 15, 2024
+
+CANDIDATES:
+1. Vendor A: SalesForce Enterprise
+2. Vendor B: HubSpot Pro
+3. Vendor C: Custom Build (in-house)
+
+VENDOR A - SalesForce Enterprise:
+- Cost: $300/user/month × 50 users = $180k/year
+- Wait, that's $180k, not $200k. But Finance said budget is $200k.
+- Features: Full CRM, marketing automation, analytics
+- Implementation: 3-4 months, $50k setup fee
+- Support: 24/7, included
+- Sales rep says: "Best in class, used by Fortune 500 companies"
+- Our IT team says: "Complex, requires dedicated admin, steep learning curve"
+
+VENDOR B - HubSpot Pro:
+- Cost: $800/user/month × 20 users = $192k/year
+- Wait, that doesn't add up. $800 × 20 = $16k/month = $192k/year. But they quoted $150k/year.
+- Let me recalculate: HubSpot website says $800/user/month for Pro, but our quote says $150k/year for 20 users. Something's off.
+- Features: CRM, marketing, sales, service hub
+- Implementation: 2-3 months, $25k setup fee
+- Support: Business hours, included
+- Sales rep says: "Easier to use than SalesForce, better for SMBs"
+- Our Sales team says: "We tried HubSpot before, it was too limited"
+
+VENDOR C - Custom Build:
+- Cost: $150k development + $50k/year maintenance = $200k first year, $50k/year after
+- Timeline: 6-9 months development
+- Features: Exactly what we need (custom)
+- Risk: What if developers leave? What if requirements change?
+- IT says: "We can build it, but it's a lot of work"
+- Finance says: "Long-term it's cheaper, but upfront cost is high"
+
+CONFLICTING OPINIONS:
+
+Sales Team:
+- "We need SalesForce. It's the industry standard."
+- "HubSpot didn't work for us last time. Why try again?"
+- "Custom build will take too long. We need something now."
+
+IT Team:
+- "SalesForce is overkill. We don't need all those features."
+- "HubSpot is easier to manage, less training needed."
+- "Custom build gives us control, but it's risky."
+
+Finance:
+- "Budget is $200k/year. SalesForce is $180k + $50k setup = $230k first year. Over budget."
+- "HubSpot quote says $150k/year, but website says $192k. Which is correct?"
+- "Custom build is $200k first year, then $50k/year. Cheaper long-term."
+
+Procurement:
+- "We need to compare apples to apples. The pricing is inconsistent."
+- "SalesForce has better support, but costs more."
+- "HubSpot is cheaper, but we had issues before."
+
+MISSING INFORMATION:
+- What's the actual HubSpot pricing? Quote says $150k, website says $192k. Need clarification.
+- What were the specific issues with HubSpot last time? Sales says "too limited" but no details.
+- What's the real SalesForce cost? $180k/year or $230k first year? Setup fee is one-time?
+- What are our actual requirements? Everyone has different needs.
+- How many users do we really need? Sales says 50, IT says 30, Finance says 20.
+- What's the migration cost? Moving data from current system to new one.
+- What's the training cost? SalesForce needs more training than HubSpot.
+- What's the ROI? No one has calculated this.
+
+NUMERIC CLAIMS (DISPUTED):
+
+User Count:
+- Sales: "We need 50 users"
+- IT: "30 users is enough, rest can be read-only"
+- Finance: "20 users max, based on budget"
+- Actual current usage: 35 active users
+
+Cost Estimates:
+- SalesForce: Sales rep says $180k/year, Finance calculates $230k first year
+- HubSpot: Quote says $150k/year, website says $192k/year
+- Custom: IT says $150k dev + $50k/year, Finance says $200k dev + $60k/year
+
+Timeline:
+- SalesForce: Sales rep says 3 months, IT says 4-6 months
+- HubSpot: Sales rep says 2 months, IT says 3-4 months
+- Custom: IT says 6 months, Finance says 9-12 months
+
+User Satisfaction (from previous HubSpot trial):
+- Sales: "3/10, too limited"
+- IT: "7/10, easy to use"
+- Marketing: "8/10, great features"
+- No consensus on why we stopped using it
+
+OPTIONS:
+
+Option 1: SalesForce Enterprise
+- Pros: Industry standard, full features, good support
+- Cons: Expensive ($230k first year), complex, over budget
+- Risk: Over budget, may not use all features
+
+Option 2: HubSpot Pro
+- Pros: Cheaper ($150k?), easier to use, good for SMBs
+- Cons: We tried it before and it didn't work, pricing unclear
+- Risk: May have same issues as before, pricing discrepancy
+
+Option 3: Custom Build
+- Pros: Exactly what we need, cheaper long-term, full control
+- Cons: Long development time (6-9 months), risky, maintenance burden
+- Risk: Delays, cost overruns, maintenance issues
+
+Option 4: Hybrid Approach
+- Start with HubSpot for immediate needs ($150k/year)
+- Build custom solution in parallel (6-9 months)
+- Migrate to custom when ready
+- Total: $150k + $200k = $350k first year (way over budget)
+
+DECISION CRITERIA (unclear):
+- Cost: What's the actual budget? $200k/year or $230k first year?
+- Timeline: When do we need it? Sales says "ASAP", IT says "Q2 is fine"
+- Features: What do we actually need? No one has documented requirements
+- Risk: What's acceptable? Finance wants low risk, Sales wants fast, IT wants flexible
+
+CONFLICTS TO RESOLVE:
+1. Budget: $200k/year vs $230k first year (SalesForce)
+2. Pricing: HubSpot quote ($150k) vs website ($192k)
+3. User count: 20 vs 30 vs 50 users
+4. Timeline: ASAP vs Q2 vs 6-9 months
+5. Previous HubSpot experience: Why did it fail? Can we avoid same issues?
+
+ACTION ITEMS:
+- [ ] Clarify HubSpot pricing (Procurement)
+- [ ] Document actual requirements (all teams)
+- [ ] Calculate total cost of ownership for each option (Finance)
+- [ ] Assess migration effort and cost (IT)
+- [ ] Get user count consensus (all teams)
+- [ ] Review previous HubSpot issues (Sales + IT)
+- [ ] Get SalesForce setup fee clarification (Procurement)
+
+NEXT MEETING: March 5, 2024
+Goal: Make final decision by March 15
+
+DECISION STATUS: PENDING - Too many conflicts and missing information
+
