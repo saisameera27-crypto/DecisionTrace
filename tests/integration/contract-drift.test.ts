@@ -23,6 +23,16 @@ import {
 const CURRENT_SCHEMA_VERSION = '1.0.0';
 
 /**
+ * Helper to collect errors from validation result
+ * Handles both success=false (errors at result.errors) and success=true (errors at result.data.errors)
+ */
+function collectErrors<T extends { success: boolean }>(r: any): string[] {
+  if (!r) return [];
+  if (r.success === false) return Array.isArray(r.errors) ? r.errors : [];
+  return Array.isArray(r.data?.errors) ? r.data.errors : [];
+}
+
+/**
  * Load recorded Gemini response
  */
 function loadRecordedResponse(stepName: string): any {
@@ -309,8 +319,9 @@ describe('Contract Drift Tests', () => {
       
       const result1 = validateWithSchema(step1Schema, mutatedStep1);
       expect(result1.success).toBe(false);
-      expect(result1.errors).toBeDefined();
-      expect(result1.errors!.some(err => 
+      const errors1 = collectErrors(result1);
+      expect(errors1.length).toBeGreaterThan(0);
+      expect(errors1.some((err: string) => 
         err.toLowerCase().includes('normalizedentities') || 
         err.toLowerCase().includes('required') ||
         err.toLowerCase().includes('expected object')
@@ -324,8 +335,9 @@ describe('Contract Drift Tests', () => {
       
       const result2 = validateWithSchema(step2Schema, mutatedStep2);
       expect(result2.success).toBe(false);
-      expect(result2.errors).toBeDefined();
-      expect(result2.errors!.some(err => 
+      const errors2 = collectErrors(result2);
+      expect(errors2.length).toBeGreaterThan(0);
+      expect(errors2.some((err: string) => 
         err.toLowerCase().includes('inferreddecision') || 
         err.toLowerCase().includes('required') ||
         err.toLowerCase().includes('expected string')
@@ -341,8 +353,9 @@ describe('Contract Drift Tests', () => {
       
       const result1 = validateWithSchema(step1Schema, mutatedStep1);
       expect(result1.success).toBe(false);
-      expect(result1.errors).toBeDefined();
-      expect(result1.errors!.some(err => 
+      const errors1 = collectErrors(result1);
+      expect(errors1.length).toBeGreaterThan(0);
+      expect(errors1.some((err: string) => 
         err.toLowerCase().includes('document_id') || 
         err.toLowerCase().includes('expected string') ||
         err.toLowerCase().includes('received number')
@@ -356,8 +369,9 @@ describe('Contract Drift Tests', () => {
       
       const result2 = validateWithSchema(step2Schema, mutatedStep2);
       expect(result2.success).toBe(false);
-      expect(result2.errors).toBeDefined();
-      expect(result2.errors!.some(err => 
+      const errors2 = collectErrors(result2);
+      expect(errors2.length).toBeGreaterThan(0);
+      expect(errors2.some((err: string) => 
         err.toLowerCase().includes('inferreddecision') || 
         err.toLowerCase().includes('expected string') ||
         err.toLowerCase().includes('received number')
@@ -369,8 +383,9 @@ describe('Contract Drift Tests', () => {
       
       const result2Enum = validateWithSchema(step2Schema, mutatedStep2Enum);
       expect(result2Enum.success).toBe(false);
-      expect(result2Enum.errors).toBeDefined();
-      expect(result2Enum.errors!.some(err => 
+      const errors2Enum = collectErrors(result2Enum);
+      expect(errors2Enum.length).toBeGreaterThan(0);
+      expect(errors2Enum.some((err: string) => 
         err.toLowerCase().includes('decisiontype') || 
         err.toLowerCase().includes('invalid option') ||
         err.toLowerCase().includes('expected')
