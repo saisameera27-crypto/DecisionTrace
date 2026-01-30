@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { parseMarkdownSections, getSectionContent } from '@/lib/report/section-parser';
 import { theme } from '@/styles/theme';
+import { BUILD_STAMP } from '@/lib/build-stamp';
 
 interface ReportData {
   caseId: string;
@@ -124,6 +125,11 @@ export default function CaseReportPage() {
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modeStatus, setModeStatus] = useState<{ isDemoMode: boolean; hasApiKey: boolean; dbConnected: boolean }>({ 
+    isDemoMode: true, 
+    hasApiKey: false, 
+    dbConnected: false 
+  });
 
   // Parse markdown sections when report data is available
   const markdownSections = useMemo(() => {
@@ -205,6 +211,23 @@ export default function CaseReportPage() {
     diagram: 'A visual map of how evidence, reasoning, and outcomes connect.',
     export: 'Download and share this report in a portable format.',
   };
+
+  // Fetch mode status on mount
+  useEffect(() => {
+    fetch('/api/mode-status')
+      .then(res => res.json())
+      .then(data => {
+        setModeStatus({
+          isDemoMode: data.isDemoMode,
+          hasApiKey: data.hasApiKey,
+          dbConnected: data.dbConnected ?? false,
+        });
+      })
+      .catch(() => {
+        // Default values if check fails
+        setModeStatus({ isDemoMode: true, hasApiKey: false, dbConnected: false });
+      });
+  }, []);
 
   useEffect(() => {
     async function fetchReport() {
@@ -376,9 +399,32 @@ export default function CaseReportPage() {
     gap: theme.spacing.sm,
   };
 
+  // Banner component (reusable)
+  const runtimeBanner = (
+    <div 
+      data-testid="runtime-mode-banner"
+      style={{
+        padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+        backgroundColor: theme.colors.background,
+        border: `1px solid ${theme.colors.border}`,
+        borderRadius: theme.borderRadius.md,
+        marginBottom: theme.spacing.lg,
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.textSecondary,
+        textAlign: 'center',
+        fontFamily: 'monospace',
+      }}
+    >
+      Mode: <strong>{modeStatus.isDemoMode ? 'demo' : 'live'}</strong> | 
+      Gemini: <strong>{modeStatus.hasApiKey ? 'enabled' : 'disabled'}</strong> | 
+      DB: <strong>{modeStatus.dbConnected ? 'connected' : 'unknown'}</strong>
+    </div>
+  );
+
   if (loading) {
     return (
       <div data-testid="report-root" style={containerStyle}>
+        {runtimeBanner}
         <div style={cardStyle}>
           <header data-testid="report-header" style={headerStyle}>
             <h1 style={titleStyle}>Decision Trace Report</h1>
@@ -394,6 +440,7 @@ export default function CaseReportPage() {
   if (error) {
     return (
       <div data-testid="report-root" style={containerStyle}>
+        {runtimeBanner}
         <div style={cardStyle}>
           <header data-testid="report-header" style={headerStyle}>
             <h1 style={titleStyle}>Decision Trace Report</h1>
@@ -423,6 +470,7 @@ export default function CaseReportPage() {
   if (!reportData || !reportData.report) {
     return (
       <div data-testid="report-root" style={containerStyle}>
+        {runtimeBanner}
         <div style={cardStyle}>
           <header data-testid="report-header" style={headerStyle}>
             <h1 style={titleStyle}>Decision Trace Report</h1>
@@ -451,6 +499,7 @@ export default function CaseReportPage() {
 
   return (
     <div data-testid="report-root" style={containerStyle}>
+      {runtimeBanner}
       <div style={cardStyle}>
         <header data-testid="report-header" style={headerStyle}>
           <h1 style={titleStyle}>Decision Trace Report</h1>
@@ -1479,6 +1528,18 @@ export default function CaseReportPage() {
           color: #0052a3;
         }
       ` }} />
+      
+      {/* Footer with Build Stamp */}
+      <footer style={{
+        marginTop: theme.spacing['2xl'],
+        padding: theme.spacing.md,
+        borderTop: `1px solid ${theme.colors.border}`,
+        textAlign: 'center',
+        fontSize: theme.typography.fontSize.xs,
+        color: theme.colors.textTertiary,
+      }}>
+        <p style={{ margin: 0 }}>Build: {BUILD_STAMP}</p>
+      </footer>
     </div>
   );
 }

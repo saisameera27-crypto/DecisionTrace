@@ -28,8 +28,9 @@
  * @returns true if demo mode is enabled
  */
 export function isDemoMode(): boolean {
-  // Explicit DEMO_MODE flag
-  if (process.env.DEMO_MODE === 'true') {
+  // Explicit DEMO_MODE flag (accepts 'true' or '1')
+  const demoModeEnv = process.env.DEMO_MODE;
+  if (demoModeEnv === 'true' || demoModeEnv === '1') {
     return true;
   }
   
@@ -56,7 +57,8 @@ export function getDemoModeStatus(): {
   enabled: boolean;
   reason: 'explicit' | 'no-api-key' | 'disabled';
 } {
-  if (process.env.DEMO_MODE === 'true') {
+  const demoModeEnv = process.env.DEMO_MODE;
+  if (demoModeEnv === 'true' || demoModeEnv === '1') {
     return { enabled: true, reason: 'explicit' };
   }
   

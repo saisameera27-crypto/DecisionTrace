@@ -3,17 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { theme } from '@/styles/theme';
+import { BUILD_STAMP } from '@/lib/build-stamp';
 
 interface ModeStatus {
   isDemoMode: boolean;
   hasApiKey: boolean;
+  dbConnected: boolean;
 }
 
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [modeStatus, setModeStatus] = useState<ModeStatus>({ isDemoMode: true, hasApiKey: false });
+  const [modeStatus, setModeStatus] = useState<ModeStatus>({ isDemoMode: true, hasApiKey: false, dbConnected: false });
 
   // Check mode status on mount
   useEffect(() => {
@@ -23,11 +25,12 @@ export default function Home() {
         setModeStatus({
           isDemoMode: data.isDemoMode,
           hasApiKey: data.hasApiKey,
+          dbConnected: data.dbConnected ?? false,
         });
       })
       .catch(() => {
         // Default to demo mode if check fails
-        setModeStatus({ isDemoMode: true, hasApiKey: false });
+        setModeStatus({ isDemoMode: true, hasApiKey: false, dbConnected: false });
       });
   }, []);
 
@@ -178,10 +181,57 @@ export default function Home() {
 
   return (
     <div style={containerStyle}>
-      <h1 style={titleStyle}>Decision Trace</h1>
+      {/* Runtime Mode Banner */}
+      <div 
+        data-testid="runtime-mode-banner"
+        style={{
+          padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+          backgroundColor: theme.colors.background,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: theme.borderRadius.md,
+          marginBottom: theme.spacing.lg,
+          fontSize: theme.typography.fontSize.xs,
+          color: theme.colors.textSecondary,
+          textAlign: 'center',
+          fontFamily: 'monospace',
+        }}
+      >
+        Mode: <strong>{modeStatus.isDemoMode ? 'demo' : 'live'}</strong> | 
+        Gemini: <strong>{modeStatus.hasApiKey ? 'enabled' : 'disabled'}</strong> | 
+        DB: <strong>{modeStatus.dbConnected ? 'connected' : 'unknown'}</strong>
+      </div>
+      
+      <h1 style={titleStyle}>Decision Trace (Updated UI)</h1>
       <p style={subtitleStyle}>
         AI-powered decision analysis using Google Gemini 3
       </p>
+      
+      {/* New Feature Check Button */}
+      <div style={{ marginBottom: theme.spacing.lg, textAlign: 'center' }}>
+        <button
+          data-testid="new-feature-check"
+          onClick={() => {}}
+          style={{
+            padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+            fontSize: theme.typography.fontSize.base,
+            backgroundColor: theme.colors.primary,
+            color: 'white',
+            border: 'none',
+            borderRadius: theme.borderRadius.lg,
+            cursor: 'pointer',
+            fontWeight: theme.typography.fontWeight.semibold,
+            transition: theme.transition.normal,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.primary;
+          }}
+        >
+          New Feature Check
+        </button>
+      </div>
 
       {/* Mode Indicator Banner/Card */}
       <div 
@@ -576,6 +626,9 @@ export default function Home() {
           >
             View Gemini 3 Implementation Docs →
           </a>
+        </p>
+        <p style={{ margin: `${theme.spacing.sm} 0`, fontSize: theme.typography.fontSize.xs }}>
+          Build: {BUILD_STAMP}
         </p>
       </div>
     </div>
