@@ -16,7 +16,8 @@ export const runtime = 'nodejs';
  * - file (required): The document file to upload
  * 
  * Returns JSON 200: { ok: true, previewText, fileName, mimeType, size, ... }
- * Returns JSON 422: { error: "...", code: "VALIDATION_ERROR" } if file missing
+ * Returns JSON 400: { error: "File is required", code: "FILE_MISSING" } if file missing
+ * Returns JSON 422: { error: "...", code: "VALIDATION_ERROR" } if file type unsupported or empty text
  * Returns JSON 422: { error: "...", code: "EXTRACTION_FAILED" } if extraction fails
  * Returns JSON 500: { error: "Document upload failed", code: "UPLOAD_FAILED" } on error
  */
@@ -27,13 +28,14 @@ export async function POST(request: Request) {
     const file = formData.get('file');
 
     // Strict guard: file must exist and be a File instance
+    // Missing file → 400 Bad Request
     if (!file || !(file instanceof File)) {
       return NextResponse.json(
         {
-          error: 'File upload is required. Please upload a document to analyze.',
-          code: 'VALIDATION_ERROR',
+          error: 'File is required',
+          code: 'FILE_MISSING',
         },
-        { status: 422 }
+        { status: 400 }
       );
     }
 
@@ -68,12 +70,13 @@ export async function POST(request: Request) {
     }
 
     // Validate that extraction yielded non-empty text
+    // Empty text or unsupported type → 422 Unprocessable Entity
     const extractedText = extractionResult.text;
     if (!extractedText || extractedText.trim().length === 0) {
       return NextResponse.json(
         {
           error: 'Could not extract readable text from this file.',
-          code: 'EMPTY_PREVIEW',
+          code: 'VALIDATION_ERROR',
         },
         { status: 422 }
       );

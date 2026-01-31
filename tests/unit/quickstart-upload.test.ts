@@ -513,8 +513,8 @@ describe('QuickStart Upload Route Handler', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.code).toBe('VALIDATION_ERROR');
-      expect(data.error).toContain('File upload is required');
+      expect(data.code).toBe('FILE_MISSING');
+      expect(data.error).toBe('File is required');
     });
 
     it('should return 422 for empty text files', async () => {
