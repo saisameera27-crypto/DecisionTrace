@@ -8,6 +8,9 @@ import { NextRequest } from 'next/server';
 
 // Mock Prisma client
 const mockPrismaClient = {
+  case: {
+    create: vi.fn(),
+  },
   caseDocument: {
     create: vi.fn(),
   },
@@ -45,14 +48,27 @@ describe('QuickStart Text API Route', () => {
     vi.clearAllMocks();
     // Set up default mocks
     mockIsDemoMode.mockReturnValue(false);
+    
+    // Mock temporary case creation (for live mode)
+    mockPrismaClient.case.create.mockResolvedValue({
+      id: 'temp-case-id',
+      title: 'Temporary Case (QuickStart Text)',
+      slug: 'temp-slug',
+      status: 'draft',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    
+    // Mock document creation (linked to temp case)
     mockPrismaClient.caseDocument.create.mockResolvedValue({
       id: 'test-document-id',
-      caseId: 'pending',
+      caseId: 'temp-case-id',
       fileName: 'text-input.txt',
       fileSize: 100,
       mimeType: 'text/plain',
       status: 'completed',
     });
+    
     mockGeminiFilesClient.uploadFile.mockResolvedValue({
       uri: 'gs://gemini-files/test-file',
       name: 'text-input.txt',
@@ -132,10 +148,18 @@ describe('QuickStart Text API Route', () => {
       const text = Array(5000).fill('word').join(' ');
       const request = createTextRequest(text);
       
-      // Mock successful document creation
+      // Mock successful case and document creation
+      mockPrismaClient.case.create.mockResolvedValue({
+        id: 'temp-case-5000',
+        title: 'Temporary Case',
+        slug: 'temp-5000',
+        status: 'draft',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       mockPrismaClient.caseDocument.create.mockResolvedValue({
         id: 'test-doc-5000',
-        caseId: 'pending',
+        caseId: 'temp-case-5000',
         fileName: 'text-input.txt',
         fileSize: text.length,
         mimeType: 'text/plain',
@@ -156,10 +180,18 @@ describe('QuickStart Text API Route', () => {
       const text = 'This is a test document with some content.';
       const request = createTextRequest(text);
       
-      // Mock successful document creation
+      // Mock successful case and document creation
+      mockPrismaClient.case.create.mockResolvedValue({
+        id: 'temp-case-123',
+        title: 'Temporary Case',
+        slug: 'temp-123',
+        status: 'draft',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       mockPrismaClient.caseDocument.create.mockResolvedValue({
         id: 'test-doc-123',
-        caseId: 'pending',
+        caseId: 'temp-case-123',
         fileName: 'text-input.txt',
         fileSize: text.length,
         mimeType: 'text/plain',
@@ -184,9 +216,17 @@ describe('QuickStart Text API Route', () => {
       const longText = 'a'.repeat(300_000);
       const request = createTextRequest(longText);
       
+      mockPrismaClient.case.create.mockResolvedValue({
+        id: 'temp-case-long',
+        title: 'Temporary Case',
+        slug: 'temp-long',
+        status: 'draft',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       mockPrismaClient.caseDocument.create.mockResolvedValue({
         id: 'test-doc-long',
-        caseId: 'pending',
+        caseId: 'temp-case-long',
         fileName: 'text-input.txt',
         fileSize: 200_000,
         mimeType: 'text/plain',
@@ -204,9 +244,17 @@ describe('QuickStart Text API Route', () => {
       const text = 'a'.repeat(5000);
       const request = createTextRequest(text);
       
+      mockPrismaClient.case.create.mockResolvedValue({
+        id: 'temp-case-preview',
+        title: 'Temporary Case',
+        slug: 'temp-preview',
+        status: 'draft',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       mockPrismaClient.caseDocument.create.mockResolvedValue({
         id: 'test-doc-preview',
-        caseId: 'pending',
+        caseId: 'temp-case-preview',
         fileName: 'text-input.txt',
         fileSize: text.length,
         mimeType: 'text/plain',
@@ -227,9 +275,17 @@ describe('QuickStart Text API Route', () => {
       const text = 'This is a test with five words.';
       const request = createTextRequest(text);
       
+      mockPrismaClient.case.create.mockResolvedValue({
+        id: 'temp-case-words',
+        title: 'Temporary Case',
+        slug: 'temp-words',
+        status: 'draft',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       mockPrismaClient.caseDocument.create.mockResolvedValue({
         id: 'test-doc-words',
-        caseId: 'pending',
+        caseId: 'temp-case-words',
         fileName: 'text-input.txt',
         fileSize: text.length,
         mimeType: 'text/plain',
@@ -248,9 +304,17 @@ describe('QuickStart Text API Route', () => {
       const text = 'word1    word2     word3';
       const request = createTextRequest(text);
       
+      mockPrismaClient.case.create.mockResolvedValue({
+        id: 'temp-case-spaces',
+        title: 'Temporary Case',
+        slug: 'temp-spaces',
+        status: 'draft',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
       mockPrismaClient.caseDocument.create.mockResolvedValue({
         id: 'test-doc-spaces',
-        caseId: 'pending',
+        caseId: 'temp-case-spaces',
         fileName: 'text-input.txt',
         fileSize: text.length,
         mimeType: 'text/plain',
