@@ -17,7 +17,8 @@ export const runtime = 'nodejs';
  * 
  * Returns JSON 200: { ok: true, previewText, fileName, mimeType, size, ... }
  * Returns JSON 400: { error: "File is required", code: "FILE_MISSING" } if file missing
- * Returns JSON 422: { error: "...", code: "VALIDATION_ERROR" } if file type unsupported or empty text
+ * Returns JSON 422: { error: "Could not extract readable text from this file.", code: "EMPTY_PREVIEW" } if extracted text is empty/whitespace
+ * Returns JSON 422: { error: "...", code: "VALIDATION_ERROR" } if file type unsupported or invalid
  * Returns JSON 422: { error: "...", code: "EXTRACTION_FAILED" } if extraction fails
  * Returns JSON 500: { error: "Document upload failed", code: "UPLOAD_FAILED" } on error
  */
@@ -70,13 +71,13 @@ export async function POST(request: Request) {
     }
 
     // Validate that extraction yielded non-empty text
-    // Empty text or unsupported type → 422 Unprocessable Entity
+    // Empty text → 422 Unprocessable Entity with EMPTY_PREVIEW code
     const extractedText = extractionResult.text;
     if (!extractedText || extractedText.trim().length === 0) {
       return NextResponse.json(
         {
           error: 'Could not extract readable text from this file.',
-          code: 'VALIDATION_ERROR',
+          code: 'EMPTY_PREVIEW',
         },
         { status: 422 }
       );
