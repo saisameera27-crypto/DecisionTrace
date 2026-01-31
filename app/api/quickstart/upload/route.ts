@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/demo-mode';
 import { randomUUID } from 'crypto';
 import { extractTextFromUpload } from '@/lib/quickstart/extract-text';
@@ -22,7 +22,7 @@ export const runtime = 'nodejs';
  * Returns JSON 422: { error: "...", code: "EXTRACTION_FAILED" } if extraction fails
  * Returns JSON 500: { error: "Document upload failed", code: "UPLOAD_FAILED" } on error
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   // TEMPORARY DEBUG: Remove after verifying route works
   const url = new URL(request.url);
   const isPing = url.searchParams.get('ping') === '1';
