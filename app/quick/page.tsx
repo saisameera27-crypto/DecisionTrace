@@ -129,8 +129,9 @@ export default function QuickStartPage() {
   };
 
   const handleRunAnalysis = async () => {
-    if (!uploaded || !documentId) {
-      setError('Please submit text first');
+    // Check readiness based on textarea content, not Save step
+    if (!isReady && !demoLoaded) {
+      setError('Please enter at least 50 characters of text first');
       return;
     }
 
@@ -139,8 +140,36 @@ export default function QuickStartPage() {
 
     try {
       let newCaseId: string;
+      let docIdToUse = documentId; // Use existing documentId if available
+
+      // If text is ready but not saved, save it first
+      if (isReady && !documentId) {
+        const textToSave = inputText || textInput;
+        setLoading('upload'); // Show upload state while saving
+        
+        const saveResponse = await fetch('/api/quickstart/text', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text: textToSave }),
+        });
+
+        if (!saveResponse.ok) {
+          const errorData = await saveResponse.json().catch(() => ({ error: 'Failed to save text' }));
+          throw new Error(errorData.error || errorData.message || 'Failed to save text');
+        }
+
+        const saveData = await saveResponse.json();
+        docIdToUse = saveData.documentId || saveData.artifactId;
+        setDocumentId(docIdToUse);
+        setUploaded(true);
+        setIsDemoMode(saveData.mode === 'demo');
+        setLoading('analysis'); // Switch back to analysis state
+      }
 
       // Demo mode: skip DB operations and use deterministic demo case ID
+      // Use demo mode if: already in demo mode, or if we just saved and got demo mode response
       if (isDemoMode) {
         // Generate deterministic demo case ID based on text content
         const textForDemo = inputText || textInput;
@@ -149,10 +178,10 @@ export default function QuickStartPage() {
           return ((acc << 5) - acc) + char.charCodeAt(0);
         }, 0);
         newCaseId = `demo-case-${Math.abs(hash)}-${timestamp}`;
-      } else {
+      } else if (docIdToUse) {
         // Live mode: normal flow with DB
-        // Step 1: Upload text to get documentId (already done, use existing documentId)
-        // documentId is already set from text submission
+        // Step 1: Upload text to get documentId (already done or just saved)
+        // docIdToUse is set from text submission or auto-save
 
         // Step 2: Create case with documentId
         const createResponse = await fetch('/api/case/create', {
@@ -162,7 +191,7 @@ export default function QuickStartPage() {
           },
           body: JSON.stringify({
             inferMode: true,
-            documentId: documentId,
+            documentId: docIdToUse,
           }),
         });
 
@@ -173,6 +202,14 @@ export default function QuickStartPage() {
 
         const createData = await createResponse.json();
         newCaseId = createData.caseId;
+      } else {
+        // Fallback: if no documentId and not demo mode, use demo mode as fallback
+        const textForDemo = inputText || textInput;
+        const timestamp = Math.floor(Date.now() / 60000) * 60000;
+        const hash = textForDemo.split('').reduce((acc, char) => {
+          return ((acc << 5) - acc) + char.charCodeAt(0);
+        }, 0);
+        newCaseId = `demo-case-${Math.abs(hash)}-${timestamp}`;
       }
 
       // Step 3: Run the analysis (works for both demo and live mode)
