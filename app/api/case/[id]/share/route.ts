@@ -162,3 +162,18 @@ export async function POST(
   }
 }
 
+// GET handler returns helpful error for accidental browser navigation
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  return NextResponse.json(
+    {
+      error: 'Use POST',
+      message: `This endpoint requires POST method. Use POST /api/case/${params.id}/share to create a share link.`,
+      code: 'METHOD_NOT_ALLOWED',
+    },
+    { status: 405 }
+  );
+}
+

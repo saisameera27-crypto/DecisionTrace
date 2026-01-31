@@ -121,3 +121,15 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// GET handler returns helpful error for accidental browser navigation
+export async function GET() {
+  return NextResponse.json(
+    {
+      error: 'Use POST',
+      message: 'This endpoint requires POST method. Use POST /api/quickstart/upload to upload a document.',
+      code: 'METHOD_NOT_ALLOWED',
+    },
+    { status: 405 }
+  );
+}

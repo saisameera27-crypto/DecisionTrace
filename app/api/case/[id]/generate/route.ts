@@ -236,6 +236,21 @@ Format the response as markdown with proper headings (## for sections).`;
   }, { status: 200 });
 }
 
+// GET handler returns helpful error for accidental browser navigation
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  return NextResponse.json(
+    {
+      error: 'Use POST',
+      message: `This endpoint requires POST method. Use POST /api/case/${params.id}/generate to generate a report.`,
+      code: 'METHOD_NOT_ALLOWED',
+    },
+    { status: 405 }
+  );
+}
+
 /**
  * Stream report generation progress via SSE (for live Gemini mode)
  */
