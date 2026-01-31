@@ -28,19 +28,33 @@ export async function POST(request: Request) {
   const isPing = url.searchParams.get('ping') === '1';
   const isDev = process.env.NODE_ENV !== 'production';
   
-  if (isPing || isDev) {
-    // Read specific headers directly (no iteration needed)
-    const contentType = request.headers.get('content-type') ?? '';
-    const userAgent = request.headers.get('user-agent') ?? '';
+  // Safe debug logging (only in non-production, allowlist headers to avoid leaking secrets)
+  if (process.env.NODE_ENV !== 'production') {
+    // Build headers object using forEach
+    const headersObj: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headersObj[key] = value;
+    });
+    
+    // Allowlist: only log safe headers (no secrets)
+    const allowedHeaders = ['content-type', 'content-length', 'user-agent'];
+    const safeHeaders: Record<string, string> = {};
+    allowedHeaders.forEach(header => {
+      if (headersObj[header.toLowerCase()]) {
+        safeHeaders[header] = headersObj[header.toLowerCase()];
+      }
+    });
     
     console.log('[QUICKSTART UPLOAD DEBUG] POST request received', {
       method: request.method,
       url: request.url,
       isPing,
       isDev,
-      contentType,
-      userAgent,
+      headers: safeHeaders,
     });
+  }
+  
+  if (isPing || isDev) {
     
     if (isPing) {
       // Return early for ping test (no formData parsing needed)
