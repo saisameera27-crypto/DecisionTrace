@@ -76,26 +76,31 @@ export async function POST(request: NextRequest) {
     let documentId: string;
     let geminiFileUri: string | null = null;
 
-    // Create document/artifact exactly like upload flow
+    // Create document/artifact - need to create a temporary Case first for foreign key constraint
+    // In demo mode, skip DB entirely and return placeholder documentId
+    // In live mode, create a temporary case, then create document linked to it
+    // When /api/case/create is called, it will update the document's caseId to the real case
     if (demoMode) {
-      // Demo mode: create document with text content stored directly
-      const document = await prisma.caseDocument.create({
+      // Demo mode: don't create document in DB, just return documentId as a placeholder
+      // The actual case creation will handle document creation or use demo mode
+      documentId = `demo-doc-${Date.now()}`;
+    } else {
+      // Live mode: create a temporary case first, then create document
+      // The temporary case will be orphaned after the real case is created and updates the document
+      const tempCase = await prisma.case.create({
         data: {
-          caseId: 'pending', // Will be updated when case is created
-          fileName: 'text-input.txt',
-          fileSize: textSize,
-          mimeType: 'text/plain',
-          status: 'completed',
-          content: limitedText, // Store text content for demo
+          title: 'Temporary Case (QuickStart Text)',
+          slug: `temp-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          status: 'draft',
           metadata: JSON.stringify({
-            demo: true,
+            temporary: true,
             source: 'quickstart-text',
+            createdAt: new Date().toISOString(),
           }),
         },
       });
-      documentId = document.id;
-    } else {
-      // Live mode: upload to Gemini Files API, then create document
+
+      // Upload to Gemini Files API
       const geminiFilesClient = getGeminiFilesClient();
       const textBuffer = Buffer.from(limitedText, 'utf-8');
       
@@ -107,21 +112,22 @@ export async function POST(request: NextRequest) {
 
       geminiFileUri = geminiFile.uri;
 
-      // Store document in database
-      // Store both geminiFileUri (for Gemini API) and content (as fallback for direct text analysis)
+      // Store document in database linked to temporary case
+      // When /api/case/create is called with this documentId, it will update caseId to the real case
       const document = await prisma.caseDocument.create({
         data: {
-          caseId: 'pending', // Will be updated when case is created
+          caseId: tempCase.id, // Link to temporary case (will be updated by /api/case/create)
           fileName: 'text-input.txt',
           fileSize: textSize,
           mimeType: 'text/plain',
           status: 'completed',
           geminiFileUri: geminiFile.uri,
-          content: limitedText, // Store text content as fallback (orchestrator can use documentText)
+          content: limitedText, // Store text content as fallback
           metadata: JSON.stringify({
             geminiFileUri: geminiFile.uri,
             geminiFileName: geminiFile.name,
             source: 'quickstart-text',
+            tempCaseId: tempCase.id, // Store temp case ID for potential cleanup
           }),
         },
       });
