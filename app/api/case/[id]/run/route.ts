@@ -15,6 +15,21 @@ import { isDemoMode } from '@/lib/demo-mode';
  * - SSE streaming (if Accept: text/event-stream header)
  * - JSON response (default)
  */
+// GET handler returns helpful error for accidental browser navigation
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  return NextResponse.json(
+    {
+      error: 'Use POST',
+      message: `This endpoint requires POST method. Use POST /api/case/${params.id}/run to run analysis.`,
+      code: 'METHOD_NOT_ALLOWED',
+    },
+    { status: 405 }
+  );
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -28,6 +43,7 @@ export async function POST(
       console.log('[RUN ROUTE] Demo mode: returning instant demo report for', caseId);
       // In demo mode, return success immediately without DB operations
       return NextResponse.json({
+        ok: true,
         success: true,
         mode: 'demo',
         stepsCompleted: 6,
@@ -137,8 +153,9 @@ export async function POST(
       },
     });
 
-    // Return result
+    // Return result with ok: true for success
     return NextResponse.json({
+      ok: result.success,
       success: result.success,
       stepsCompleted: result.stepsCompleted,
       stepsFailed: result.stepsFailed,

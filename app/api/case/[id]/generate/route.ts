@@ -229,6 +229,7 @@ Format the response as markdown with proper headings (## for sections).`;
   });
 
   return NextResponse.json({
+    ok: true,
     caseId,
     status: 'completed',
     message: 'Report generated successfully',

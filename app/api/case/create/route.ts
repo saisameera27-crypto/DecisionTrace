@@ -66,6 +66,18 @@ const createCaseSchema = z.discriminatedUnion('inferMode', [
  * 
  * Returns the created case ID for routing to report generation.
  */
+// GET handler returns helpful error for accidental browser navigation
+export async function GET() {
+  return NextResponse.json(
+    {
+      error: 'Use POST',
+      message: 'This endpoint requires POST method. Use POST /api/case/create to create a case.',
+      code: 'METHOD_NOT_ALLOWED',
+    },
+    { status: 405 }
+  );
+}
+
 export async function POST(request: NextRequest) {
   // Declare variables in function scope so they're accessible in catch block
   // Use getPrismaClient() from @/lib/prisma (consistent with all other API routes)
@@ -261,6 +273,7 @@ export async function POST(request: NextRequest) {
 
     // Success response - return immediately with caseId
     return NextResponse.json({
+      ok: true,
       caseId: newCase.id,
       slug: newCase.slug,
       message: 'Case created successfully. Call /api/case/[id]/generate to generate the report.',

@@ -74,6 +74,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
+      ok: true,
       success: true,
       documentId: document.id,
       geminiFileUri: geminiFile.uri,

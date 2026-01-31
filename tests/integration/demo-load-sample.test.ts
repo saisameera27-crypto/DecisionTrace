@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GET, POST } from '@/app/api/demo/load-sample/route';
+import { POST } from '@/app/api/demo/load-sample/route';
 
 describe('Demo Load Sample - Database Initialization Errors', () => {
   beforeEach(() => {
@@ -149,30 +149,7 @@ describe('Demo Load Sample - Database Initialization Errors', () => {
     vi.restoreAllMocks();
   });
 
-  it('should handle GET request same as POST', async () => {
-    const mockPrismaError = {
-      code: '42P01',
-      message: 'relation "Case" does not exist',
-    };
-
-    const prismaModule = await import('@/lib/prisma');
-    const mockPrisma = {
-      case: {
-        upsert: vi.fn().mockRejectedValue(mockPrismaError),
-      },
-    };
-    vi.spyOn(prismaModule, 'getPrismaClient').mockReturnValue(mockPrisma as any);
-
-    const response = await GET();
-    const data = await response.json();
-
-    expect(response.status).toBe(503);
-    expect(data).toEqual({
-      error: 'DB_NOT_INITIALIZED',
-      message: 'Database tables are not initialized. Run migrations.',
-    });
-
-    vi.restoreAllMocks();
-  });
+  // Note: GET handler removed - state-changing actions should only use POST
+  // This prevents 405 errors and aligns with RESTful best practices
 });
 

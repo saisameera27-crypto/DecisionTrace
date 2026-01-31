@@ -163,8 +163,9 @@ This decision involved launching a new product line in Q2 2024. The decision was
       },
     });
 
-    // Always return 200 with { caseId } when demo seed exists
+    // Always return 200 with { ok: true, caseId } when demo seed exists
     return NextResponse.json({
+      ok: true,
       caseId: demoCase.id,
       slug: demoCase.slug,
       shareSlug: 'demo-sample-case-share',
@@ -208,10 +209,19 @@ This decision involved launching a new product line in Q2 2024. The decision was
   }
 }
 
-export async function GET() {
+// State-changing action: use POST only
+export async function POST() {
   return loadSampleCase();
 }
 
-export async function POST() {
-  return loadSampleCase();
+// GET handler returns helpful error for accidental browser navigation
+export async function GET() {
+  return NextResponse.json(
+    {
+      error: 'Use POST',
+      message: 'This endpoint requires POST method. Use POST /api/demo/load-sample to load the sample case.',
+      code: 'METHOD_NOT_ALLOWED',
+    },
+    { status: 405 }
+  );
 }

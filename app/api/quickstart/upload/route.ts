@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
     // extractedText is always a normal UTF-8 string (never binary garbage)
     return NextResponse.json(
       {
+        ok: true,
         success: true,
         documentId: documentId,
         extractedText: limitedText, // UTF-8 string, never binary
