@@ -203,13 +203,13 @@ export default function CaseReportPage() {
 
   // Tab descriptions mapping
   const tabDescriptions: Record<string, string> = {
-    overview: 'High-level summary of the decision, stakeholders, and context.',
-    evidence: 'Supporting facts and inputs used to reach the decision.',
-    assumptions: 'Assumptions made due to missing or uncertain information.',
-    alternatives: 'Other options considered and why they were not chosen.',
-    risks: 'Risks identified and what could go wrong.',
-    diagram: 'A visual map of how evidence, reasoning, and outcomes connect.',
-    export: 'Download and share this report in a portable format.',
+    overview: 'High-level decision summary and key takeaways.',
+    evidence: 'Extracted facts, signals, and supporting notes from the document.',
+    assumptions: 'Inferred assumptions the decision relies on.',
+    alternatives: 'Plausible options and trade-offs Gemini identified.',
+    risks: 'Potential risks, failure modes, and mitigations.',
+    diagram: 'Decision flow visualized as a Mermaid diagram.',
+    export: 'Download or copy outputs for sharing.',
   };
 
   // Fetch mode status on mount
@@ -387,16 +387,15 @@ export default function CaseReportPage() {
     transition: theme.transition.normal,
   };
 
-  // Tab description style
+  // Tab description style - small, muted text, consistent spacing
   const tabDescriptionStyle: React.CSSProperties = {
-    padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-    fontSize: theme.typography.fontSize.sm,
+    padding: `${theme.spacing.sm} ${theme.spacing.xl}`,
+    fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textTertiary,
     backgroundColor: theme.colors.backgroundSecondary,
     borderBottom: `1px solid ${theme.colors.border}`,
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
+    lineHeight: theme.typography.lineHeight.normal,
+    marginBottom: theme.spacing.md,
   };
 
   // Banner component (reusable)
@@ -738,8 +737,7 @@ export default function CaseReportPage() {
         </nav>
 
         <div data-testid="tab-description" style={tabDescriptionStyle}>
-          <span style={{ fontSize: '0.875rem' }}>ℹ️</span>
-          <span>{tabDescriptions[activeTab] || tabDescriptions.overview}</span>
+          {tabDescriptions[activeTab] || tabDescriptions.overview}
         </div>
 
         <main data-testid="report-content" style={contentStyle}>

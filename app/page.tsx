@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { theme } from '@/styles/theme';
 import { BUILD_STAMP } from '@/lib/build-stamp';
@@ -13,9 +13,17 @@ interface ModeStatus {
 
 export default function Home() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [modeStatus, setModeStatus] = useState<ModeStatus>({ isDemoMode: true, hasApiKey: false, dbConnected: false });
+  const [caseId, setCaseId] = useState<string | null>(null);
+  const [artifactId, setArtifactId] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [modeStatus, setModeStatus] = useState<ModeStatus>({ isDemoMode: true, hasApiKey: false, dbConnected: false });
+  const [isDragging, setIsDragging] = useState(false);
+  const [showDemoTooltip, setShowDemoTooltip] = useState(false);
+  const [showGeminiTooltip, setShowGeminiTooltip] = useState(false);
 
   // Check mode status on mount
   useEffect(() => {
@@ -29,607 +37,550 @@ export default function Home() {
         });
       })
       .catch(() => {
-        // Default to demo mode if check fails
         setModeStatus({ isDemoMode: true, hasApiKey: false, dbConnected: false });
       });
   }, []);
 
-  const loadDemoCase = async () => {
-    setLoading('load-sample');
+  const handleFileSelect = async (file: File) => {
+    if (!file) return;
+
     setError(null);
-    
+    setLoading('upload');
+    setFileName(file.name);
+    setUploadStatus(null);
+
     try {
-      const response = await fetch('/api/demo/load-sample', {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/quickstart/upload', {
         method: 'POST',
+        body: formData,
       });
-      
+
+      const raw = await response.text();
+      if (!raw || raw.trim() === '') {
+        throw new Error(`Empty response from server (${response.status} ${response.statusText})`);
+      }
+
+      let data: any;
+      try {
+        data = JSON.parse(raw);
+      } catch (parseError) {
+        const preview = raw.length > 300 ? raw.substring(0, 300) + '...' : raw;
+        throw new Error(`Invalid JSON response: ${preview}`);
+      }
+
       if (!response.ok) {
-        const data = await response.json();
-        
-        // Check for database initialization error
-        if (data.error === 'DB_NOT_INITIALIZED') {
-          setError('Demo database not initialized. Please redeploy after migrations run.');
-        } else {
-          setError(data.message || 'Failed to load demo case');
+        const errorMessage = data.error || data.message || 'Upload failed';
+        if (data.code === 'DB_NOT_INITIALIZED') {
+          throw new Error('Database tables are not initialized. Please redeploy after migrations run.');
         }
-        setLoading(null);
-        return;
+        if (data.code === 'GEMINI_UPLOAD_FAILED') {
+          throw new Error(`Gemini upload failed: ${errorMessage}`);
+        }
+        if (data.code === 'VALIDATION_ERROR') {
+          throw new Error(`Validation error: ${errorMessage}`);
+        }
+        throw new Error(errorMessage);
       }
-      
-      const data = await response.json();
-      // Navigate to the case page
-      router.push(`/case/${data.caseId}`);
-    } catch (err: any) {
-      // Check if error response contains DB_NOT_INITIALIZED
-      if (err.message && err.message.includes('DB_NOT_INITIALIZED')) {
-        setError('Demo database not initialized. Please redeploy after migrations run.');
-      } else {
-        setError(err.message || 'Failed to load demo case');
-      }
+
+      setCaseId(data.caseId);
+      setArtifactId(data.artifactId);
+      setUploadStatus('File uploaded');
       setLoading(null);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+      setLoading(null);
+      setUploadStatus(null);
+      setCaseId(null);
+      setArtifactId(null);
+      setFileName(null);
     }
   };
 
-  const openReport = async () => {
-    setLoading('open-report');
-    setError(null);
-    
-    try {
-      // First load the demo case
-      const response = await fetch('/api/demo/load-sample', {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        const data = await response.json();
-        
-        // Check for database initialization error
-        if (data.error === 'DB_NOT_INITIALIZED') {
-          setError('Demo database not initialized. Please redeploy after migrations run.');
-        } else {
-          setError(data.message || 'Failed to load demo case');
-        }
-        setLoading(null);
-        return;
-      }
-      
-      const data = await response.json();
-      // Navigate directly to the report page
-      router.push(`/case/${data.caseId}`);
-    } catch (err: any) {
-      if (err.message && err.message.includes('DB_NOT_INITIALIZED')) {
-        setError('Demo database not initialized. Please redeploy after migrations run.');
-      } else {
-        setError(err.message || 'Failed to open report');
-      }
-      setLoading(null);
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
     }
   };
 
-  const openPublicShare = async () => {
-    setLoading('open-share');
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  };
+
+  const handleRunAnalysis = async () => {
+    if (!caseId) return;
+
     setError(null);
-    
+    setLoading('analysis');
+
     try {
-      // First load the demo case
-      const loadResponse = await fetch('/api/demo/load-sample', {
-        method: 'POST',
-      });
-      
-      if (!loadResponse.ok) {
-        const data = await loadResponse.json();
-        
-        // Check for database initialization error
-        if (data.error === 'DB_NOT_INITIALIZED') {
-          setError('Demo database not initialized. Please redeploy after migrations run.');
-          setLoading(null);
-          return;
-        }
-        throw new Error(data.message || 'Failed to load demo case');
-      }
-      
-      const loadData = await loadResponse.json();
-      const caseId = loadData.caseId;
-      
-      // Create share link
-      const shareResponse = await fetch(`/api/case/${caseId}/share`, {
+      const response = await fetch(`/api/case/${caseId}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ expirationDays: 30 }),
       });
-      
-      if (!shareResponse.ok) {
-        const data = await shareResponse.json();
-        throw new Error(data.message || 'Failed to create share link');
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Analysis failed' }));
+        throw new Error(errorData.error || 'Analysis failed');
       }
-      
-      const shareData = await shareResponse.json();
-      const shareSlug = shareData.slug;
-      
-      // Navigate to public share page
-      router.push(`/public/case/${shareSlug}`);
+
+      // Redirect to report page (keep existing report redirect behavior)
+      router.push(`/case/${caseId}`);
     } catch (err: any) {
-      setError(err.message || 'Failed to open public share link');
+      setError(err.message || 'Analysis failed');
       setLoading(null);
     }
   };
 
-  // Theme-based styles
+  const handleLoadDemo = async () => {
+    setError(null);
+    setLoading('demo');
+
+    try {
+      const response = await fetch('/api/demo/load-sample', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Failed to load demo' }));
+        if (errorData.code === 'DB_NOT_INITIALIZED') {
+          throw new Error('Demo database not initialized. Please redeploy after migrations run.');
+        }
+        throw new Error(errorData.error || errorData.message || 'Failed to load demo');
+      }
+
+      const data = await response.json();
+      router.push(`/case/${data.caseId}`);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load demo');
+      setLoading(null);
+    }
+  };
+
+  // Top header bar - fixed at top
+  const topHeaderStyle: React.CSSProperties = {
+    position: 'sticky',
+    top: 0,
+    zIndex: 10,
+    backgroundColor: theme.colors.background,
+    borderBottom: `1px solid ${theme.colors.border}`,
+    padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+    marginBottom: theme.spacing.xl,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  };
+
+  // Container styles - max-w-3xl, centered, clean spacing
   const containerStyle: React.CSSProperties = {
-    padding: theme.spacing.xl,
-    maxWidth: '900px',
+    maxWidth: '768px', // max-w-3xl equivalent
     margin: '0 auto',
+    padding: `0 ${theme.spacing.xl} ${theme.spacing['2xl']} ${theme.spacing.xl}`,
     minHeight: '100vh',
   };
 
-  const titleStyle: React.CSSProperties = {
-    fontSize: theme.typography.fontSize['4xl'],
-    marginBottom: theme.spacing.sm,
-    fontWeight: theme.typography.fontWeight.bold,
+  // Header title style - text-4xl font-semibold
+  const headerTitleStyle: React.CSSProperties = {
+    fontSize: theme.typography.fontSize['4xl'], // text-4xl
+    fontWeight: theme.typography.fontWeight.semibold, // font-semibold
     color: theme.colors.textPrimary,
-    lineHeight: theme.typography.lineHeight.tight,
+    margin: 0,
+    letterSpacing: '-0.025em',
   };
 
-  const subtitleStyle: React.CSSProperties = {
-    fontSize: theme.typography.fontSize.xl,
-    marginBottom: theme.spacing.xl,
-    color: theme.colors.textSecondary,
-    lineHeight: theme.typography.lineHeight.relaxed,
+  // Tiny pill styles - subtle
+  const pillBaseStyle: React.CSSProperties = {
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    borderRadius: theme.borderRadius.full,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: theme.typography.fontWeight.medium,
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   };
+
+  const pillDemoStyle: React.CSSProperties = {
+    ...pillBaseStyle,
+    backgroundColor: theme.colors.backgroundSecondary,
+    color: theme.colors.textSecondary,
+    border: `1px solid ${theme.colors.border}`,
+  };
+
+  const pillLiveStyle: React.CSSProperties = {
+    ...pillBaseStyle,
+    backgroundColor: 'transparent',
+    color: theme.colors.primary,
+    border: `1px solid ${theme.colors.primary}`,
+  };
+
+  const infoIconStyle: React.CSSProperties = {
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    backgroundColor: theme.colors.textTertiary,
+    color: theme.colors.background,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '10px',
+    fontWeight: theme.typography.fontWeight.bold,
+    cursor: 'help',
+    lineHeight: '1',
+  };
+
+  const tooltipStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: 'calc(100% + 4px)',
+    right: 0,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    backgroundColor: theme.colors.textPrimary,
+    color: theme.colors.background,
+    borderRadius: theme.borderRadius.md,
+    fontSize: theme.typography.fontSize.xs,
+    lineHeight: theme.typography.lineHeight.normal,
+    whiteSpace: 'normal',
+    zIndex: 50,
+    boxShadow: theme.colors.shadowLg,
+    maxWidth: '280px',
+    minWidth: '200px',
+  };
+
+  const tooltipContainerStyle: React.CSSProperties = {
+    position: 'relative',
+    display: 'inline-flex',
+    alignItems: 'center',
+  };
+
+  // Card styles - rounded, soft shadow, neutral tones
+  const cardStyle: React.CSSProperties = {
+    backgroundColor: theme.colors.background,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.xl,
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+    marginBottom: theme.spacing.lg,
+  };
+
+  // Upload area with drag-and-drop
+  const uploadAreaStyle: React.CSSProperties = {
+    border: `2px dashed ${isDragging ? theme.colors.primary : theme.colors.border}`,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing['2xl'],
+    textAlign: 'center',
+    cursor: 'pointer',
+    backgroundColor: isDragging ? theme.colors.backgroundSecondary : theme.colors.background,
+    transition: 'all 0.2s',
+    marginBottom: theme.spacing.lg,
+  };
+
+  const primaryButtonStyle: React.CSSProperties = {
+    width: '100%',
+    padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: theme.typography.fontWeight.semibold,
+    color: 'white',
+    backgroundColor: theme.colors.primary,
+    border: 'none',
+    borderRadius: theme.borderRadius.lg,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    outline: 'none',
+  };
+
+  const buttonDisabledStyle: React.CSSProperties = {
+    ...primaryButtonStyle,
+    backgroundColor: theme.colors.textMuted,
+    cursor: 'not-allowed',
+    opacity: 0.6,
+  };
+
+  const statusTextStyle: React.CSSProperties = {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.sm,
+  };
+
+  const statusSuccessStyle: React.CSSProperties = {
+    ...statusTextStyle,
+    color: theme.colors.success,
+  };
+
+  const errorStyle: React.CSSProperties = {
+    padding: theme.spacing.md,
+    backgroundColor: '#fee2e2',
+    border: `1px solid ${theme.colors.error}`,
+    borderRadius: theme.borderRadius.md,
+    color: theme.colors.error,
+    fontSize: theme.typography.fontSize.sm,
+    marginBottom: theme.spacing.lg,
+  };
+
+  const demoLinkStyle: React.CSSProperties = {
+    textAlign: 'center',
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.textTertiary,
+  };
+
+  const demoLinkTextStyle: React.CSSProperties = {
+    color: theme.colors.textTertiary,
+    textDecoration: 'underline',
+    cursor: 'pointer',
+    fontSize: theme.typography.fontSize.xs,
+  };
+
+  const isAnalysisDisabled = !caseId || !artifactId || loading === 'upload' || loading === 'analysis';
 
   return (
-    <div style={containerStyle}>
-      {/* Runtime Mode Banner */}
-      <div 
-        data-testid="runtime-mode-banner"
-        style={{
-          padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-          backgroundColor: theme.colors.background,
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: theme.borderRadius.md,
-          marginBottom: theme.spacing.lg,
-          fontSize: theme.typography.fontSize.xs,
-          color: theme.colors.textSecondary,
-          textAlign: 'center',
-          fontFamily: 'monospace',
-        }}
-      >
-        Mode: <strong>{modeStatus.isDemoMode ? 'demo' : 'live'}</strong> | 
-        Gemini: <strong>{modeStatus.hasApiKey ? 'enabled' : 'disabled'}</strong> | 
-        DB: <strong>{modeStatus.dbConnected ? 'connected' : 'unknown'}</strong>
-      </div>
-      
-      <h1 style={titleStyle}>Decision Trace (Updated UI)</h1>
-      <p style={subtitleStyle}>
-        AI-powered decision analysis using Google Gemini 3
-      </p>
-      
-      {/* New Feature Check Button */}
-      <div style={{ marginBottom: theme.spacing.lg, textAlign: 'center' }}>
-        <button
-          data-testid="new-feature-check"
-          onClick={() => {}}
-          style={{
-            padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-            fontSize: theme.typography.fontSize.base,
-            backgroundColor: theme.colors.primary,
-            color: 'white',
-            border: 'none',
-            borderRadius: theme.borderRadius.lg,
-            cursor: 'pointer',
-            fontWeight: theme.typography.fontWeight.semibold,
-            transition: theme.transition.normal,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.primary;
-          }}
-        >
-          New Feature Check
-        </button>
-      </div>
+    <div data-testid="quickstart-root">
+      {/* Top Header Bar - Logo/Title on left, pills on right */}
+      <header style={topHeaderStyle}>
+        <h1 style={headerTitleStyle}>Decision Trace</h1>
+        <div style={{ display: 'flex', gap: theme.spacing.sm, flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* Demo Mode Pill with Tooltip */}
+          <div style={tooltipContainerStyle}>
+            <span data-testid="mode-pill" style={modeStatus.isDemoMode ? pillDemoStyle : pillLiveStyle}>
+              {modeStatus.isDemoMode ? 'Demo Mode' : 'Live Mode'}
+            </span>
+            <span
+              style={infoIconStyle}
+              onMouseEnter={() => setShowDemoTooltip(true)}
+              onMouseLeave={() => setShowDemoTooltip(false)}
+              onClick={() => setShowDemoTooltip(!showDemoTooltip)}
+              role="button"
+              tabIndex={0}
+              aria-label="Demo mode information"
+            >
+              i
+            </span>
+            {showDemoTooltip && (
+              <div
+                data-testid="demo-explainer"
+                style={tooltipStyle}
+                onMouseEnter={() => setShowDemoTooltip(true)}
+                onMouseLeave={() => setShowDemoTooltip(false)}
+              >
+                {modeStatus.isDemoMode
+                  ? 'Uses sample data when API key is missing.'
+                  : 'Live mode uses Gemini 3 for real-time analysis.'}
+              </div>
+            )}
+          </div>
 
-      {/* Mode Indicator Banner/Card */}
-      <div 
-        data-testid="mode-indicator"
-        style={{
-          padding: `${theme.spacing.md} ${theme.spacing.lg}`,
-          backgroundColor: theme.colors.background,
-          border: `2px solid ${modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success}`,
-          borderRadius: theme.borderRadius.lg,
-          marginBottom: theme.spacing.lg,
-          textAlign: 'center',
-          boxShadow: theme.colors.shadowSm,
-        }}
-      >
-        <strong style={{ 
-          color: modeStatus.isDemoMode ? theme.colors.primary : theme.colors.success,
-          fontSize: theme.typography.fontSize.base,
+          {/* Gemini Status Pill with Tooltip */}
+          <div style={tooltipContainerStyle}>
+            <span data-testid="gemini-pill" style={pillDemoStyle}>
+              Gemini: {modeStatus.hasApiKey ? 'Enabled' : 'Disabled'}
+            </span>
+            <span
+              style={infoIconStyle}
+              onMouseEnter={() => setShowGeminiTooltip(true)}
+              onMouseLeave={() => setShowGeminiTooltip(false)}
+              onClick={() => setShowGeminiTooltip(!showGeminiTooltip)}
+              role="button"
+              tabIndex={0}
+              aria-label="Gemini status information"
+            >
+              i
+            </span>
+            {showGeminiTooltip && (
+              <div
+                data-testid="gemini-explainer"
+                style={tooltipStyle}
+                onMouseEnter={() => setShowGeminiTooltip(true)}
+                onMouseLeave={() => setShowGeminiTooltip(false)}
+              >
+                {modeStatus.hasApiKey
+                  ? 'Gemini 3 is configured. Analysis will use Gemini 3.'
+                  : 'No API key found. Demo report only.'}
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <div style={containerStyle}>
+        {/* Main QuickStart Card */}
+      <div style={cardStyle}>
+        <h2 style={{
+          fontSize: theme.typography.fontSize['2xl'],
           fontWeight: theme.typography.fontWeight.semibold,
-          display: 'block',
+          color: theme.colors.textPrimary,
+          marginBottom: theme.spacing.md,
+          marginTop: 0,
         }}>
-          {modeStatus.isDemoMode ? 'Mode: Demo' : 'Mode: Live (Gemini 3)'}
-        </strong>
-        <p style={{ 
-          margin: `${theme.spacing.sm} 0 0 0`, 
-          color: theme.colors.textSecondary,
-          fontSize: theme.typography.fontSize.sm,
-          lineHeight: theme.typography.lineHeight.normal,
-        }}>
-          {modeStatus.isDemoMode 
-            ? 'No API key required. Runs instantly with demo data.'
-            : 'Uses Gemini 3 to generate reports from your inputs.'}
-        </p>
-      </div>
-
-      {/* Primary Actions Section */}
-      <div style={{
-        padding: theme.spacing.xl,
-        backgroundColor: theme.colors.background,
-        border: `2px solid ${theme.colors.primary}`,
-        borderRadius: theme.borderRadius.xl,
-        marginBottom: theme.spacing.xl,
-        boxShadow: theme.colors.shadowMd,
-      }}>
-        <h2 style={{ 
-          fontSize: theme.typography.fontSize['3xl'], 
-          marginBottom: theme.spacing.md, 
-          color: theme.colors.primary,
-          fontWeight: theme.typography.fontWeight.bold,
-          lineHeight: theme.typography.lineHeight.tight,
-        }}>
-          Get Started
+          Quick Start
         </h2>
-        <p style={{ 
-          marginBottom: theme.spacing.lg, 
-          color: theme.colors.textSecondary, 
-          fontSize: theme.typography.fontSize.base,
+        <p style={{
+          fontSize: theme.typography.fontSize.lg, // text-lg
+          color: theme.colors.textSecondary, // text-neutral-600
+          marginBottom: theme.spacing.xl,
           lineHeight: theme.typography.lineHeight.relaxed,
         }}>
-          Choose how you'd like to explore Decision Trace:
+          Upload a document and run AI analysis to generate a decision trace report.
         </p>
 
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: theme.spacing.md,
-        }}>
-          {/* Button 1: Try Demo */}
+        {/* Error Message */}
+        {error && (
+          <div style={errorStyle}>
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+
+        {/* Step 1: Upload Document */}
+        <div style={{ marginBottom: theme.spacing.xl }}>
+          <label style={{
+            display: 'block',
+            fontSize: theme.typography.fontSize.base,
+            fontWeight: theme.typography.fontWeight.medium,
+            color: theme.colors.textPrimary,
+            marginBottom: theme.spacing.sm,
+          }}>
+            1. Upload Document
+          </label>
+          
+          {/* Drag and Drop Area */}
+          <div
+            style={uploadAreaStyle}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.md,.pdf,.doc,.docx"
+              style={{ display: 'none' }}
+              onChange={handleFileInputChange}
+              data-testid="upload-input"
+            />
+            <div style={{ fontSize: theme.typography.fontSize['3xl'], marginBottom: theme.spacing.sm }}>
+              📄
+            </div>
+            <div style={{
+              fontSize: theme.typography.fontSize.base,
+              color: theme.colors.textPrimary,
+              marginBottom: theme.spacing.xs,
+            }}>
+              {isDragging ? 'Drop file here' : 'Click to upload or drag and drop'}
+            </div>
+            <div style={{
+              fontSize: theme.typography.fontSize.sm,
+              color: theme.colors.textSecondary,
+            }}>
+              Supports: TXT, MD, PDF, DOC, DOCX
+            </div>
+          </div>
+
+          {/* Upload Status */}
+          <div data-testid="upload-status" style={uploadStatus ? statusSuccessStyle : statusTextStyle}>
+            {loading === 'upload' ? (
+              'Uploading...'
+            ) : uploadStatus && fileName ? (
+              <>✓ {uploadStatus}: <strong>{fileName}</strong></>
+            ) : (
+              'No file selected'
+            )}
+          </div>
+        </div>
+
+        {/* Step 2: Run Analysis */}
+        <div>
+          <label style={{
+            display: 'block',
+            fontSize: theme.typography.fontSize.base,
+            fontWeight: theme.typography.fontWeight.medium,
+            color: theme.colors.textPrimary,
+            marginBottom: theme.spacing.sm,
+          }}>
+            2. Run Analysis
+          </label>
+          
           <button
-            data-testid="load-sample-case-button"
-            onClick={loadDemoCase}
-            disabled={loading !== null}
-            style={{
-              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: theme.typography.fontSize.lg,
-              backgroundColor: loading === 'load-sample' ? theme.colors.textMuted : theme.colors.primary,
-              color: 'white',
-              border: 'none',
-              borderRadius: theme.borderRadius.lg,
-              cursor: loading === 'load-sample' ? 'not-allowed' : 'pointer',
-              fontWeight: theme.typography.fontWeight.bold,
-              textAlign: 'left',
-              display: 'flex',
-              alignItems: 'center',
-              gap: theme.spacing.sm,
-              transition: theme.transition.normal,
-            }}
+            onClick={handleRunAnalysis}
+            disabled={isAnalysisDisabled}
+            style={isAnalysisDisabled ? buttonDisabledStyle : primaryButtonStyle}
             onMouseEnter={(e) => {
-              if (loading !== 'load-sample') {
+              if (!isAnalysisDisabled) {
                 e.currentTarget.style.backgroundColor = theme.colors.primaryHover;
               }
             }}
             onMouseLeave={(e) => {
-              if (loading !== 'load-sample') {
+              if (!isAnalysisDisabled) {
                 e.currentTarget.style.backgroundColor = theme.colors.primary;
               }
             }}
-          >
-            {loading === 'load-sample' ? '⏳ Loading...' : '🎯 Try Demo - Load Sample Case'}
-          </button>
-
-          {/* Button 2: Create Your Own Case */}
-          <button
-            data-testid="create-case-button"
-            onClick={() => router.push('/create')}
-            disabled={loading !== null}
-            style={{
-              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: theme.typography.fontSize.lg,
-              backgroundColor: loading ? theme.colors.textMuted : theme.colors.success,
-              color: 'white',
-              border: 'none',
-              borderRadius: theme.borderRadius.lg,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: theme.typography.fontWeight.bold,
-              textAlign: 'left',
-              display: 'flex',
-              alignItems: 'center',
-              gap: theme.spacing.sm,
-              transition: theme.transition.normal,
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#059669';
+            onFocus={(e) => {
+              if (!isAnalysisDisabled) {
+                e.currentTarget.style.outline = `2px solid ${theme.colors.primary}`;
+                e.currentTarget.style.outlineOffset = '2px';
               }
             }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = theme.colors.success;
-              }
+            onBlur={(e) => {
+              e.currentTarget.style.outline = 'none';
             }}
+            data-testid="run-analysis"
           >
-            ✨ Create Your Own Case
+            {loading === 'analysis' ? 'Analyzing...' : 'Run Gemini 3 Analysis'}
           </button>
         </div>
+
+        {/* Demo Mode Link - Only show in demo mode */}
+        {modeStatus.isDemoMode && (
+          <div style={demoLinkStyle}>
+            <span
+              onClick={handleLoadDemo}
+              style={demoLinkTextStyle}
+              data-testid="qs-demo-link"
+            >
+              Load sample case instead
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Demo Quick Actions Section */}
+      {/* Footer */}
       <div style={{
-        padding: theme.spacing.xl,
-        backgroundColor: theme.colors.background,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: theme.borderRadius.xl,
-        marginBottom: theme.spacing.xl,
-        boxShadow: theme.colors.shadowSm,
-      }}>
-        <h3 style={{ 
-          fontSize: theme.typography.fontSize.xl, 
-          marginBottom: theme.spacing.md, 
-          color: theme.colors.textPrimary,
-          fontWeight: theme.typography.fontWeight.semibold,
-        }}>
-          Quick Demo Actions
-        </h3>
-        <p style={{ 
-          marginBottom: theme.spacing.lg, 
-          color: theme.colors.textSecondary, 
-          fontSize: theme.typography.fontSize.sm,
-          lineHeight: theme.typography.lineHeight.relaxed,
-        }}>
-          After loading the sample case, you can:
-        </p>
-
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: theme.spacing.sm,
-        }}>
-          {/* Button 2: Open Report */}
-          <button
-            data-testid="open-report-button"
-            onClick={openReport}
-            disabled={loading !== null}
-            style={{
-              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: theme.typography.fontSize.base,
-              backgroundColor: loading === 'open-report' ? theme.colors.textMuted : theme.colors.success,
-              color: 'white',
-              border: 'none',
-              borderRadius: theme.borderRadius.lg,
-              cursor: loading === 'open-report' ? 'not-allowed' : 'pointer',
-              fontWeight: theme.typography.fontWeight.semibold,
-              textAlign: 'left',
-              display: 'flex',
-              alignItems: 'center',
-              gap: theme.spacing.sm,
-              transition: theme.transition.normal,
-            }}
-            onMouseEnter={(e) => {
-              if (loading !== 'open-report') {
-                e.currentTarget.style.backgroundColor = '#059669';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (loading !== 'open-report') {
-                e.currentTarget.style.backgroundColor = theme.colors.success;
-              }
-            }}
-          >
-            {loading === 'open-report' ? '⏳ Loading...' : '📊 Open Report'}
-          </button>
-
-          {/* Button 3: Open Public Share Link */}
-          <button
-            data-testid="open-public-share-button"
-            onClick={openPublicShare}
-            disabled={loading !== null}
-            style={{
-              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: theme.typography.fontSize.base,
-              backgroundColor: loading === 'open-share' ? theme.colors.textMuted : theme.colors.warning,
-              color: 'white',
-              border: 'none',
-              borderRadius: theme.borderRadius.lg,
-              cursor: loading === 'open-share' ? 'not-allowed' : 'pointer',
-              fontWeight: theme.typography.fontWeight.semibold,
-              textAlign: 'left',
-              display: 'flex',
-              alignItems: 'center',
-              gap: theme.spacing.sm,
-              transition: theme.transition.normal,
-            }}
-            onMouseEnter={(e) => {
-              if (loading !== 'open-share') {
-                e.currentTarget.style.backgroundColor = '#d97706';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (loading !== 'open-share') {
-                e.currentTarget.style.backgroundColor = theme.colors.warning;
-              }
-            }}
-          >
-            {loading === 'open-share' ? '⏳ Loading...' : '🔗 Open Public Share Link'}
-          </button>
-        </div>
-      </div>
-
-      {/* Live Gemini 3 Section (Only shown if API key exists) */}
-      {modeStatus.hasApiKey && (
-        <div style={{
-          padding: theme.spacing.xl,
-          backgroundColor: theme.colors.background,
-          border: `2px solid ${theme.colors.success}`,
-          borderRadius: theme.borderRadius.xl,
-          marginBottom: theme.spacing.xl,
-          boxShadow: theme.colors.shadowMd,
-        }}>
-          <h2 style={{ 
-            fontSize: theme.typography.fontSize['3xl'], 
-            marginBottom: theme.spacing.md, 
-            color: theme.colors.success,
-            fontWeight: theme.typography.fontWeight.bold,
-            lineHeight: theme.typography.lineHeight.tight,
-          }}>
-            🤖 Live Gemini 3
-          </h2>
-          <p style={{ 
-            marginBottom: theme.spacing.lg, 
-            color: theme.colors.textSecondary, 
-            fontSize: theme.typography.fontSize.base,
-            lineHeight: theme.typography.lineHeight.relaxed,
-          }}>
-            Uses Gemini 3 to generate reports from your inputs. Upload your own documents and get live AI analysis results.
-          </p>
-          <button
-            data-testid="run-live-gemini-button"
-            onClick={() => {
-              // For now, show a message that live analysis requires case creation
-              // In a full implementation, this would navigate to case creation/upload
-              alert('Live Gemini 3 analysis requires creating a case and uploading a document. This feature is available when GEMINI_API_KEY is configured.');
-            }}
-            disabled={loading !== null}
-            style={{
-              padding: `${theme.spacing.md} ${theme.spacing.xl}`,
-              fontSize: theme.typography.fontSize.lg,
-              backgroundColor: loading ? theme.colors.textMuted : theme.colors.success,
-              color: 'white',
-              border: 'none',
-              borderRadius: theme.borderRadius.lg,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: theme.typography.fontWeight.bold,
-              textAlign: 'left',
-              display: 'flex',
-              alignItems: 'center',
-              gap: theme.spacing.sm,
-              transition: theme.transition.normal,
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#059669';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = theme.colors.success;
-              }
-            }}
-          >
-            🚀 Run Live Gemini 3 Analysis
-          </button>
-          <p style={{ 
-            marginTop: theme.spacing.md, 
-            color: theme.colors.textTertiary, 
-            fontSize: theme.typography.fontSize.sm,
-            fontStyle: 'italic',
-            lineHeight: theme.typography.lineHeight.normal,
-          }}>
-            Note: Live analysis requires API key and may incur costs. Demo mode is recommended for hackathon judging.
-          </p>
-        </div>
-      )}
-
-      {/* Error Message */}
-      {error && (
-        <div style={{
-          padding: theme.spacing.md,
-          backgroundColor: '#fee2e2',
-          border: `1px solid ${theme.colors.error}`,
-          borderRadius: theme.borderRadius.lg,
-          color: theme.colors.error,
-          marginBottom: theme.spacing.xl,
-        }}>
-          <strong style={{ fontWeight: theme.typography.fontWeight.semibold }}>Error:</strong> {error}
-        </div>
-      )}
-
-      {/* How It Works */}
-      <div style={{ marginTop: theme.spacing['2xl'], marginBottom: theme.spacing.xl }}>
-        <h2 style={{ 
-          fontSize: theme.typography.fontSize['2xl'], 
-          marginBottom: theme.spacing.md,
-          fontWeight: theme.typography.fontWeight.semibold,
-          color: theme.colors.textPrimary,
-        }}>
-          How It Works
-        </h2>
-        <ul style={{ 
-          lineHeight: theme.typography.lineHeight.relaxed, 
-          fontSize: theme.typography.fontSize.base,
-          color: theme.colors.textSecondary,
-          paddingLeft: theme.spacing.lg,
-        }}>
-          <li style={{ marginBottom: theme.spacing.sm }}>1. Upload/enter decision info</li>
-          <li style={{ marginBottom: theme.spacing.sm }}>2. Generate report</li>
-          <li style={{ marginBottom: theme.spacing.sm }}>3. Share/export</li>
-        </ul>
-      </div>
-
-      {/* Features */}
-      <div style={{ marginTop: theme.spacing.xl, marginBottom: theme.spacing.xl }}>
-        <h2 style={{ 
-          fontSize: theme.typography.fontSize['2xl'], 
-          marginBottom: theme.spacing.md,
-          fontWeight: theme.typography.fontWeight.semibold,
-          color: theme.colors.textPrimary,
-        }}>
-          Features
-        </h2>
-        <ul style={{ 
-          lineHeight: theme.typography.lineHeight.relaxed, 
-          fontSize: theme.typography.fontSize.base,
-          color: theme.colors.textSecondary,
-          paddingLeft: theme.spacing.lg,
-        }}>
-          <li style={{ marginBottom: theme.spacing.sm }}>✅ 6-step AI analysis powered by Google Gemini 3</li>
-          <li style={{ marginBottom: theme.spacing.sm }}>✅ Decision extraction and risk assessment</li>
-          <li style={{ marginBottom: theme.spacing.sm }}>✅ Comprehensive reports with visualizations</li>
-          <li style={{ marginBottom: theme.spacing.sm }}>✅ Public share links for collaboration</li>
-          <li style={{ marginBottom: theme.spacing.sm }}>✅ Works in demo mode without API key</li>
-        </ul>
-      </div>
-
-      {/* Powered by Gemini 3 */}
-      <div style={{
-        marginTop: theme.spacing.xl,
-        padding: theme.spacing.md,
-        backgroundColor: theme.colors.background,
-        borderTop: `1px solid ${theme.colors.border}`,
         textAlign: 'center',
         fontSize: theme.typography.fontSize.sm,
         color: theme.colors.textTertiary,
+        marginTop: theme.spacing.xl,
       }}>
         <p style={{ margin: `${theme.spacing.sm} 0` }}>
           Powered by <strong style={{ fontWeight: theme.typography.fontWeight.semibold }}>Google Gemini 3</strong>
         </p>
-        <p style={{ margin: `${theme.spacing.sm} 0` }}>
-          <a 
-            href="https://github.com/saisameera27-crypto/DecisionTrace/blob/main/GEMINI_3_ENFORCEMENT.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: theme.colors.primary, textDecoration: 'none' }}
-          >
-            View Gemini 3 Implementation Docs →
-          </a>
-        </p>
         <p style={{ margin: `${theme.spacing.sm} 0`, fontSize: theme.typography.fontSize.xs }}>
           Build: {BUILD_STAMP}
         </p>
+      </div>
       </div>
     </div>
   );

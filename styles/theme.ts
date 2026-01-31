@@ -6,27 +6,27 @@
  */
 
 export const theme = {
-  // Colors - Light Theme (default)
+  // Colors - Light Theme (default) - Elegant restrained palette
   colors: {
-    // Primary accent
-    primary: '#0066cc',
-    primaryHover: '#0052a3',
-    primaryLight: '#e6f2ff',
+    // Primary accent - dark slate/indigo
+    primary: '#475569', // slate-600
+    primaryHover: '#334155', // slate-700
+    primaryLight: '#f1f5f9', // slate-100
     
-    // Neutral grays
+    // Neutral backgrounds
     background: '#ffffff',
-    backgroundSecondary: '#f9fafb',
-    backgroundTertiary: '#f3f4f6',
+    backgroundSecondary: '#fafafa', // neutral-50
+    backgroundTertiary: '#f5f5f5', // neutral-100
     
-    // Text
-    textPrimary: '#111827',
-    textSecondary: '#4b5563',
-    textTertiary: '#6b7280',
-    textMuted: '#9ca3af',
+    // Text - accessible contrast
+    textPrimary: '#171717', // neutral-900
+    textSecondary: '#525252', // neutral-600
+    textTertiary: '#737373', // neutral-500
+    textMuted: '#a3a3a3', // neutral-400
     
-    // Borders and dividers
-    border: '#e5e7eb',
-    borderLight: '#f3f4f6',
+    // Borders and dividers - subtle neutral
+    border: '#e5e5e5', // neutral-200
+    borderLight: '#f5f5f5', // neutral-100
     
     // Status colors
     success: '#10b981',
