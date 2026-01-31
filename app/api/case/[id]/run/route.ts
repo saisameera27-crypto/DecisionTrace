@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { runOrchestrator, type OrchestratorOptions } from '@/lib/orchestrator';
+import { isDemoMode } from '@/lib/demo-mode';
 
 /**
  * Run Orchestrator API Route
@@ -20,6 +21,31 @@ export async function POST(
 ) {
   try {
     const caseId = params.id;
+    
+    // Demo mode: return deterministic demo report immediately (no DB, no Gemini)
+    const demoModeEnabled = isDemoMode();
+    if (demoModeEnabled && caseId.startsWith('demo-case-')) {
+      console.log('[RUN ROUTE] Demo mode: returning instant demo report for', caseId);
+      // In demo mode, return success immediately without DB operations
+      return NextResponse.json({
+        success: true,
+        mode: 'demo',
+        stepsCompleted: 6,
+        stepsFailed: 0,
+        totalTokens: 0,
+        totalDurationMs: 100,
+        caseId: caseId,
+        steps: [
+          { stepNumber: 1, status: 'completed', errors: [], warnings: [] },
+          { stepNumber: 2, status: 'completed', errors: [], warnings: [] },
+          { stepNumber: 3, status: 'completed', errors: [], warnings: [] },
+          { stepNumber: 4, status: 'completed', errors: [], warnings: [] },
+          { stepNumber: 5, status: 'completed', errors: [], warnings: [] },
+          { stepNumber: 6, status: 'completed', errors: [], warnings: [] },
+        ],
+      }, { status: 200 });
+    }
+    
     const prisma = getPrismaClient();
 
     // Find case with documents
@@ -126,16 +152,20 @@ export async function POST(
       })),
     }, { status: result.success ? 200 : 207 }); // 207 Multi-Status if some steps failed
   } catch (error: any) {
-    console.error('Orchestrator error:', {
+    console.error('[RUN ROUTE] Orchestrator error:', {
       message: error?.message || 'Unknown error',
       code: error?.code || 'UNKNOWN',
+      stack: error?.stack || 'No stack trace',
+      caseId: params?.id || 'unknown',
+      isDemoMode: isDemoMode(),
     });
 
     return NextResponse.json(
       {
         error: 'Internal Server Error',
         code: 'INTERNAL_ERROR',
-        message: error?.message,
+        message: error?.message || 'Failed to run analysis',
+        ...(process.env.NODE_ENV === 'development' && { stack: error?.stack }),
       },
       { status: 500 }
     );

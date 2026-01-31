@@ -18,7 +18,10 @@ export default function Home() {
   const [caseId, setCaseId] = useState<string | null>(null);
   const [artifactId, setArtifactId] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -44,6 +47,11 @@ export default function Home() {
   const handleFileSelect = async (file: File) => {
     if (!file) return;
 
+    // Prevent double-clicking: if already uploading, ignore
+    if (loading === 'upload') {
+      return;
+    }
+
     setError(null);
     setLoading('upload');
     setFileName(file.name);
@@ -58,41 +66,67 @@ export default function Home() {
         body: formData,
       });
 
-      const raw = await response.text();
-      if (!raw || raw.trim() === '') {
-        throw new Error(`Empty response from server (${response.status} ${response.statusText})`);
-      }
-
+      // Safely read response body: try JSON first, fall back to text
+      // Note: Response body can only be read once, so we clone it for fallback
       let data: any;
+      let errorMessage = 'Upload failed';
+
+      // Clone the response so we can read it multiple times if needed
+      const responseClone = response.clone();
+
       try {
-        data = JSON.parse(raw);
-      } catch (parseError) {
-        const preview = raw.length > 300 ? raw.substring(0, 300) + '...' : raw;
-        throw new Error(`Invalid JSON response: ${preview}`);
+        // Try to parse as JSON first (most common case)
+        data = await response.json();
+      } catch (jsonError) {
+        // If JSON parse fails, fall back to text from the cloned response
+        try {
+          const rawText = await responseClone.text();
+          if (rawText && rawText.trim()) {
+            errorMessage = rawText.length > 300 ? rawText.substring(0, 300) + '...' : rawText;
+          } else {
+            errorMessage = `Server returned ${response.status} ${response.statusText}`;
+          }
+        } catch (textError) {
+          // If text() also fails, use status
+          errorMessage = `Server returned ${response.status} ${response.statusText}`;
+        }
+
+        // If response is not ok, throw with the error message
+        if (!response.ok) {
+          throw new Error(errorMessage);
+        }
+
+        // If response is ok but JSON parse failed, this is unexpected
+        throw new Error('Server response was not valid JSON');
       }
 
+      // Handle non-ok responses (we have parsed JSON)
       if (!response.ok) {
-        const errorMessage = data.error || data.message || 'Upload failed';
-        if (data.code === 'DB_NOT_INITIALIZED') {
-          throw new Error('Database tables are not initialized. Please redeploy after migrations run.');
-        }
-        if (data.code === 'GEMINI_UPLOAD_FAILED') {
-          throw new Error(`Gemini upload failed: ${errorMessage}`);
-        }
-        if (data.code === 'VALIDATION_ERROR') {
-          throw new Error(`Validation error: ${errorMessage}`);
-        }
+        errorMessage = data.error || data.message || errorMessage || 'Upload failed';
         throw new Error(errorMessage);
       }
 
-      setCaseId(data.caseId);
-      setArtifactId(data.artifactId);
-      setUploadStatus('File uploaded');
-      setLoading(null);
+      // Handle success response with preview
+      if (data.success) {
+        setFileName(data.filename);
+        setUploadStatus('Uploaded');
+        setUploadPreview(data.preview || null);
+        setUploadedFile(file); // Store file for case creation
+        // Store demo mode status from server response
+        setIsDemoMode(data.mode === 'demo');
+        // Note: We don't set caseId/artifactId here since upload doesn't create them
+        setLoading(null);
+      } else {
+        throw new Error('Upload succeeded but response format was unexpected');
+      }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      // Show the actual error message from the server
+      const displayError = err.message || 'An error occurred';
+      setError(displayError);
       setLoading(null);
       setUploadStatus(null);
+      setUploadPreview(null);
+      setUploadedFile(null);
       setCaseId(null);
       setArtifactId(null);
       setFileName(null);
@@ -100,6 +134,10 @@ export default function Home() {
   };
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Prevent double-clicking: if already uploading, ignore
+    if (loading === 'upload') {
+      return;
+    }
     const file = event.target.files?.[0];
     if (file) {
       handleFileSelect(file);
@@ -107,18 +145,31 @@ export default function Home() {
   };
 
   const handleDragOver = (e: React.DragEvent) => {
+    // Prevent interaction when uploading
+    if (loading === 'upload') {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
+    if (loading === 'upload') {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    // Prevent interaction when uploading
+    if (loading === 'upload') {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
@@ -129,27 +180,93 @@ export default function Home() {
     }
   };
 
+  const handleUploadAreaClick = () => {
+    // Prevent clicking when uploading
+    if (loading === 'upload') {
+      return;
+    }
+    fileInputRef.current?.click();
+  };
+
   const handleRunAnalysis = async () => {
-    if (!caseId) return;
+    if (!uploadedFile || !fileName) {
+      setError('Please upload a file first');
+      return;
+    }
 
     setError(null);
     setLoading('analysis');
 
     try {
-      const response = await fetch(`/api/case/${caseId}/run`, {
+      let newCaseId: string;
+
+      // Demo mode: skip DB operations and use deterministic demo case ID
+      if (isDemoMode) {
+        // Generate deterministic demo case ID based on filename
+        const timestamp = Math.floor(Date.now() / 60000) * 60000; // Round to minute
+        const hash = fileName.split('').reduce((acc, char) => {
+          return ((acc << 5) - acc) + char.charCodeAt(0);
+        }, 0);
+        newCaseId = `demo-case-${Math.abs(hash)}-${timestamp}`;
+      } else {
+        // Live mode: normal flow with DB
+        // Step 1: Upload file to get documentId
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', uploadedFile);
+
+        const uploadResponse = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json().catch(() => ({ error: 'File upload failed' }));
+          throw new Error(errorData.error || 'File upload failed');
+        }
+
+        const uploadData = await uploadResponse.json();
+        const documentId = uploadData.documentId;
+
+        if (!documentId) {
+          throw new Error('File upload succeeded but no documentId returned');
+        }
+
+        // Step 2: Create case with documentId
+        const createResponse = await fetch('/api/case/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inferMode: true,
+            documentId: documentId,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json().catch(() => ({ error: 'Failed to create case' }));
+          throw new Error(errorData.error || errorData.message || 'Failed to create case');
+        }
+
+        const createData = await createResponse.json();
+        newCaseId = createData.caseId;
+      }
+
+      // Step 3: Run the analysis (works for both demo and live mode)
+      const runResponse = await fetch(`/api/case/${newCaseId}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Analysis failed' }));
+      if (!runResponse.ok) {
+        const errorData = await runResponse.json().catch(() => ({ error: 'Analysis failed' }));
         throw new Error(errorData.error || 'Analysis failed');
       }
 
       // Redirect to report page (keep existing report redirect behavior)
-      router.push(`/case/${caseId}`);
+      router.push(`/case/${newCaseId}`);
     } catch (err: any) {
       setError(err.message || 'Analysis failed');
       setLoading(null);
@@ -288,13 +405,16 @@ export default function Home() {
   };
 
   // Upload area with drag-and-drop
+  const isUploading = loading === 'upload';
   const uploadAreaStyle: React.CSSProperties = {
     border: `2px dashed ${isDragging ? theme.colors.primary : theme.colors.border}`,
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing['2xl'],
     textAlign: 'center',
-    cursor: 'pointer',
+    cursor: isUploading ? 'not-allowed' : 'pointer',
     backgroundColor: isDragging ? theme.colors.backgroundSecondary : theme.colors.background,
+    opacity: isUploading ? 0.6 : 1,
+    pointerEvents: isUploading ? 'none' : 'auto',
     transition: 'all 0.2s',
     marginBottom: theme.spacing.lg,
   };
@@ -355,7 +475,8 @@ export default function Home() {
     fontSize: theme.typography.fontSize.xs,
   };
 
-  const isAnalysisDisabled = !caseId || !artifactId || loading === 'upload' || loading === 'analysis';
+  // Enable analysis button when upload is successful (has fileName and uploadStatus)
+  const isAnalysisDisabled = !fileName || !uploadStatus || loading === 'upload' || loading === 'analysis';
 
   return (
     <div data-testid="quickstart-root">
@@ -472,7 +593,7 @@ export default function Home() {
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleUploadAreaClick}
           >
             <input
               ref={fileInputRef}
@@ -490,7 +611,11 @@ export default function Home() {
               color: theme.colors.textPrimary,
               marginBottom: theme.spacing.xs,
             }}>
-              {isDragging ? 'Drop file here' : 'Click to upload or drag and drop'}
+              {loading === 'upload' 
+                ? 'Uploading...' 
+                : isDragging 
+                  ? 'Drop file here' 
+                  : 'Click to upload or drag and drop'}
             </div>
             <div style={{
               fontSize: theme.typography.fontSize.sm,
@@ -510,6 +635,29 @@ export default function Home() {
               'No file selected'
             )}
           </div>
+
+          {/* Upload Preview */}
+          {uploadPreview && (
+            <div style={{
+              marginTop: theme.spacing.sm,
+              padding: theme.spacing.md,
+              backgroundColor: theme.colors.backgroundSecondary,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: theme.borderRadius.md,
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textSecondary,
+              maxHeight: '150px',
+              overflow: 'auto',
+              lineHeight: theme.typography.lineHeight.relaxed,
+            }}>
+              <div style={{ fontWeight: theme.typography.fontWeight.medium, marginBottom: theme.spacing.xs }}>
+                Preview:
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {uploadPreview}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Step 2: Run Analysis */}

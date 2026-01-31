@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { normalizeDecisionData } from '@/lib/report-normalizer';
+import { isDemoMode } from '@/lib/demo-mode';
+import { getDemoReport } from '@/lib/demo-report';
 
 /**
  * Get case report
@@ -15,8 +17,48 @@ export async function GET(
 ) {
   // Wrap entire handler in try/catch
   try {
-    const prisma = getPrismaClient();
     const caseId = params.id;
+
+    // Demo mode: return demo report immediately (no DB, no Gemini)
+    const demoModeEnabled = isDemoMode();
+    if (demoModeEnabled && caseId.startsWith('demo-case-')) {
+      console.log('[REPORT ROUTE] Demo mode: returning demo report for', caseId);
+      try {
+        // Extract filename from caseId or use default
+        // CaseId format: demo-case-{hash}-{timestamp}
+        // We'll use a generic filename for demo reports
+        const demoReport = getDemoReport('uploaded-document.txt');
+        return NextResponse.json({
+          caseId: caseId, // Use the provided caseId
+          report: demoReport.report,
+          decision: demoReport.decision,
+          step1Analysis: {
+            normalizedEntities: { people: [], organizations: [], products: [], dates: [] },
+            extractedClaims: [],
+            contradictions: [],
+            missingInfo: [],
+          },
+          step2Analysis: {
+            inferredDecision: demoReport.decision?.title || 'Demo Decision',
+            decisionType: 'other',
+            decisionOwnerCandidates: [],
+            decisionCriteria: [],
+            confidence: { score: 0.8, reasons: ['Demo mode analysis'] },
+          },
+          step6Analysis: null,
+        });
+      } catch (demoError: any) {
+        console.error('[REPORT ROUTE] Demo mode error:', {
+          message: demoError?.message || 'Unknown error',
+          stack: demoError?.stack || 'No stack trace',
+          caseId,
+        });
+        // Fall through to regular error handling
+        throw demoError;
+      }
+    }
+
+    const prisma = getPrismaClient();
 
     // Check if in test/mock mode
     const isTestMode = process.env.NODE_ENV === 'test' || process.env.CI === 'true';
@@ -121,9 +163,18 @@ export async function GET(
     });
   } catch (error: any) {
     // On error, return structured JSON response
-    console.error('Error loading case report:', error);
+    console.error('[REPORT ROUTE] Error loading case report:', {
+      message: error?.message || 'Unknown error',
+      stack: error?.stack || 'No stack trace',
+      caseId: params?.id || 'unknown',
+      isDemoMode: isDemoMode(),
+    });
     return NextResponse.json(
-      { code: 'REPORT_LOAD_FAILED', message: String(error) },
+      { 
+        code: 'REPORT_LOAD_FAILED', 
+        message: error?.message || String(error) || 'Failed to load report',
+        ...(process.env.NODE_ENV === 'development' && { stack: error?.stack }),
+      },
       { status: 500 }
     );
   }
