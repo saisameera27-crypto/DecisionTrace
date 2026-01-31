@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Text is required',
-          code: 'MISSING_TEXT',
+          code: 'VALIDATION_ERROR',
         },
         { status: 400 }
       );
@@ -43,9 +43,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Text cannot be empty',
-          code: 'EMPTY_TEXT',
+          code: 'VALIDATION_ERROR',
         },
-        { status: 422 }
+        { status: 400 }
       );
     }
 
@@ -58,10 +58,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: `Text exceeds 5000 words (${wordCount} words). Please reduce to 5000 words or less.`,
-          code: 'WORD_LIMIT_EXCEEDED',
+          code: 'VALIDATION_ERROR',
           limit: 5000,
         },
-        { status: 422 }
+        { status: 400 }
       );
     }
 
@@ -160,8 +160,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'Text processing failed',
-        code: 'PROCESSING_FAILED',
+        error: error?.message || 'Text processing failed',
+        code: 'SERVER_ERROR',
       },
       { status: 500 }
     );

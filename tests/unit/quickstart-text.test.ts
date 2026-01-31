@@ -90,31 +90,31 @@ describe('QuickStart Text API Route', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.code).toBe('MISSING_TEXT');
+      expect(data.code).toBe('VALIDATION_ERROR');
       expect(data.error).toBe('Text is required');
     });
 
-    it('should return 422 if text is empty string', async () => {
+    it('should return 400 if text is empty string', async () => {
       const request = createTextRequest('');
 
       const response = await POST(request);
       const data = await response.json();
 
-      expect(response.status).toBe(422);
-      expect(data.code).toBe('EMPTY_TEXT');
+      expect(response.status).toBe(400);
+      expect(data.code).toBe('VALIDATION_ERROR');
     });
 
-    it('should return 422 if text is only whitespace', async () => {
+    it('should return 400 if text is only whitespace', async () => {
       const request = createTextRequest('   \n\n  ');
 
       const response = await POST(request);
       const data = await response.json();
 
-      expect(response.status).toBe(422);
-      expect(data.code).toBe('EMPTY_TEXT');
+      expect(response.status).toBe(400);
+      expect(data.code).toBe('VALIDATION_ERROR');
     });
 
-    it('should return 422 if text exceeds 5000 words', async () => {
+    it('should return 400 if text exceeds 5000 words', async () => {
       // Create text with 5001 words
       const longText = Array(5001).fill('word').join(' ');
       const request = createTextRequest(longText);
@@ -122,8 +122,8 @@ describe('QuickStart Text API Route', () => {
       const response = await POST(request);
       const data = await response.json();
 
-      expect(response.status).toBe(422);
-      expect(data.code).toBe('WORD_LIMIT_EXCEEDED');
+      expect(response.status).toBe(400);
+      expect(data.code).toBe('VALIDATION_ERROR');
       expect(data.limit).toBe(5000);
       expect(data.error).toContain('exceeds 5000 words');
     });

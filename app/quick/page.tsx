@@ -18,6 +18,8 @@ export default function QuickStartPage() {
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [qsSavedOk, setQsSavedOk] = useState(false);
+  const [qsSaveErr, setQsSaveErr] = useState<string | null>(null);
 
   // Count words in text input (split on whitespace)
   const wordCount = textInput.trim().split(/\s+/).filter(word => word.length > 0).length;
@@ -29,6 +31,9 @@ export default function QuickStartPage() {
   const handleSaveText = async () => {
     if (!isTextValid) return;
 
+    // Reset save status before calling fetch
+    setQsSavedOk(false);
+    setQsSaveErr(null);
     setError(null);
     setLoading('upload');
     setFileName('text-input.txt');
@@ -46,7 +51,9 @@ export default function QuickStartPage() {
 
       const raw = await response.text();
       if (!raw || raw.trim() === '') {
-        throw new Error(`Empty response from server (${response.status} ${response.statusText})`);
+        const errMsg = `${response.status} ${response.statusText} Empty response`;
+        setQsSaveErr(errMsg);
+        throw new Error(errMsg);
       }
 
       let data: any;
@@ -54,30 +61,19 @@ export default function QuickStartPage() {
         data = JSON.parse(raw);
       } catch (parseError) {
         const preview = raw.length > 300 ? raw.substring(0, 300) + '...' : raw;
-        throw new Error(`Invalid JSON response: ${preview}`);
+        const errMsg = `${response.status} Invalid JSON: ${preview}`;
+        setQsSaveErr(errMsg);
+        throw new Error(errMsg);
       }
 
       if (!response.ok) {
-        const errorMessage = data.error || data.message || 'Text save failed';
-        if (data.code === 'DB_NOT_INITIALIZED') {
-          throw new Error('Database tables are not initialized. Please redeploy after migrations run.');
-        }
-        if (data.code === 'MISSING_TEXT') {
-          throw new Error('Text is required');
-        }
-        if (data.code === 'EMPTY_TEXT') {
-          throw new Error('Text cannot be empty');
-        }
-        if (data.code === 'WORD_LIMIT_EXCEEDED') {
-          throw new Error(`Text exceeds ${data.limit || 5000} words. Please shorten.`);
-        }
-        if (data.code === 'GEMINI_UPLOAD_FAILED') {
-          throw new Error(`Gemini upload failed: ${errorMessage}`);
-        }
-        if (data.code === 'VALIDATION_ERROR') {
-          throw new Error(`Validation error: ${errorMessage}`);
-        }
-        throw new Error(errorMessage);
+        // Parse error response from already-parsed data
+        const status = response.status;
+        const code = data?.code ?? '';
+        const error = data?.error ?? data?.message ?? 'Save failed';
+        const errMsg = `${status} ${code ? code + ' ' : ''}${error}`;
+        setQsSaveErr(errMsg);
+        throw new Error(errMsg);
       }
 
       // Handle success response with required fields
@@ -96,11 +92,18 @@ export default function QuickStartPage() {
         setIsDemoMode(data.mode === 'demo');
         // Note: caseId will be set after case creation in handleRunAnalysis
         setLoading(null);
+        // Set success state for status marker
+        setQsSavedOk(true);
       } else {
-        throw new Error('Text save succeeded but response format was unexpected');
+        const errMsg = 'Text save succeeded but response format was unexpected';
+        setQsSaveErr(errMsg);
+        throw new Error(errMsg);
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const errMsg = err.message || 'An error occurred';
+      setError(errMsg);
+      setQsSaveErr(errMsg);
+      setQsSavedOk(false);
       setLoading(null);
       setUploadStatus(null);
       setUploaded(false);
@@ -331,13 +334,6 @@ export default function QuickStartPage() {
           </div>
         )}
 
-        {/* Text save complete status marker - visible when save succeeded */}
-        {uploaded && documentId && (
-          <div style={statusStyle} data-testid="qs-upload-ok">
-            ✓ Text saved
-          </div>
-        )}
-
         {/* Textarea input */}
         <textarea
           value={textInput}
@@ -433,6 +429,32 @@ export default function QuickStartPage() {
         >
           {loading === 'analysis' ? 'Running Analysis...' : 'Run Gemini 3 Analysis'}
         </button>
+
+        {/* Save status markers - always rendered when state is set */}
+        {qsSavedOk && (
+          <div 
+            style={{
+              ...statusStyle,
+              display: 'block', // Ensure visible
+              visibility: 'visible', // Ensure visible
+            }}
+            data-testid="qs-upload-ok"
+          >
+            Saved
+          </div>
+        )}
+        {qsSaveErr && (
+          <div 
+            style={{
+              ...errorStyle,
+              display: 'block', // Ensure visible
+              visibility: 'visible', // Ensure visible
+            }}
+            data-testid="qs-save-error"
+          >
+            {qsSaveErr}
+          </div>
+        )}
 
         {/* Disabled reason text */}
         {isAnalysisDisabled && (
