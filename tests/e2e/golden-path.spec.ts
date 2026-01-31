@@ -1,17 +1,54 @@
 /**
  * Golden Path E2E Test - Smoke Tests (QuickStart Flow)
- * Tests QuickStart workflow: upload file → run analysis → verify report
+ * Tests QuickStart workflow: submit text → run analysis → verify report
  * Validates user-visible behavior, not backend internals
  */
 
 import { test, expect } from './fixtures';
-import { fileURLToPath } from 'url';
-import { dirname, join, resolve } from 'path';
-import { readFileSync } from 'fs';
 
-// ESM-safe __dirname equivalent
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+// Inline fixture text (no file system access needed)
+const FIXTURE_TEXT = `Hiring Decision Thread - Product Manager Role
+
+From: Sarah Chen <sarah@company.com>
+To: Hiring Team
+Subject: Re: Product Manager Candidate - John Smith
+
+I think we should hire John. He has 5 years of experience and worked at Google.
+
+From: Mike Johnson <mike@company.com>
+To: Hiring Team
+Subject: Re: Product Manager Candidate - John Smith
+
+Wait, I heard he only has 3 years of experience. Also, he worked at Microsoft, not Google.
+
+From: Sarah Chen <sarah@company.com>
+To: Hiring Team
+Subject: Re: Product Manager Candidate - John Smith
+
+Actually, let me check my notes... I might have mixed up the candidates.
+
+From: Lisa Wang <lisa@company.com>
+To: Hiring Team
+Subject: Re: Product Manager Candidate - John Smith
+
+We need to decide by Friday. What's the budget for this role?
+
+From: Mike Johnson <mike@company.com>
+To: Hiring Team
+Subject: Re: Product Manager Candidate - John Smith
+
+Budget is $150k. But we also have another candidate - Maria Garcia - who might be a better fit.
+
+From: Sarah Chen <sarah@company.com>
+To: Hiring Team
+Subject: Re: Product Manager Candidate - John Smith
+
+I haven't reviewed Maria's resume yet. Can someone send it?
+
+Decision needed: Should we hire John Smith or Maria Garcia for the Product Manager role?
+Budget: $150k
+Deadline: Friday
+Missing info: Maria's resume, John's actual work history verification`;
 
 test.describe('Golden Path', () => {
   test('should complete QuickStart workflow and verify report @smoke', async ({ page }) => {
@@ -24,18 +61,14 @@ test.describe('Golden Path', () => {
     // Wait for QuickStart page to be ready (wait for textarea to be visible)
     await expect(page.locator('[data-testid="qs-text"]')).toBeVisible({ timeout: 10000 });
 
-    // Read fixture file and paste into textarea
-    const fixturePath = resolve(__dirname, '../../fixtures/messy-hiring-thread.txt');
-    const fixtureText = readFileSync(fixturePath, 'utf-8');
-    
-    // Type text into textarea
+    // Fill textarea with fixture text
     const textarea = page.locator('[data-testid="qs-text"]');
-    await textarea.fill(fixtureText);
+    await textarea.fill(FIXTURE_TEXT);
     
     // Click save button
     await page.click('[data-testid="qs-save-text"]');
 
-    // Wait for upload complete status marker to appear
+    // Wait for text save complete status marker to appear
     await expect(page.locator('[data-testid="qs-upload-ok"]')).toBeVisible({ timeout: 10000 });
 
     // Wait for run button to become enabled
@@ -47,8 +80,8 @@ test.describe('Golden Path', () => {
       const errorBanner = page.locator('[data-testid="qs-upload-error"]');
       if (await errorBanner.isVisible().catch(() => false)) {
         const errorText = await errorBanner.textContent();
-        console.error('[E2E TEST] Upload failed - Error banner text:', errorText);
-        throw new Error(`Upload failed: ${errorText || 'Unknown error'}. Run button never enabled.`);
+        console.error('[E2E TEST] Text save failed - Error banner text:', errorText);
+        throw new Error(`Text save failed: ${errorText || 'Unknown error'}. Run button never enabled.`);
       }
       // If no error banner, check disabled reason
       const disabledReason = page.locator('[data-testid="qs-run-disabled-reason"]');

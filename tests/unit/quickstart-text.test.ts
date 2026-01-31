@@ -6,9 +6,30 @@
 import { describe, it, expect, beforeEach, vi, beforeAll } from 'vitest';
 import { NextRequest } from 'next/server';
 
+// Mock Prisma client
+const mockPrismaClient = {
+  caseDocument: {
+    create: vi.fn(),
+  },
+};
+
+vi.mock('@/lib/prisma', () => ({
+  getPrismaClient: vi.fn(() => mockPrismaClient),
+}));
+
+// Mock Gemini Files client
+const mockGeminiFilesClient = {
+  uploadFile: vi.fn(),
+};
+
+vi.mock('@/lib/gemini-files', () => ({
+  getGeminiFilesClient: vi.fn(() => mockGeminiFilesClient),
+}));
+
 // Mock demo-mode
+const mockIsDemoMode = vi.fn(() => false);
 vi.mock('@/lib/demo-mode', () => ({
-  isDemoMode: vi.fn(() => false),
+  isDemoMode: () => mockIsDemoMode(),
 }));
 
 // Dynamic import of route handler - will be loaded AFTER mocks are set up
@@ -22,6 +43,23 @@ describe('QuickStart Text API Route', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Set up default mocks
+    mockIsDemoMode.mockReturnValue(false);
+    mockPrismaClient.caseDocument.create.mockResolvedValue({
+      id: 'test-document-id',
+      caseId: 'pending',
+      fileName: 'text-input.txt',
+      fileSize: 100,
+      mimeType: 'text/plain',
+      status: 'completed',
+    });
+    mockGeminiFilesClient.uploadFile.mockResolvedValue({
+      uri: 'gs://gemini-files/test-file',
+      name: 'text-input.txt',
+      mimeType: 'text/plain',
+    });
+    // Set DATABASE_URL for tests
+    process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:./tmp/test.db';
   });
 
   function createTextRequest(text: string): NextRequest {
@@ -52,28 +90,28 @@ describe('QuickStart Text API Route', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.code).toBe('TEXT_MISSING');
+      expect(data.code).toBe('MISSING_TEXT');
       expect(data.error).toBe('Text is required');
     });
 
-    it('should return 400 if text is empty string', async () => {
+    it('should return 422 if text is empty string', async () => {
       const request = createTextRequest('');
 
       const response = await POST(request);
       const data = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(data.code).toBe('TEXT_MISSING');
+      expect(response.status).toBe(422);
+      expect(data.code).toBe('EMPTY_TEXT');
     });
 
-    it('should return 400 if text is only whitespace', async () => {
+    it('should return 422 if text is only whitespace', async () => {
       const request = createTextRequest('   \n\n  ');
 
       const response = await POST(request);
       const data = await response.json();
 
-      expect(response.status).toBe(400);
-      expect(data.code).toBe('TEXT_MISSING');
+      expect(response.status).toBe(422);
+      expect(data.code).toBe('EMPTY_TEXT');
     });
 
     it('should return 422 if text exceeds 5000 words', async () => {
@@ -85,13 +123,24 @@ describe('QuickStart Text API Route', () => {
       const data = await response.json();
 
       expect(response.status).toBe(422);
-      expect(data.code).toBe('VALIDATION_ERROR');
+      expect(data.code).toBe('WORD_LIMIT_EXCEEDED');
+      expect(data.limit).toBe(5000);
       expect(data.error).toContain('exceeds 5000 words');
     });
 
     it('should accept text with exactly 5000 words', async () => {
       const text = Array(5000).fill('word').join(' ');
       const request = createTextRequest(text);
+      
+      // Mock successful document creation
+      mockPrismaClient.caseDocument.create.mockResolvedValue({
+        id: 'test-doc-5000',
+        caseId: 'pending',
+        fileName: 'text-input.txt',
+        fileSize: text.length,
+        mimeType: 'text/plain',
+        status: 'completed',
+      });
 
       const response = await POST(request);
       const data = await response.json();
@@ -106,6 +155,16 @@ describe('QuickStart Text API Route', () => {
     it('should return success response with correct shape', async () => {
       const text = 'This is a test document with some content.';
       const request = createTextRequest(text);
+      
+      // Mock successful document creation
+      mockPrismaClient.caseDocument.create.mockResolvedValue({
+        id: 'test-doc-123',
+        caseId: 'pending',
+        fileName: 'text-input.txt',
+        fileSize: text.length,
+        mimeType: 'text/plain',
+        status: 'completed',
+      });
 
       const response = await POST(request);
       const data = await response.json();
@@ -124,6 +183,15 @@ describe('QuickStart Text API Route', () => {
     it('should limit text to 200k characters', async () => {
       const longText = 'a'.repeat(300_000);
       const request = createTextRequest(longText);
+      
+      mockPrismaClient.caseDocument.create.mockResolvedValue({
+        id: 'test-doc-long',
+        caseId: 'pending',
+        fileName: 'text-input.txt',
+        fileSize: 200_000,
+        mimeType: 'text/plain',
+        status: 'completed',
+      });
 
       const response = await POST(request);
       const data = await response.json();
@@ -135,6 +203,15 @@ describe('QuickStart Text API Route', () => {
     it('should generate preview text (first 2000 characters)', async () => {
       const text = 'a'.repeat(5000);
       const request = createTextRequest(text);
+      
+      mockPrismaClient.caseDocument.create.mockResolvedValue({
+        id: 'test-doc-preview',
+        caseId: 'pending',
+        fileName: 'text-input.txt',
+        fileSize: text.length,
+        mimeType: 'text/plain',
+        status: 'completed',
+      });
 
       const response = await POST(request);
       const data = await response.json();
@@ -149,6 +226,15 @@ describe('QuickStart Text API Route', () => {
     it('should count words correctly', async () => {
       const text = 'This is a test with five words.';
       const request = createTextRequest(text);
+      
+      mockPrismaClient.caseDocument.create.mockResolvedValue({
+        id: 'test-doc-words',
+        caseId: 'pending',
+        fileName: 'text-input.txt',
+        fileSize: text.length,
+        mimeType: 'text/plain',
+        status: 'completed',
+      });
 
       const response = await POST(request);
       const data = await response.json();
@@ -161,6 +247,15 @@ describe('QuickStart Text API Route', () => {
     it('should handle multiple spaces between words', async () => {
       const text = 'word1    word2     word3';
       const request = createTextRequest(text);
+      
+      mockPrismaClient.caseDocument.create.mockResolvedValue({
+        id: 'test-doc-spaces',
+        caseId: 'pending',
+        fileName: 'text-input.txt',
+        fileSize: text.length,
+        mimeType: 'text/plain',
+        status: 'completed',
+      });
 
       const response = await POST(request);
       const data = await response.json();

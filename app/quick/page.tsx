@@ -58,9 +58,18 @@ export default function QuickStartPage() {
       }
 
       if (!response.ok) {
-        const errorMessage = data.error || data.message || 'Upload failed';
+        const errorMessage = data.error || data.message || 'Text save failed';
         if (data.code === 'DB_NOT_INITIALIZED') {
           throw new Error('Database tables are not initialized. Please redeploy after migrations run.');
+        }
+        if (data.code === 'MISSING_TEXT') {
+          throw new Error('Text is required');
+        }
+        if (data.code === 'EMPTY_TEXT') {
+          throw new Error('Text cannot be empty');
+        }
+        if (data.code === 'WORD_LIMIT_EXCEEDED') {
+          throw new Error(`Text exceeds ${data.limit || 5000} words. Please shorten.`);
         }
         if (data.code === 'GEMINI_UPLOAD_FAILED') {
           throw new Error(`Gemini upload failed: ${errorMessage}`);
@@ -76,11 +85,12 @@ export default function QuickStartPage() {
         setFileName(data.filename);
         setUploadStatus('Text saved');
         setDocumentId(data.documentId); // Store documentId from response
+        setArtifactId(data.artifactId || data.documentId); // Store artifactId (alias for compatibility)
         setExtractedText(data.extractedText || null); // Store extracted text
         setUploaded(true); // Mark text save as complete
         // Store demo mode status from server response
         setIsDemoMode(data.mode === 'demo');
-        // Note: We don't set caseId/artifactId here since text submission doesn't create them
+        // Note: caseId will be set after case creation in handleRunAnalysis
         setLoading(null);
       } else {
         throw new Error('Text save succeeded but response format was unexpected');
