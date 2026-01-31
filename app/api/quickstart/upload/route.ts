@@ -29,18 +29,17 @@ export async function POST(request: Request) {
   const isDev = process.env.NODE_ENV !== 'production';
   
   if (isPing || isDev) {
-    // Safe headers conversion (Headers.entries() may not be available in all TS environments)
-    const headersObj: Record<string, string> = {};
-    request.headers.forEach((value, key) => {
-      headersObj[key] = value;
-    });
+    // Read specific headers directly (no iteration needed)
+    const contentType = request.headers.get('content-type') ?? '';
+    const userAgent = request.headers.get('user-agent') ?? '';
     
     console.log('[QUICKSTART UPLOAD DEBUG] POST request received', {
       method: request.method,
       url: request.url,
       isPing,
       isDev,
-      headers: headersObj,
+      contentType,
+      userAgent,
     });
     
     if (isPing) {
