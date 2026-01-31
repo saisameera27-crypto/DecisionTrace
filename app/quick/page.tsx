@@ -81,13 +81,17 @@ export default function QuickStartPage() {
       }
 
       // Handle success response with required fields
-      if (data.success) {
-        setFileName(data.filename);
+      if (data.success || data.ok) {
+        setFileName(data.filename || data.fileName || 'text-input.txt');
         setUploadStatus('Text saved');
-        setDocumentId(data.documentId); // Store documentId from response
-        setArtifactId(data.artifactId || data.documentId); // Store artifactId (alias for compatibility)
+        // Ensure documentId is set (required for status marker and run button)
+        const docId = data.documentId || data.artifactId;
+        if (docId) {
+          setDocumentId(docId);
+          setArtifactId(data.artifactId || docId); // Store artifactId (alias for compatibility)
+        }
         setExtractedText(data.extractedText || null); // Store extracted text
-        setUploaded(true); // Mark text save as complete
+        setUploaded(true); // Mark text save as complete - this enables the status marker
         // Store demo mode status from server response
         setIsDemoMode(data.mode === 'demo');
         // Note: caseId will be set after case creation in handleRunAnalysis
@@ -327,7 +331,7 @@ export default function QuickStartPage() {
           </div>
         )}
 
-        {/* Text save complete status marker */}
+        {/* Text save complete status marker - visible when save succeeded */}
         {uploaded && documentId && (
           <div style={statusStyle} data-testid="qs-upload-ok">
             ✓ Text saved
