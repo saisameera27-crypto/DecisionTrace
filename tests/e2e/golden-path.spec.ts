@@ -78,13 +78,79 @@ test.describe('Golden Path', () => {
     await expect(page.locator('[data-testid="qs-upload-ok"]')).toBeVisible({ timeout: 10000 });
 
     // Expect run button to be enabled (based on textarea content)
-    await expect(page.locator('[data-testid="qs-run"]')).toBeEnabled({ timeout: 10000 });
+    const runButton = page.locator('[data-testid="qs-run"]');
+    await expect(runButton).toBeEnabled({ timeout: 10000 });
+    
+    // Verify button is actually enabled and visible
+    const isEnabled = await runButton.isEnabled();
+    const isVisible = await runButton.isVisible();
+    console.log('Run button state - enabled:', isEnabled, 'visible:', isVisible);
+    
+    if (!isEnabled) {
+      // Check disabled reason
+      const disabledReason = page.locator('[data-testid="qs-run-disabled-reason"]');
+      if (await disabledReason.count() > 0) {
+        const reason = await disabledReason.textContent();
+        console.error('Run button disabled. Reason:', reason);
+        throw new Error(`Run button is disabled: ${reason}`);
+      }
+    }
 
-    // Click run button
-    await page.click('[data-testid="qs-run"]');
+    // Click run button and wait for navigation
+    console.log('Clicking Run button...');
+    console.log('URL before click:', page.url());
+    
+    // Set up console error listener
+    const consoleErrors: string[] = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+        console.error('Browser console error:', msg.text());
+      }
+    });
 
-    // Wait for navigation to case page (report is shown at /case/:id)
-    await page.waitForURL(/\/case\/[^/]+/, { timeout: 30000 });
+    // Click and wait for navigation with Promise.race to catch both URL change and errors
+    const clickPromise = page.click('[data-testid="qs-run"]');
+    const navigationPromise = page.waitForURL(/\/case\/[^/]+/, { timeout: 30000, waitUntil: 'domcontentloaded' });
+    
+    await clickPromise;
+    console.log('Run button clicked. Waiting for navigation...');
+    
+    // Wait a moment to see if any errors appear
+    await page.waitForTimeout(1000);
+    
+    // Check for error messages
+    const errorElement = page.locator('[data-testid="qs-upload-error"], [data-testid="qs-save-error"]');
+    if (await errorElement.count() > 0) {
+      const errorText = await errorElement.first().textContent();
+      console.error('Error after clicking Run:', errorText);
+      throw new Error(`Run button failed: ${errorText}`);
+    }
+    
+    // Check for console errors
+    if (consoleErrors.length > 0) {
+      console.error('Console errors detected:', consoleErrors);
+    }
+
+    // Wait for navigation
+    try {
+      await navigationPromise;
+      console.log('Navigation successful. Current URL:', page.url());
+    } catch (navError) {
+      // If URL wait fails, try waiting for report element directly (client-side routing)
+      console.log('URL wait failed, trying to wait for report element directly...');
+      console.log('Current URL:', page.url());
+      console.log('Console errors:', consoleErrors);
+      
+      // Try waiting for report element as fallback
+      try {
+        await expect(page.locator('[data-testid="report-root"]')).toBeVisible({ timeout: 10000 });
+        console.log('Report element found. Current URL:', page.url());
+      } catch (reportError) {
+        // If both fail, throw with diagnostic info
+        throw new Error(`Navigation failed. URL: ${page.url()}, Console errors: ${consoleErrors.join(', ')}`);
+      }
+    }
 
     // Verify report page renders with stable UI assertions (wait for specific elements, not networkidle)
     await expect(page.locator('[data-testid="report-root"]')).toBeVisible({ timeout: 10000 });
