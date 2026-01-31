@@ -21,6 +21,8 @@ export default function Home() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [uploadMimeType, setUploadMimeType] = useState<string | null>(null);
+  const [showFullPreview, setShowFullPreview] = useState<boolean>(false);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +113,9 @@ export default function Home() {
         setFileName(data.filename);
         setUploadStatus('Uploaded');
         setUploadPreview(data.preview || null);
+        setUploadMimeType(data.mimeType || null);
         setUploadedFile(file); // Store file for case creation
+        setShowFullPreview(false); // Reset preview expansion
         // Store demo mode status from server response
         setIsDemoMode(data.mode === 'demo');
         // Note: We don't set caseId/artifactId here since upload doesn't create them
@@ -126,6 +130,8 @@ export default function Home() {
       setLoading(null);
       setUploadStatus(null);
       setUploadPreview(null);
+      setUploadMimeType(null);
+      setShowFullPreview(false);
       setUploadedFile(null);
       setCaseId(null);
       setArtifactId(null);
@@ -637,27 +643,152 @@ export default function Home() {
           </div>
 
           {/* Upload Preview */}
-          {uploadPreview && (
-            <div style={{
-              marginTop: theme.spacing.sm,
-              padding: theme.spacing.md,
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: theme.borderRadius.md,
-              fontSize: theme.typography.fontSize.xs,
-              color: theme.colors.textSecondary,
-              maxHeight: '150px',
-              overflow: 'auto',
-              lineHeight: theme.typography.lineHeight.relaxed,
-            }}>
-              <div style={{ fontWeight: theme.typography.fontWeight.medium, marginBottom: theme.spacing.xs }}>
-                Preview:
+          {uploadPreview && (() => {
+            // Detect binary garbage: high ratio of non-printable chars or starts with "PK" for DOCX
+            const isBinaryGarbage = (text: string, filename: string | null, mimeType: string | null): boolean => {
+              if (!text || text.length === 0) return false;
+              
+              // Check if starts with "PK" and file is DOCX (ZIP header)
+              if (text.startsWith('PK') && filename?.toLowerCase().endsWith('.docx')) {
+                return true;
+              }
+              
+              // Check ratio of non-printable characters
+              const nonPrintableCount = text.split('').filter(char => {
+                const code = char.charCodeAt(0);
+                // Allow printable ASCII (32-126), tabs (9), newlines (10, 13), and common Unicode
+                return code < 32 && code !== 9 && code !== 10 && code !== 13;
+              }).length;
+              
+              const ratio = nonPrintableCount / text.length;
+              // If more than 10% non-printable chars, consider it binary
+              return ratio > 0.1;
+            };
+
+            const isBinary = isBinaryGarbage(uploadPreview, fileName, uploadMimeType);
+            const previewLength = uploadPreview.length;
+            const previewToShow = showFullPreview ? uploadPreview : uploadPreview.slice(0, 1000);
+            const hasMore = previewLength > 1000;
+
+            // Detect file type from mimeType or filename
+            const getFileType = (mimeType: string | null, filename: string | null): string => {
+              if (mimeType) {
+                if (mimeType.includes('wordprocessingml')) return 'Word Document (.docx)';
+                if (mimeType === 'application/pdf') return 'PDF Document';
+                if (mimeType === 'text/plain') return 'Text File';
+                if (mimeType === 'text/markdown') return 'Markdown File';
+                if (mimeType.startsWith('text/')) return 'Text File';
+              }
+              if (filename) {
+                const ext = filename.split('.').pop()?.toLowerCase();
+                if (ext === 'docx') return 'Word Document (.docx)';
+                if (ext === 'pdf') return 'PDF Document';
+                if (ext === 'txt') return 'Text File';
+                if (ext === 'md') return 'Markdown File';
+              }
+              return 'Unknown Type';
+            };
+
+            if (isBinary) {
+              return (
+                <div
+                  style={{
+                    marginTop: theme.spacing.sm,
+                    padding: theme.spacing.md,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: theme.typography.fontSize.xs,
+                    color: '#dc2626',
+                  }}
+                  data-testid="qs-preview-error"
+                >
+                  <div style={{ fontWeight: theme.typography.fontWeight.medium, marginBottom: theme.spacing.xs }}>
+                    Preview unavailable — extracting text from Word file failed.
+                  </div>
+                  {fileName && (
+                    <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textSecondary, marginTop: theme.spacing.xs }}>
+                      File: {fileName} ({getFileType(uploadMimeType, fileName)})
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            return (
+              <div
+                style={{
+                  marginTop: theme.spacing.sm,
+                  padding: theme.spacing.md,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.borderRadius.md,
+                  fontSize: theme.typography.fontSize.xs,
+                  color: theme.colors.textSecondary,
+                  lineHeight: theme.typography.lineHeight.relaxed,
+                }}
+                data-testid="qs-preview"
+              >
+                {/* File Metadata */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginBottom: theme.spacing.xs,
+                  fontSize: theme.typography.fontSize.xs,
+                }}>
+                  <div style={{ fontWeight: theme.typography.fontWeight.medium }}>
+                    Preview:
+                  </div>
+                  {fileName && (
+                    <div style={{ color: theme.colors.textTertiary || theme.colors.textSecondary }}>
+                      {fileName} • {getFileType(uploadMimeType, fileName)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Preview Content */}
+                <div style={{ 
+                  whiteSpace: 'pre-wrap', 
+                  wordBreak: 'break-word',
+                  maxHeight: showFullPreview ? 'none' : '200px',
+                  overflow: showFullPreview ? 'visible' : 'auto',
+                  marginBottom: hasMore ? theme.spacing.xs : 0,
+                }}>
+                  {previewToShow}
+                  {!showFullPreview && hasMore && '...'}
+                </div>
+
+                {/* Show More/Less Button */}
+                {hasMore && (
+                  <button
+                    onClick={() => setShowFullPreview(!showFullPreview)}
+                    style={{
+                      marginTop: theme.spacing.xs,
+                      padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: theme.borderRadius.sm,
+                      fontSize: theme.typography.fontSize.xs,
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                      e.currentTarget.style.borderColor = theme.colors.textSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.borderColor = theme.colors.border;
+                    }}
+                  >
+                    {showFullPreview ? 'Show less' : 'Show more'}
+                  </button>
+                )}
               </div>
-              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {uploadPreview}
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Step 2: Run Analysis */}
