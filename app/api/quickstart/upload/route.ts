@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/demo-mode';
 import { randomUUID } from 'crypto';
 import { extractTextFromUpload } from '@/lib/quickstart/extract-text';
@@ -15,14 +15,14 @@ export const runtime = 'nodejs';
  * Accepts multipart form-data:
  * - file (required): The document file to upload
  * 
- * Returns JSON 200: { success: true, filename, mimeType, size, preview, extractedText, documentId }
- * Returns JSON 400: { error: "...", code: "VALIDATION_ERROR" } if file missing
- * Returns JSON 422: { error: "Could not extract readable text from this file.", code: "EMPTY_PREVIEW" } if extraction yields empty text
+ * Returns JSON 200: { ok: true, previewText, fileName, mimeType, size, ... }
+ * Returns JSON 422: { error: "...", code: "VALIDATION_ERROR" } if file missing
+ * Returns JSON 422: { error: "...", code: "EXTRACTION_FAILED" } if extraction fails
  * Returns JSON 500: { error: "Document upload failed", code: "UPLOAD_FAILED" } on error
  */
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    // Parse form data safely
+    // Parse form data safely (multipart/form-data)
     const formData = await request.formData();
     const file = formData.get('file');
 
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
           error: 'File upload is required. Please upload a document to analyze.',
           code: 'VALIDATION_ERROR',
         },
-        { status: 400 }
+        { status: 422 }
       );
     }
 
@@ -89,19 +89,25 @@ export async function POST(request: NextRequest) {
     // Check if in demo mode
     const demoMode = isDemoMode();
 
+    // Generate preview text (first 2000 characters)
+    const previewText = limitedText.slice(0, 2000);
+
     // Return success JSON on upload with required fields
     // extractedText is always a normal UTF-8 string (never binary garbage)
     return NextResponse.json(
       {
         ok: true,
+        previewText: previewText, // Required field
+        fileName: filename, // Required field (camelCase)
+        mimeType: mimeType, // Required field
+        size: file.size, // Required field
+        // Additional fields for backward compatibility
         success: true,
         documentId: documentId,
         extractedText: limitedText, // UTF-8 string, never binary
         mode: demoMode ? 'demo' : 'live',
-        filename: filename,
-        mimeType: mimeType,
-        size: file.size,
-        preview: limitedText.slice(0, 2000), // UTF-8 string preview
+        filename: filename, // Keep for backward compatibility
+        preview: previewText, // Keep for backward compatibility
       },
       { status: 200 }
     );
