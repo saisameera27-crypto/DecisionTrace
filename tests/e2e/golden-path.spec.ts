@@ -59,16 +59,15 @@ test.describe('Golden Path', () => {
     await expect(page.locator('h1:has-text("Quick Start")')).toBeVisible({ timeout: 10000 });
     
     // Wait for QuickStart page to be ready (wait for textarea to be visible)
-    await expect(page.locator('[data-testid="qs-text"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-testid="qs-textarea"]')).toBeVisible({ timeout: 10000 });
 
     // Fill textarea with fixture text
-    const textarea = page.locator('[data-testid="qs-text"]');
-    await textarea.fill(FIXTURE_TEXT);
+    await page.fill('[data-testid="qs-textarea"]', FIXTURE_TEXT);
     
-    // Click save button
-    await page.click('[data-testid="qs-save-text"]');
+    // Click save/continue button
+    await page.click('[data-testid="qs-save"]');
 
-    // Wait for text save complete status marker to appear
+    // Wait for save marker to appear
     await expect(page.locator('[data-testid="qs-upload-ok"]')).toBeVisible({ timeout: 10000 });
 
     // Wait for run button to become enabled
@@ -76,6 +75,13 @@ test.describe('Golden Path', () => {
     try {
       await expect(page.locator('[data-testid="qs-run"]')).toBeEnabled({ timeout: 10000 });
     } catch (enableError) {
+      // Check if there's a save error and log it
+      const saveError = page.locator('[data-testid="qs-save-error"]');
+      if (await saveError.isVisible().catch(() => false)) {
+        const errorText = await saveError.textContent();
+        console.error('[E2E TEST] Text save failed - Error text:', errorText);
+        throw new Error(`Text save failed: ${errorText || 'Unknown error'}. Run button never enabled.`);
+      }
       // Check if there's an error banner and log it
       const errorBanner = page.locator('[data-testid="qs-upload-error"]');
       if (await errorBanner.isVisible().catch(() => false)) {

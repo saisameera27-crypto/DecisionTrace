@@ -20,6 +20,8 @@ export default function QuickStartPage() {
   const [error, setError] = useState<string | null>(null);
   const [qsSavedOk, setQsSavedOk] = useState(false);
   const [qsSaveErr, setQsSaveErr] = useState<string | null>(null);
+  const [savedOk, setSavedOk] = useState(false);
+  const [demoLoaded, setDemoLoaded] = useState(false);
 
   // Count words in text input (split on whitespace)
   const wordCount = textInput.trim().split(/\s+/).filter(word => word.length > 0).length;
@@ -34,6 +36,7 @@ export default function QuickStartPage() {
     // Reset save status before calling fetch
     setQsSavedOk(false);
     setQsSaveErr(null);
+    setSavedOk(false);
     setError(null);
     setLoading('upload');
     setFileName('text-input.txt');
@@ -94,6 +97,8 @@ export default function QuickStartPage() {
         setLoading(null);
         // Set success state for status marker
         setQsSavedOk(true);
+        setSavedOk(true); // Backward-compatible marker state
+        setDemoLoaded(false); // Reset demo loaded when text is saved
       } else {
         const errMsg = 'Text save succeeded but response format was unexpected';
         setQsSaveErr(errMsg);
@@ -104,6 +109,8 @@ export default function QuickStartPage() {
       setError(errMsg);
       setQsSaveErr(errMsg);
       setQsSavedOk(false);
+      setSavedOk(false);
+      setDemoLoaded(false);
       setLoading(null);
       setUploadStatus(null);
       setUploaded(false);
@@ -185,6 +192,7 @@ export default function QuickStartPage() {
   const handleLoadDemo = async () => {
     setError(null);
     setLoading('demo');
+    setDemoLoaded(false); // Reset before loading
 
     try {
       const response = await fetch('/api/demo/load-sample', {
@@ -202,11 +210,16 @@ export default function QuickStartPage() {
       const data = await response.json();
       const demoCaseId = data.caseId;
 
+      // Mark demo as loaded (enables run button)
+      setDemoLoaded(true);
+      setSavedOk(false); // Reset savedOk when demo is loaded
+      
       // Redirect to report page
       router.push(`/case/${demoCaseId}`);
     } catch (err: any) {
       setError(err.message || 'Failed to load demo');
       setLoading(null);
+      setDemoLoaded(false);
     }
   };
 
@@ -298,15 +311,16 @@ export default function QuickStartPage() {
     cursor: 'pointer',
   };
 
-  // Enable analysis button if and only if: text submitted (uploaded === true) AND documentId exists
-  const isAnalysisDisabled = !uploaded || !documentId;
+  // Enable analysis button when: text is saved successfully OR demo sample is loaded
+  // Disable Run when no saved text exists
+  const isAnalysisDisabled = !savedOk && !demoLoaded;
   
   // Determine disabled reason for display
   const getDisabledReason = (): string => {
     if (loading === 'upload') return 'Saving text...';
     if (loading === 'analysis') return 'Running analysis...';
-    if (!uploaded) return 'Save text first';
-    if (!documentId) return 'Text save incomplete';
+    if (loading === 'demo') return 'Loading demo...';
+    if (!savedOk && !demoLoaded) return 'Save text first or load demo';
     return '';
   };
 
@@ -328,8 +342,20 @@ export default function QuickStartPage() {
           </div>
         )}
 
+        {/* Status indicator - visible always */}
+        <div 
+          style={{
+            ...statusStyle,
+            display: 'block',
+            visibility: 'visible',
+          }}
+          data-testid="qs-status"
+        >
+          {savedOk ? 'ready' : demoLoaded ? 'ready' : 'not-ready'}
+        </div>
+
         {uploadStatus && fileName && (
-          <div style={statusStyle} data-testid="qs-status">
+          <div style={statusStyle}>
             {uploadStatus}: <span data-testid="qs-file">{fileName}</span>
           </div>
         )}
@@ -353,7 +379,7 @@ export default function QuickStartPage() {
             backgroundColor: loading === 'upload' || loading === 'analysis' ? theme.colors.background : 'white',
             color: theme.colors.textPrimary,
           }}
-          data-testid="qs-text"
+          data-testid="qs-textarea"
         />
 
         {/* Validation message */}
@@ -403,7 +429,7 @@ export default function QuickStartPage() {
               e.currentTarget.style.boxShadow = (buttonStyle.boxShadow as string) || '';
             }
           }}
-          data-testid="qs-save-text"
+          data-testid="qs-save"
         >
           {loading === 'upload' ? 'Saving...' : 'Save Text'}
         </button>
@@ -430,8 +456,8 @@ export default function QuickStartPage() {
           {loading === 'analysis' ? 'Running Analysis...' : 'Run Gemini 3 Analysis'}
         </button>
 
-        {/* Save status markers - always rendered when state is set */}
-        {qsSavedOk && (
+        {/* Backward-compatible marker - rendered when savedOk is true */}
+        {savedOk && (
           <div 
             style={{
               ...statusStyle,
@@ -440,7 +466,7 @@ export default function QuickStartPage() {
             }}
             data-testid="qs-upload-ok"
           >
-            Saved
+            Ready
           </div>
         )}
         {qsSaveErr && (
