@@ -23,6 +23,26 @@ export const runtime = 'nodejs';
  * Returns JSON 500: { error: "Document upload failed", code: "UPLOAD_FAILED" } on error
  */
 export async function POST(request: Request) {
+  // TEMPORARY DEBUG: Remove after verifying route works
+  const url = new URL(request.url);
+  const isPing = url.searchParams.get('ping') === '1';
+  const isDev = process.env.NODE_ENV !== 'production';
+  
+  if (isPing || isDev) {
+    console.log('[QUICKSTART UPLOAD DEBUG] POST request received', {
+      method: request.method,
+      url: request.url,
+      isPing,
+      isDev,
+      headers: Object.fromEntries(request.headers.entries()),
+    });
+    
+    if (isPing) {
+      // Return early for ping test (no formData parsing needed)
+      return NextResponse.json({ ok: true, debug: 'ping-success', method: 'POST' }, { status: 200 });
+    }
+  }
+  
   try {
     // Parse form data safely (multipart/form-data)
     const formData = await request.formData();
