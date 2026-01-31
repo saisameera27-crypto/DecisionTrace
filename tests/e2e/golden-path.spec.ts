@@ -7,6 +7,7 @@
 import { test, expect } from './fixtures';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
+import { readFileSync } from 'fs';
 
 // ESM-safe __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -20,17 +21,19 @@ test.describe('Golden Path', () => {
     // Wait for page title to ensure page is loaded
     await expect(page.locator('h1:has-text("Quick Start")')).toBeVisible({ timeout: 10000 });
     
-    // Wait for QuickStart page to be ready (wait for upload button to be visible)
-    await expect(page.locator('[data-testid="qs-upload"]')).toBeVisible({ timeout: 10000 });
+    // Wait for QuickStart page to be ready (wait for textarea to be visible)
+    await expect(page.locator('[data-testid="qs-text"]')).toBeVisible({ timeout: 10000 });
 
-    // Upload fixture file - set file directly on the hidden file input
-    // The file input is hidden but we can set files on it directly
-    const fileInput = page.locator('input[type="file"]');
-    // Wait for file input to be attached to DOM
-    await expect(fileInput).toBeAttached({ timeout: 5000 });
-    // Resolve to absolute path: from tests/e2e/ go up to project root, then to fixtures/
+    // Read fixture file and paste into textarea
     const fixturePath = resolve(__dirname, '../../fixtures/messy-hiring-thread.txt');
-    await fileInput.setInputFiles(fixturePath);
+    const fixtureText = readFileSync(fixturePath, 'utf-8');
+    
+    // Type text into textarea
+    const textarea = page.locator('[data-testid="qs-text"]');
+    await textarea.fill(fixtureText);
+    
+    // Click save button
+    await page.click('[data-testid="qs-save-text"]');
 
     // Wait for upload complete status marker to appear
     await expect(page.locator('[data-testid="qs-upload-ok"]')).toBeVisible({ timeout: 10000 });

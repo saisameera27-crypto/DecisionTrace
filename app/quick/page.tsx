@@ -6,38 +6,42 @@ import { theme } from '@/styles/theme';
 
 export default function QuickStartPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [caseId, setCaseId] = useState<string | null>(null);
   const [artifactId, setArtifactId] = useState<string | null>(null);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [textInput, setTextInput] = useState<string>('');
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [uploaded, setUploaded] = useState<boolean>(false);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Count words in text input (split on whitespace)
+  const wordCount = textInput.trim().split(/\s+/).filter(word => word.length > 0).length;
+  const maxWords = 5000;
+  const isTextValid = wordCount > 0 && wordCount <= maxWords;
+  const isEmpty = textInput.trim().length === 0;
+  const isTooLong = wordCount > maxWords;
+
+  const handleSaveText = async () => {
+    if (!isTextValid) return;
 
     setError(null);
     setLoading('upload');
-    setFileName(file.name);
+    setFileName('text-input.txt');
     setUploadStatus(null);
 
     try {
-      // Single call to quickstart upload endpoint
-      const formData = new FormData();
-      formData.append('file', file);
-      // title is optional - will be auto-generated if not provided
-
-      const response = await fetch('/api/quickstart/upload', {
+      // Call quickstart text endpoint
+      const response = await fetch('/api/quickstart/text', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: textInput }),
       });
 
       const raw = await response.text();
@@ -70,23 +74,21 @@ export default function QuickStartPage() {
       // Handle success response with required fields
       if (data.success) {
         setFileName(data.filename);
-        setUploadStatus('Uploaded');
-        setUploadedFile(file); // Store file for case creation
+        setUploadStatus('Text saved');
         setDocumentId(data.documentId); // Store documentId from response
         setExtractedText(data.extractedText || null); // Store extracted text
-        setUploaded(true); // Mark upload as complete
+        setUploaded(true); // Mark text save as complete
         // Store demo mode status from server response
         setIsDemoMode(data.mode === 'demo');
-        // Note: We don't set caseId/artifactId here since upload doesn't create them
+        // Note: We don't set caseId/artifactId here since text submission doesn't create them
         setLoading(null);
       } else {
-        throw new Error('Upload succeeded but response format was unexpected');
+        throw new Error('Text save succeeded but response format was unexpected');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setLoading(null);
       setUploadStatus(null);
-      setUploadedFile(null);
       setUploaded(false);
       setDocumentId(null);
       setExtractedText(null);
@@ -97,8 +99,8 @@ export default function QuickStartPage() {
   };
 
   const handleRunAnalysis = async () => {
-    if (!uploadedFile || !fileName) {
-      setError('Please upload a file first');
+    if (!uploaded || !documentId) {
+      setError('Please submit text first');
       return;
     }
 
@@ -110,34 +112,16 @@ export default function QuickStartPage() {
 
       // Demo mode: skip DB operations and use deterministic demo case ID
       if (isDemoMode) {
-        // Generate deterministic demo case ID based on filename
+        // Generate deterministic demo case ID based on text content
         const timestamp = Math.floor(Date.now() / 60000) * 60000; // Round to minute
-        const hash = fileName.split('').reduce((acc, char) => {
+        const hash = textInput.split('').reduce((acc, char) => {
           return ((acc << 5) - acc) + char.charCodeAt(0);
         }, 0);
         newCaseId = `demo-case-${Math.abs(hash)}-${timestamp}`;
       } else {
         // Live mode: normal flow with DB
-        // Step 1: Upload file to get documentId
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', uploadedFile);
-
-        const uploadResponse = await fetch('/api/files/upload', {
-          method: 'POST',
-          body: uploadFormData,
-        });
-
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json().catch(() => ({ error: 'File upload failed' }));
-          throw new Error(errorData.error || 'File upload failed');
-        }
-
-        const uploadData = await uploadResponse.json();
-        const documentId = uploadData.documentId;
-
-        if (!documentId) {
-          throw new Error('File upload succeeded but no documentId returned');
-        }
+        // Step 1: Upload text to get documentId (already done, use existing documentId)
+        // documentId is already set from text submission
 
         // Step 2: Create case with documentId
         const createResponse = await fetch('/api/case/create', {
@@ -297,15 +281,22 @@ export default function QuickStartPage() {
     cursor: 'pointer',
   };
 
-  // Enable analysis button if and only if: upload succeeded (uploaded === true) AND documentId exists
+  // Enable analysis button if and only if: text submitted (uploaded === true) AND documentId exists
   const isAnalysisDisabled = !uploaded || !documentId;
   
   // Determine disabled reason for display
   const getDisabledReason = (): string => {
-    if (loading === 'upload') return 'Uploading...';
+    if (loading === 'upload') return 'Saving text...';
     if (loading === 'analysis') return 'Running analysis...';
-    if (!uploaded) return 'Upload a document first';
-    if (!documentId) return 'Upload incomplete';
+    if (!uploaded) return 'Save text first';
+    if (!documentId) return 'Text save incomplete';
+    return '';
+  };
+
+  // Get validation message for textarea
+  const getValidationMessage = (): string => {
+    if (isEmpty) return 'Paste decision notes to analyze.';
+    if (isTooLong) return 'Max 5000 words. Please shorten.';
     return '';
   };
 
@@ -326,46 +317,85 @@ export default function QuickStartPage() {
           </div>
         )}
 
-        {/* Upload complete status marker */}
+        {/* Text save complete status marker */}
         {uploaded && documentId && (
           <div style={statusStyle} data-testid="qs-upload-ok">
-            ✓ Upload complete
+            ✓ Text saved
           </div>
         )}
 
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".txt,.md,.pdf,.doc,.docx"
-          style={{ display: 'none' }}
-          onChange={handleFileSelect}
+        {/* Textarea input */}
+        <textarea
+          value={textInput}
+          onChange={(e) => setTextInput(e.target.value)}
+          placeholder="Paste decision notes to analyze..."
+          disabled={loading === 'upload' || loading === 'analysis'}
+          style={{
+            width: '100%',
+            minHeight: '200px',
+            padding: theme.spacing.md,
+            fontSize: theme.typography.fontSize.base,
+            fontFamily: theme.typography.fontFamily,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: theme.borderRadius.md,
+            marginBottom: theme.spacing.xs,
+            resize: 'vertical',
+            backgroundColor: loading === 'upload' || loading === 'analysis' ? theme.colors.background : 'white',
+            color: theme.colors.textPrimary,
+          }}
+          data-testid="qs-text"
         />
 
-        {/* Button 1: Upload Document */}
+        {/* Validation message */}
+        {getValidationMessage() && (
+          <div
+            style={{
+              fontSize: theme.typography.fontSize.sm,
+              color: isTooLong ? '#c33' : theme.colors.textSecondary,
+              marginBottom: theme.spacing.xs,
+            }}
+          >
+            {getValidationMessage()}
+          </div>
+        )}
+
+        {/* Word counter */}
+        <div
+          style={{
+            fontSize: theme.typography.fontSize.sm,
+            color: isTooLong ? '#c33' : theme.colors.textSecondary,
+            textAlign: 'right',
+            marginBottom: theme.spacing.md,
+          }}
+          data-testid="qs-wordcount"
+        >
+          {wordCount} / {maxWords} words
+        </div>
+
+        {/* Button 1: Save Text */}
         <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={loading === 'upload' || loading === 'analysis'}
+          onClick={handleSaveText}
+          disabled={!isTextValid || loading === 'upload' || loading === 'analysis'}
           style={
-            loading === 'upload' || loading === 'analysis'
+            !isTextValid || loading === 'upload' || loading === 'analysis'
               ? buttonDisabledStyle
               : buttonStyle
           }
           onMouseEnter={(e) => {
-            if (!loading && loading !== 'upload' && loading !== 'analysis') {
+            if (isTextValid && !loading && loading !== 'upload' && loading !== 'analysis') {
               Object.assign(e.currentTarget.style, buttonHoverStyle);
             }
           }}
           onMouseLeave={(e) => {
-            if (!loading && loading !== 'upload' && loading !== 'analysis') {
+            if (isTextValid && !loading && loading !== 'upload' && loading !== 'analysis') {
               e.currentTarget.style.backgroundColor = buttonStyle.backgroundColor as string;
               e.currentTarget.style.transform = '';
               e.currentTarget.style.boxShadow = (buttonStyle.boxShadow as string) || '';
             }
           }}
-          data-testid="qs-upload"
+          data-testid="qs-save-text"
         >
-          {loading === 'upload' ? 'Uploading...' : 'Upload Document'}
+          {loading === 'upload' ? 'Saving...' : 'Save Text'}
         </button>
 
         {/* Button 2: Run Gemini 3 Analysis */}
