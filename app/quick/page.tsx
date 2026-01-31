@@ -11,7 +11,9 @@ export default function QuickStartPage() {
   const [caseId, setCaseId] = useState<string | null>(null);
   const [artifactId, setArtifactId] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,15 +64,23 @@ export default function QuickStartPage() {
         throw new Error(errorMessage);
       }
 
-      // Store caseId + artifactId + fileName in state
-      setCaseId(data.caseId);
-      setArtifactId(data.artifactId);
-      setUploadStatus('Uploaded');
-      setLoading(null);
+      // Handle success response with preview
+      if (data.success) {
+        setFileName(data.filename);
+        setUploadStatus('Uploaded');
+        setUploadedFile(file); // Store file for case creation
+        // Store demo mode status from server response
+        setIsDemoMode(data.mode === 'demo');
+        // Note: We don't set caseId/artifactId here since upload doesn't create them
+        setLoading(null);
+      } else {
+        throw new Error('Upload succeeded but response format was unexpected');
+      }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
       setLoading(null);
       setUploadStatus(null);
+      setUploadedFile(null);
       setCaseId(null);
       setArtifactId(null);
       setFileName(null);
@@ -78,26 +88,84 @@ export default function QuickStartPage() {
   };
 
   const handleRunAnalysis = async () => {
-    if (!caseId) return;
+    if (!uploadedFile || !fileName) {
+      setError('Please upload a file first');
+      return;
+    }
 
     setError(null);
     setLoading('analysis');
 
     try {
-      const response = await fetch(`/api/case/${caseId}/run`, {
+      let newCaseId: string;
+
+      // Demo mode: skip DB operations and use deterministic demo case ID
+      if (isDemoMode) {
+        // Generate deterministic demo case ID based on filename
+        const timestamp = Math.floor(Date.now() / 60000) * 60000; // Round to minute
+        const hash = fileName.split('').reduce((acc, char) => {
+          return ((acc << 5) - acc) + char.charCodeAt(0);
+        }, 0);
+        newCaseId = `demo-case-${Math.abs(hash)}-${timestamp}`;
+      } else {
+        // Live mode: normal flow with DB
+        // Step 1: Upload file to get documentId
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', uploadedFile);
+
+        const uploadResponse = await fetch('/api/files/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json().catch(() => ({ error: 'File upload failed' }));
+          throw new Error(errorData.error || 'File upload failed');
+        }
+
+        const uploadData = await uploadResponse.json();
+        const documentId = uploadData.documentId;
+
+        if (!documentId) {
+          throw new Error('File upload succeeded but no documentId returned');
+        }
+
+        // Step 2: Create case with documentId
+        const createResponse = await fetch('/api/case/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inferMode: true,
+            documentId: documentId,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json().catch(() => ({ error: 'Failed to create case' }));
+          throw new Error(errorData.error || errorData.message || 'Failed to create case');
+        }
+
+        const createData = await createResponse.json();
+        newCaseId = createData.caseId;
+      }
+
+      // Step 3: Run the analysis (works for both demo and live mode)
+      const runResponse = await fetch(`/api/case/${newCaseId}/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Analysis failed' }));
+      if (!runResponse.ok) {
+        const errorData = await runResponse.json().catch(() => ({ error: 'Analysis failed' }));
         throw new Error(errorData.error || 'Analysis failed');
       }
 
       // Redirect to report page (keep existing report redirect behavior)
-      router.push(`/case/${caseId}`);
+      router.push(`/case/${newCaseId}`);
     } catch (err: any) {
       setError(err.message || 'Analysis failed');
       setLoading(null);
@@ -220,7 +288,8 @@ export default function QuickStartPage() {
     cursor: 'pointer',
   };
 
-  const isAnalysisDisabled = !caseId || !artifactId || loading === 'upload' || loading === 'analysis';
+  // Enable analysis button when upload is successful (has fileName and uploadStatus)
+  const isAnalysisDisabled = !fileName || !uploadStatus || loading === 'upload' || loading === 'analysis';
 
   return (
     <div style={containerStyle}>
