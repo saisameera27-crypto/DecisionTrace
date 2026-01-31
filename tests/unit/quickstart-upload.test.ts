@@ -1,10 +1,10 @@
 /**
  * Unit Tests for QuickStart Upload Route
- * Tests DOCX, PDF, and TXT file extraction
+ * Tests DOCX and TXT/MD file extraction
+ * Note: PDF extraction is not currently supported
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { POST } from '@/app/api/quickstart/upload/route';
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,26 +14,31 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Mock mammoth
+// CRITICAL: Mocks must be declared BEFORE importing the module under test
+// vi.mock() calls are hoisted, but we need to ensure the route module imports the mocked versions
+
+// Mock mammoth - extractRawText returns { value: string, messages: [] }
 vi.mock('mammoth', () => ({
   default: {
-    extractRawText: vi.fn(),
+    extractRawText: vi.fn().mockResolvedValue({
+      value: 'Extracted DOCX text',
+      messages: [],
+    }),
   },
 }));
 
-// Mock pdf-parse
-vi.mock('pdf-parse', () => ({
-  default: vi.fn(),
-}));
+// PDF extraction is not currently supported in the upload route
 
 // Mock demo-mode
 vi.mock('@/lib/demo-mode', () => ({
   isDemoMode: vi.fn(() => false),
 }));
 
-// Import after mocks
+// Import mocked modules (these will use the mocks above)
 import mammoth from 'mammoth';
-import pdfParseLib from 'pdf-parse';
+
+// Dynamic import of route module - will be loaded AFTER mocks are set up
+let POST: typeof import('@/app/api/quickstart/upload/route').POST;
 
 /**
  * Load a minimal DOCX fixture file
@@ -83,8 +88,19 @@ async function createUploadRequest(file: File): Promise<NextRequest> {
 }
 
 describe('QuickStart Upload Route - File Extraction', () => {
+  // Dynamically import the route module AFTER all mocks are set up
+  beforeAll(async () => {
+    const routeModule = await import('@/app/api/quickstart/upload/route');
+    POST = routeModule.POST;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset mocks to default return values
+    vi.mocked(mammoth.extractRawText).mockResolvedValue({
+      value: 'Extracted DOCX text',
+      messages: [],
+    });
   });
 
   describe('DOCX Extraction', () => {
@@ -113,8 +129,6 @@ describe('QuickStart Upload Route - File Extraction', () => {
       expect(data.mimeType).toContain('wordprocessingml');
       expect(data.preview).toBe(testContent.slice(0, 2000));
       expect(mammoth.extractRawText).toHaveBeenCalled();
-      
-      vi.mocked(mammoth.extractRawText).mockClear();
     });
 
     it('should detect DOCX by filename extension', async () => {
@@ -134,9 +148,7 @@ describe('QuickStart Upload Route - File Extraction', () => {
       
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(mockMammoth).toHaveBeenCalled(); // Should still use mammoth due to .docx extension
-      
-      mockMammoth.mockRestore();
+      expect(mammoth.extractRawText).toHaveBeenCalled(); // Should still use mammoth due to .docx extension
     });
 
     it('should return 422 if DOCX extraction yields empty text', async () => {
@@ -156,8 +168,6 @@ describe('QuickStart Upload Route - File Extraction', () => {
       expect(response.status).toBe(422);
       expect(data.code).toBe('UNSUPPORTED_PREVIEW');
       expect(data.error).toContain('Could not extract readable text');
-      
-      mockMammoth.mockRestore();
     });
 
     it('should handle DOCX extraction errors gracefully', async () => {
@@ -176,8 +186,6 @@ describe('QuickStart Upload Route - File Extraction', () => {
       expect(response.status).toBe(422);
       expect(data.code).toBe('EXTRACTION_FAILED');
       expect(data.error).toContain('Failed to extract text from DOCX');
-      
-      mockMammoth.mockRestore();
     });
   });
 
@@ -211,58 +219,6 @@ describe('QuickStart Upload Route - File Extraction', () => {
     });
   });
 
-  describe('PDF Extraction', () => {
-    it('should extract text from PDF file using pdf-parse', async () => {
-      // Create a minimal PDF buffer (PDF header + minimal structure)
-      // Real PDFs are complex, so we'll mock pdf-parse for unit tests
-      const pdfBuffer = Buffer.from('%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n>>\nendobj\nxref\n0 0\ntrailer\n<<\n/Root 1 0 R\n>>\n%%EOF');
-      const file = await createTestFile('test.pdf', pdfBuffer, 'application/pdf');
-      
-      const request = await createUploadRequest(file);
-      
-      (pdfParseLib as any).default.mockResolvedValue({
-        text: 'Extracted PDF text content',
-        info: {},
-        metadata: {},
-        version: '1.4',
-        numpages: 1,
-      });
-      
-      const response = await POST(request);
-      const data = await response.json();
-      
-      expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(data.extractedText).toContain('Extracted PDF text');
-      expect((pdfParseLib as any).default).toHaveBeenCalled();
-      
-      vi.mocked((pdfParseLib as any).default).mockClear();
-    });
-
-    it('should return 422 if PDF extraction yields empty text', async () => {
-      const pdfBuffer = Buffer.from('%PDF-1.4\n%%EOF'); // Minimal empty PDF
-      const file = await createTestFile('empty.pdf', pdfBuffer, 'application/pdf');
-      
-      const request = await createUploadRequest(file);
-      
-      (pdfParseLib as any).default.mockResolvedValue({
-        text: '', // Empty text
-        info: {},
-        metadata: {},
-        version: '1.4',
-        numpages: 1,
-      });
-      
-      const response = await POST(request);
-      const data = await response.json();
-      
-      expect(response.status).toBe(422);
-      expect(data.code).toBe('UNSUPPORTED_PREVIEW');
-      expect(data.error).toContain('Could not extract readable text');
-      
-      mockPdfParse.mockRestore();
-    });
-  });
 
   describe('Error Handling', () => {
     it('should return 400 if file is missing', async () => {
