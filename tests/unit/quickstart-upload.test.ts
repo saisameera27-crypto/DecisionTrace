@@ -365,24 +365,12 @@ describe('QuickStart Upload Route Handler', () => {
    * Uses real File objects that implement arrayBuffer() correctly
    */
   function createUploadRequest(file: File): NextRequest {
-    // Store the original File to ensure it has all methods (arrayBuffer, etc.)
-    // Verify it has arrayBuffer() before using it
-    if (typeof file.arrayBuffer !== 'function') {
-      throw new Error('File object does not have arrayBuffer() method');
-    }
+    // Store the original File - Node.js 20+ native File has arrayBuffer()
     const storedFile = file;
     
     // Create FormData with the File
     const formData = new FormData();
     formData.append('file', storedFile);
-    
-    // Verify the File retrieved from FormData has arrayBuffer()
-    const retrievedFile = formData.get('file');
-    if (!(retrievedFile instanceof File) || typeof retrievedFile.arrayBuffer !== 'function') {
-      // If FormData doesn't preserve File methods, create a wrapper
-      // This should not happen in Node 20, but handle it just in case
-      throw new Error('FormData.get() did not return a File with arrayBuffer()');
-    }
     
     // Create NextRequest with FormData body
     const request = new NextRequest('http://localhost:3000/api/quickstart/upload', {

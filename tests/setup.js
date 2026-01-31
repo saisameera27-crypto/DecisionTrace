@@ -7,11 +7,45 @@ import { vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Ensure fetch is available (Node 18+ has native fetch, but we ensure it's available)
-if (typeof globalThis.fetch === 'undefined') {
-  // If fetch is not available, we could use undici or node-fetch
-  // But Node 22+ has native fetch, so this is mainly for compatibility
-  console.warn('⚠️  Fetch not available - Node 18+ required for native fetch');
+// Node.js 20+ has native File, Blob, FormData, Headers, Request, Response
+// These are already available in globalThis, but we ensure they're not overridden
+// Node.js 22+ has native fetch as well
+
+// Verify native Web APIs are available (Node.js 20+)
+if (!globalThis.File) {
+  throw new Error('File is not available - Node.js 20+ required');
+}
+if (!globalThis.Blob) {
+  throw new Error('Blob is not available - Node.js 20+ required');
+}
+if (!globalThis.FormData) {
+  throw new Error('FormData is not available - Node.js 20+ required');
+}
+
+// jsdom environment may override native File, so we ensure Node.js native File is used
+// Store native File before jsdom potentially overrides it
+const NativeFile = globalThis.File;
+const NativeBlob = globalThis.Blob;
+const NativeFormData = globalThis.FormData;
+
+// After jsdom loads, restore native implementations if they were overridden
+// This ensures File.arrayBuffer() works correctly
+if (NativeFile && typeof NativeFile.prototype.arrayBuffer === 'function') {
+  // Restore native File if it has arrayBuffer()
+  globalThis.File = NativeFile;
+  globalThis.Blob = NativeBlob;
+  globalThis.FormData = NativeFormData;
+}
+
+// Ensure fetch is available (Node.js 18+ has native fetch)
+if (!globalThis.fetch) {
+  // Fallback to undici if native fetch is not available
+  try {
+    const { fetch: undiciFetch } = require('undici');
+    globalThis.fetch = undiciFetch;
+  } catch (e) {
+    console.warn('⚠️  Fetch not available - Node.js 18+ required for native fetch');
+  }
 }
 
 // Mock Gemini API by default - tests run without real API key

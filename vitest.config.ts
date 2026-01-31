@@ -11,10 +11,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom', // Use jsdom for React component tests
+    environment: 'node', // Use node environment for unit tests (File.arrayBuffer() support)
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
-    // Override environment for specific test directories
     testTimeout: 10000,
     coverage: {
       provider: 'v8',
@@ -32,7 +31,7 @@ export default defineConfig({
       GEMINI_API_KEY: 'mock-api-key-for-testing',
       NODE_ENV: 'test'
     },
-    // Setup files run before tests
+    // Setup files run before tests - ensures File.arrayBuffer() polyfill is loaded
     setupFiles: ['./tests/setup.js'],
     // Additional setup for UI tests
     setupFilesAfterEnv: ['./tests/ui/setup.ts']
