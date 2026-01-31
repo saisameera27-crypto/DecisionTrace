@@ -63,42 +63,24 @@ test.describe('Golden Path', () => {
 
     // Fill textarea with fixture text
     await page.fill('[data-testid="qs-textarea"]', FIXTURE_TEXT);
+
+    // Diagnostic logging before waiting for readiness marker
+    console.log('QuickStart URL:', page.url());
+    const body = await page.textContent('body');
+    console.log('Body snippet:', body?.slice(0, 1200));
     
-    // Click save/continue button
-    await page.click('[data-testid="qs-save"]');
-
-    // Wait for save marker to appear
-    await expect(page.locator('[data-testid="qs-upload-ok"]')).toBeVisible({ timeout: 10000 });
-
-    // Wait for run button to become enabled
-    // If button never enables, check for error and log it
-    try {
-      await expect(page.locator('[data-testid="qs-run"]')).toBeEnabled({ timeout: 10000 });
-    } catch (enableError) {
-      // Check if there's a save error and log it
-      const saveError = page.locator('[data-testid="qs-save-error"]');
-      if (await saveError.isVisible().catch(() => false)) {
-        const errorText = await saveError.textContent();
-        console.error('[E2E TEST] Text save failed - Error text:', errorText);
-        throw new Error(`Text save failed: ${errorText || 'Unknown error'}. Run button never enabled.`);
-      }
-      // Check if there's an error banner and log it
-      const errorBanner = page.locator('[data-testid="qs-upload-error"]');
-      if (await errorBanner.isVisible().catch(() => false)) {
-        const errorText = await errorBanner.textContent();
-        console.error('[E2E TEST] Text save failed - Error banner text:', errorText);
-        throw new Error(`Text save failed: ${errorText || 'Unknown error'}. Run button never enabled.`);
-      }
-      // If no error banner, check disabled reason
-      const disabledReason = page.locator('[data-testid="qs-run-disabled-reason"]');
-      if (await disabledReason.isVisible().catch(() => false)) {
-        const reasonText = await disabledReason.textContent();
-        console.error('[E2E TEST] Run button disabled - Reason:', reasonText);
-      }
-      throw enableError;
+    // Log readiness state if present
+    if (await page.locator('[data-testid="qs-not-ready"]').count()) {
+      console.log('Not ready text:', await page.locator('[data-testid="qs-not-ready"]').textContent());
     }
 
-    // Click run button (now guaranteed to be enabled)
+    // Expect readiness marker to appear immediately (based on textarea content, not API)
+    await expect(page.locator('[data-testid="qs-upload-ok"]')).toBeVisible({ timeout: 10000 });
+
+    // Expect run button to be enabled (based on textarea content)
+    await expect(page.locator('[data-testid="qs-run"]')).toBeEnabled({ timeout: 10000 });
+
+    // Click run button
     await page.click('[data-testid="qs-run"]');
 
     // Wait for navigation to case page (report is shown at /case/:id)

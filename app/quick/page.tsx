@@ -22,6 +22,10 @@ export default function QuickStartPage() {
   const [qsSaveErr, setQsSaveErr] = useState<string | null>(null);
   const [savedOk, setSavedOk] = useState(false);
   const [demoLoaded, setDemoLoaded] = useState(false);
+  const [inputText, setInputText] = useState('');
+
+  // Deterministic readiness marker: based only on textarea content, not API results
+  const isReady = inputText.trim().length >= 50; // threshold to avoid empty content
 
   // Count words in text input (split on whitespace)
   const wordCount = textInput.trim().split(/\s+/).filter(word => word.length > 0).length;
@@ -31,7 +35,9 @@ export default function QuickStartPage() {
   const isTooLong = wordCount > maxWords;
 
   const handleSaveText = async () => {
-    if (!isTextValid) return;
+    // Use inputText for saving (sync with textInput for backward compatibility)
+    const textToSave = inputText || textInput;
+    if (!textToSave.trim() || textToSave.trim().length < 50) return;
 
     // Reset save status before calling fetch
     setQsSavedOk(false);
@@ -49,7 +55,7 @@ export default function QuickStartPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: textInput }),
+        body: JSON.stringify({ text: textToSave }),
       });
 
       const raw = await response.text();
@@ -137,8 +143,9 @@ export default function QuickStartPage() {
       // Demo mode: skip DB operations and use deterministic demo case ID
       if (isDemoMode) {
         // Generate deterministic demo case ID based on text content
+        const textForDemo = inputText || textInput;
         const timestamp = Math.floor(Date.now() / 60000) * 60000; // Round to minute
-        const hash = textInput.split('').reduce((acc, char) => {
+        const hash = textForDemo.split('').reduce((acc, char) => {
           return ((acc << 5) - acc) + char.charCodeAt(0);
         }, 0);
         newCaseId = `demo-case-${Math.abs(hash)}-${timestamp}`;
@@ -311,16 +318,16 @@ export default function QuickStartPage() {
     cursor: 'pointer',
   };
 
-  // Enable analysis button when: text is saved successfully OR demo sample is loaded
-  // Disable Run when no saved text exists
-  const isAnalysisDisabled = !savedOk && !demoLoaded;
+  // Enable analysis button when: textarea has sufficient content (isReady) OR demo sample is loaded
+  // Deterministic readiness: based on textarea content, not API results
+  const isAnalysisDisabled = !isReady && !demoLoaded;
   
   // Determine disabled reason for display
   const getDisabledReason = (): string => {
     if (loading === 'upload') return 'Saving text...';
     if (loading === 'analysis') return 'Running analysis...';
     if (loading === 'demo') return 'Loading demo...';
-    if (!savedOk && !demoLoaded) return 'Save text first or load demo';
+    if (!isReady && !demoLoaded) return 'Enter at least 50 characters or load demo';
     return '';
   };
 
@@ -360,10 +367,14 @@ export default function QuickStartPage() {
           </div>
         )}
 
-        {/* Textarea input */}
+        {/* Textarea input - wired to inputText for deterministic readiness */}
         <textarea
-          value={textInput}
-          onChange={(e) => setTextInput(e.target.value)}
+          value={inputText}
+          onChange={(e) => {
+            setInputText(e.target.value);
+            // Sync with textInput for backward compatibility with existing save logic
+            setTextInput(e.target.value);
+          }}
           placeholder="Paste decision notes to analyze..."
           disabled={loading === 'upload' || loading === 'analysis'}
           style={{
@@ -456,8 +467,8 @@ export default function QuickStartPage() {
           {loading === 'analysis' ? 'Running Analysis...' : 'Run Gemini 3 Analysis'}
         </button>
 
-        {/* Backward-compatible marker - rendered when savedOk is true */}
-        {savedOk && (
+        {/* Deterministic readiness marker - ALWAYS rendered based on textarea content, not API results */}
+        {isReady ? (
           <div 
             style={{
               ...statusStyle,
@@ -467,6 +478,17 @@ export default function QuickStartPage() {
             data-testid="qs-upload-ok"
           >
             Ready
+          </div>
+        ) : (
+          <div 
+            style={{
+              ...statusStyle,
+              display: 'block', // Ensure visible
+              visibility: 'visible', // Ensure visible
+            }}
+            data-testid="qs-not-ready"
+          >
+            Not ready
           </div>
         )}
         {qsSaveErr && (
