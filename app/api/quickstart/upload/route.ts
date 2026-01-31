@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isDemoMode } from '@/lib/demo-mode';
+import { randomUUID } from 'crypto';
 
 // Force Node.js runtime (required for Buffer operations)
 export const runtime = 'nodejs';
@@ -36,20 +37,25 @@ export async function POST(request: NextRequest) {
 
     // Convert file → text without fancy parsing (for stability)
     const buffer = Buffer.from(await file.arrayBuffer());
-    const text = buffer.toString('utf-8').slice(0, 200_000);
+    const extractedText = buffer.toString('utf-8').slice(0, 200_000);
+
+    // Generate documentId without DB (using crypto.randomUUID)
+    const documentId = randomUUID();
 
     // Check if in demo mode
     const demoMode = isDemoMode();
 
-    // Return success JSON on upload
+    // Return success JSON on upload with required fields
     return NextResponse.json(
       {
         success: true,
+        documentId: documentId,
+        extractedText: extractedText,
         mode: demoMode ? 'demo' : 'live',
         filename: file.name,
         mimeType: file.type || 'text/plain',
         size: file.size,
-        preview: text.slice(0, 2000),
+        preview: extractedText.slice(0, 2000),
       },
       { status: 200 }
     );

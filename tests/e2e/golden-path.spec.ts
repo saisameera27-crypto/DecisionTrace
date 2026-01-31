@@ -32,10 +32,31 @@ test.describe('Golden Path', () => {
     const fixturePath = resolve(__dirname, '../../fixtures/messy-hiring-thread.txt');
     await fileInput.setInputFiles(fixturePath);
 
-    // Wait for upload status to appear
-    await expect(page.locator('[data-testid="qs-status"]')).toContainText('Uploaded', { timeout: 10000 });
+    // Wait for upload complete status marker to appear
+    await expect(page.locator('[data-testid="qs-upload-ok"]')).toBeVisible({ timeout: 10000 });
 
-    // Click run button
+    // Wait for run button to become enabled
+    // If button never enables, check for error and log it
+    try {
+      await expect(page.locator('[data-testid="qs-run"]')).toBeEnabled({ timeout: 10000 });
+    } catch (enableError) {
+      // Check if there's an error banner and log it
+      const errorBanner = page.locator('[data-testid="qs-upload-error"]');
+      if (await errorBanner.isVisible().catch(() => false)) {
+        const errorText = await errorBanner.textContent();
+        console.error('[E2E TEST] Upload failed - Error banner text:', errorText);
+        throw new Error(`Upload failed: ${errorText || 'Unknown error'}. Run button never enabled.`);
+      }
+      // If no error banner, check disabled reason
+      const disabledReason = page.locator('[data-testid="qs-run-disabled-reason"]');
+      if (await disabledReason.isVisible().catch(() => false)) {
+        const reasonText = await disabledReason.textContent();
+        console.error('[E2E TEST] Run button disabled - Reason:', reasonText);
+      }
+      throw enableError;
+    }
+
+    // Click run button (now guaranteed to be enabled)
     await page.click('[data-testid="qs-run"]');
 
     // Wait for navigation to case page (report is shown at /case/:id)

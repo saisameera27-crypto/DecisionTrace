@@ -10,9 +10,12 @@ export default function QuickStartPage() {
   
   const [caseId, setCaseId] = useState<string | null>(null);
   const [artifactId, setArtifactId] = useState<string | null>(null);
+  const [documentId, setDocumentId] = useState<string | null>(null);
+  const [extractedText, setExtractedText] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [uploaded, setUploaded] = useState<boolean>(false);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,11 +67,14 @@ export default function QuickStartPage() {
         throw new Error(errorMessage);
       }
 
-      // Handle success response with preview
+      // Handle success response with required fields
       if (data.success) {
         setFileName(data.filename);
         setUploadStatus('Uploaded');
         setUploadedFile(file); // Store file for case creation
+        setDocumentId(data.documentId); // Store documentId from response
+        setExtractedText(data.extractedText || null); // Store extracted text
+        setUploaded(true); // Mark upload as complete
         // Store demo mode status from server response
         setIsDemoMode(data.mode === 'demo');
         // Note: We don't set caseId/artifactId here since upload doesn't create them
@@ -81,6 +87,9 @@ export default function QuickStartPage() {
       setLoading(null);
       setUploadStatus(null);
       setUploadedFile(null);
+      setUploaded(false);
+      setDocumentId(null);
+      setExtractedText(null);
       setCaseId(null);
       setArtifactId(null);
       setFileName(null);
@@ -288,8 +297,17 @@ export default function QuickStartPage() {
     cursor: 'pointer',
   };
 
-  // Enable analysis button when upload is successful (has fileName and uploadStatus)
-  const isAnalysisDisabled = !fileName || !uploadStatus || loading === 'upload' || loading === 'analysis';
+  // Enable analysis button if and only if: upload succeeded (uploaded === true) AND documentId exists
+  const isAnalysisDisabled = !uploaded || !documentId;
+  
+  // Determine disabled reason for display
+  const getDisabledReason = (): string => {
+    if (loading === 'upload') return 'Uploading...';
+    if (loading === 'analysis') return 'Running analysis...';
+    if (!uploaded) return 'Upload a document first';
+    if (!documentId) return 'Upload incomplete';
+    return '';
+  };
 
   return (
     <div style={containerStyle}>
@@ -297,7 +315,7 @@ export default function QuickStartPage() {
         <h1 style={titleStyle}>Quick Start</h1>
 
         {error && (
-          <div style={errorStyle}>
+          <div style={errorStyle} data-testid="qs-upload-error">
             {error}
           </div>
         )}
@@ -305,6 +323,13 @@ export default function QuickStartPage() {
         {uploadStatus && fileName && (
           <div style={statusStyle} data-testid="qs-status">
             {uploadStatus}: <span data-testid="qs-file">{fileName}</span>
+          </div>
+        )}
+
+        {/* Upload complete status marker */}
+        {uploaded && documentId && (
+          <div style={statusStyle} data-testid="qs-upload-ok">
+            ✓ Upload complete
           </div>
         )}
 
@@ -364,6 +389,21 @@ export default function QuickStartPage() {
         >
           {loading === 'analysis' ? 'Running Analysis...' : 'Run Gemini 3 Analysis'}
         </button>
+
+        {/* Disabled reason text */}
+        {isAnalysisDisabled && (
+          <div 
+            style={{
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textTertiary,
+              textAlign: 'center',
+              marginTop: theme.spacing.xs,
+            }}
+            data-testid="qs-run-disabled-reason"
+          >
+            {getDisabledReason()}
+          </div>
+        )}
 
         {/* Demo link */}
         <div style={demoLinkStyle}>
