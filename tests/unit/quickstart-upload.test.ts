@@ -7,6 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi, beforeAll } from 'vitest';
 import { NextRequest } from 'next/server';
+import { Buffer } from 'node:buffer';
 import { detectFileKind, extractTextFromUpload } from '@/lib/quickstart/extract-text';
 
 // CRITICAL: Mocks must be declared BEFORE importing the route handler module
@@ -341,21 +342,21 @@ describe('QuickStart Upload Route Handler', () => {
   /**
    * Create a real File object using Node 20 Web APIs
    * Ensures File has arrayBuffer() method for route handler
+   * Uses type cast for tests to avoid TypeScript BlobPart errors with Uint8Array
    */
   function createRealFile(
     content: string | Uint8Array,
     filename: string,
     mimeType: string
   ): File {
-    let blob: Blob;
     if (typeof content === 'string') {
+      // For strings, encode to Uint8Array then create File with cast
       const bytes = new TextEncoder().encode(content);
-      blob = new Blob([bytes], { type: mimeType });
+      return new File([bytes as unknown as BlobPart], filename, { type: mimeType });
     } else {
-      blob = new Blob([content], { type: mimeType });
+      // For Uint8Array, create File with cast
+      return new File([content as unknown as BlobPart], filename, { type: mimeType });
     }
-    // Create File from Blob - ensures all File methods (including arrayBuffer) are available
-    return new File([blob], filename, { type: mimeType });
   }
 
   /**
