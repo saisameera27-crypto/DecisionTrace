@@ -132,8 +132,7 @@ export async function POST(request: Request) {
 export async function GET() {
   return NextResponse.json(
     {
-      error: 'Use POST',
-      message: 'This endpoint requires POST method. Use POST /api/quickstart/upload to upload a document.',
+      error: 'Use POST with multipart/form-data',
       code: 'METHOD_NOT_ALLOWED',
     },
     { status: 405 }
