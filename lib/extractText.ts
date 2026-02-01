@@ -10,7 +10,6 @@
  */
 
 import mammoth from "mammoth";
-import pdfParseLib from "pdf-parse";
 
 const SUPPORTED_EXTENSIONS = [".txt", ".md", ".docx", ".pdf"];
 const SUPPORTED_MIMES = [
@@ -78,8 +77,10 @@ export async function extractTextFromUpload(file: File): Promise<ExtractTextResu
         const result = await mammoth.extractRawText({ buffer });
         text = (result.value || "").trim();
       } else if (kind === "pdf") {
-        const pdfData = await (pdfParseLib as (buf: Buffer) => Promise<{ text?: string }>)(buffer);
-        text = (pdfData.text || "").trim();
+        const mod = await import("pdf-parse");
+        const pdfParse = mod.default ?? mod;
+        const pdfData = await pdfParse(buffer);
+        text = (pdfData?.text ?? "").trim();
       } else {
         text = "";
       }

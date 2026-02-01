@@ -4,11 +4,13 @@
  * Does not persist anything; returns the ledger only.
  */
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, type Schema } from "@google/genai";
 import {
   type DecisionLedger,
   DECISION_LEDGER_SCHEMA,
 } from "./decisionLedgerSchema";
+
+const responseSchema = DECISION_LEDGER_SCHEMA as unknown as Schema;
 
 const MODEL_PRIMARY = "gemini-3-pro-preview";
 const MODEL_FALLBACK = "gemini-3-flash-preview";
@@ -38,7 +40,7 @@ async function generateWithModel(
 ): Promise<string> {
   const config: import("@google/genai").GenerateContentConfig = {
     responseMimeType: "application/json",
-    responseSchema: DECISION_LEDGER_SCHEMA as import("@google/genai").Schema,
+    responseSchema,
     systemInstruction: SYSTEM_INSTRUCTION,
   };
   if (signal) (config as { abortSignal?: AbortSignal }).abortSignal = signal;
