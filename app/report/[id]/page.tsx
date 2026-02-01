@@ -130,6 +130,15 @@ function EmptyStateCard({ title, message }: { title: string; message: string }) 
 const TABS = ["Overview", "Decision Flow", "Stakeholders", "Evidence", "Risks", "Assumptions"] as const;
 type Tab = (typeof TABS)[number];
 
+const TAB_DESCRIPTIONS: Record<Tab, string> = {
+  Overview: "Decision summary, confidence, and what would change the outcome.",
+  "Decision Flow": "Step-by-step audit trail showing where AI influenced decisions and which rules applied.",
+  Stakeholders: "RACI accountability: who owned, approved, and was consulted.",
+  Evidence: "Evidence used vs missing, with strength and confidence impact.",
+  Risks: "Risk register with severity, acceptance, and mitigations.",
+  Assumptions: "Key assumptions and validation status that could invalidate the decision.",
+};
+
 function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
     <div
@@ -159,12 +168,12 @@ function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
               data-testid={`report-tab-${t.toLowerCase().replace(" ", "")}`}
               style={{
                 borderRadius: theme.borderRadius.full,
-                border: `1px solid ${isActive ? theme.colors.primary : theme.colors.border}`,
+                border: `1px solid ${isActive ? theme.colors.indigo600 : theme.colors.border}`,
                 padding: `${theme.spacing.xs} ${theme.spacing.md}`,
                 fontSize: theme.typography.fontSize.sm,
                 fontWeight: isActive ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.normal,
-                backgroundColor: isActive ? theme.colors.primary : "transparent",
-                color: isActive ? theme.colors.background : theme.colors.textPrimary,
+                backgroundColor: isActive ? theme.colors.indigo600 : "transparent",
+                color: isActive ? "#ffffff" : theme.colors.textPrimary,
                 cursor: "pointer",
                 boxShadow: isActive ? theme.colors.shadowSm : "none",
               }}
@@ -173,6 +182,17 @@ function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
             </button>
           );
         })}
+      </div>
+      <div
+        style={{
+          marginTop: theme.spacing.xs,
+          fontSize: theme.typography.fontSize.xs,
+          color: theme.colors.textSecondary,
+          lineHeight: 1.4,
+        }}
+        data-testid="report-tab-description"
+      >
+        {TAB_DESCRIPTIONS[tab]}
       </div>
     </div>
   );
@@ -248,94 +268,93 @@ export default function ReportPage() {
   const displayTitle = (ledger?.decision?.outcome?.trim()) || "Decision Trace Report";
   const createdAtFormatted = createdAt ? new Date(createdAt).toLocaleString() : "—";
   const extReport = report as ReportPayload & { openQuestions?: string[]; nextActions?: string[] };
-  const { aiLine, overrideLine } = flowBannerLines(ledger.flow);
+  const { aiLine } = flowBannerLines(ledger.flow);
 
   return (
     <div data-testid="report-content" style={{ maxWidth: MAX_WIDTH_6XL, margin: "0 auto", padding: theme.spacing.xl, display: "flex", flexDirection: "column", gap: theme.spacing.md }}>
       {/* Header */}
-      <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md }}>
-          <div style={{ flex: "1 1 0", minWidth: 0 }}>
-            <h1
-              style={{
-                fontSize: theme.typography.fontSize["2xl"],
-                fontWeight: theme.typography.fontWeight.bold,
-                margin: 0,
-                lineHeight: theme.typography.lineHeight.tight,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-                textWrap: "balance",
-              }}
-            >
-              {displayTitle}
-            </h1>
-            <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
-              Decision Ledger • Gemini 3 • Audit-ready
-            </div>
-            <div
-              style={{
-                marginTop: theme.spacing.sm,
-                fontSize: theme.typography.fontSize.xs,
-                color: theme.colors.textTertiary,
-                fontFamily: "ui-monospace, monospace",
-              }}
-              data-testid="report-analysis-id-debug"
-            >
-              ID <span style={{ letterSpacing: "0.02em" }}>{id}</span>
-              <span style={{ marginLeft: theme.spacing.sm, marginRight: theme.spacing.sm, color: theme.colors.border }}>·</span>
-              Created {createdAtFormatted}
-            </div>
-            <div style={{ marginTop: theme.spacing.xs, display: "flex", flexWrap: "wrap", alignItems: "center", gap: theme.spacing.xs }}>
-              <Pill>File: {meta.filename ?? "—"}</Pill>
-              <Pill>Type: {meta.mimeType ?? "—"}</Pill>
-              {meta.size != null ? <Pill>Size: {meta.size} B</Pill> : null}
-            </div>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md }}>
+        <div style={{ flex: "1 1 0", minWidth: 0 }}>
+          <h1
+            style={{
+              fontSize: theme.typography.fontSize["2xl"],
+              fontWeight: theme.typography.fontWeight.bold,
+              margin: 0,
+              lineHeight: theme.typography.lineHeight.tight,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              textWrap: "balance",
+            }}
+          >
+            {displayTitle}
+          </h1>
+          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
+            {meta.filename?.trim() || "—"} • {createdAtFormatted}
           </div>
+          <details
+            style={{
+              marginTop: theme.spacing.sm,
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textTertiary,
+            }}
+            data-testid="report-details-disclosure"
+          >
+            <summary style={{ cursor: "pointer", listStyle: "none", userSelect: "none" }}>
+              <span style={{ textDecoration: "underline" }}>Details</span>
+            </summary>
+            <div style={{ marginTop: theme.spacing.xs, paddingLeft: 0 }}>
+              <div style={{ fontFamily: "ui-monospace, monospace", letterSpacing: "0.02em" }} data-testid="report-analysis-id-debug">
+                Analysis ID: {id}
+              </div>
+              <div style={{ marginTop: theme.spacing.xs }}>File type: {meta.mimeType ?? "—"}</div>
+              <div style={{ marginTop: theme.spacing.xs }}>File size: {meta.size != null ? `${meta.size} B` : "—"}</div>
+            </div>
+          </details>
+        </div>
 
-          <div style={{ display: "flex", gap: theme.spacing.sm, flexShrink: 0 }}>
-            <button
-              type="button"
-              style={{
-                borderRadius: theme.borderRadius.full,
-                border: `1px solid ${theme.colors.border}`,
-                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                fontSize: theme.typography.fontSize.sm,
-                cursor: "pointer",
-                backgroundColor: theme.colors.background,
-              }}
-              onClick={() => {
-                const payload = { reportId: id, createdAt, meta, ledger };
-                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `decision-trace-${id}.json`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                URL.revokeObjectURL(url);
-              }}
-              data-testid="report-download-json"
-            >
-              Download Audit JSON
-            </button>
-            <Link
-              href="/"
-              style={{
-                borderRadius: theme.borderRadius.full,
-                border: `1px solid ${theme.colors.border}`,
-                padding: `${theme.spacing.sm} ${theme.spacing.md}`,
-                fontSize: theme.typography.fontSize.sm,
-                color: theme.colors.textPrimary,
-                textDecoration: "none",
-              }}
-              data-testid="report-back-to-upload"
-            >
-              Back
-            </Link>
-          </div>
+        <div style={{ display: "flex", gap: theme.spacing.xs, flexShrink: 0, alignItems: "center" }}>
+          <button
+            type="button"
+            style={{
+              borderRadius: theme.borderRadius.full,
+              border: `1px solid ${theme.colors.border}`,
+              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+              fontSize: theme.typography.fontSize.xs,
+              cursor: "pointer",
+              backgroundColor: theme.colors.background,
+            }}
+            onClick={() => {
+              const payload = { reportId: id, createdAt, meta, ledger };
+              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `decision-trace-${id}.json`;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              URL.revokeObjectURL(url);
+            }}
+            data-testid="report-download-json"
+          >
+            Download Audit JSON
+          </button>
+          <Link
+            href="/"
+            style={{
+              borderRadius: theme.borderRadius.full,
+              border: `1px solid ${theme.colors.border}`,
+              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+              fontSize: theme.typography.fontSize.xs,
+              color: theme.colors.textPrimary,
+              textDecoration: "none",
+            }}
+            data-testid="report-back-to-upload"
+          >
+            Back
+          </Link>
         </div>
       </div>
 
@@ -406,7 +425,7 @@ export default function ReportPage() {
                 flexWrap: "wrap",
                 gap: theme.spacing.lg,
                 paddingTop: theme.spacing.sm,
-                borderTop: `1px solid ${theme.colors.border}`,
+                borderTop: `1px solid ${theme.colors.emerald200}`,
                 fontSize: theme.typography.fontSize.xs,
                 color: theme.colors.textSecondary,
               }}
@@ -425,8 +444,8 @@ export default function ReportPage() {
         data-testid="report-ai-override-banner"
         style={{
           borderRadius: theme.borderRadius.xl,
-          border: `1px solid ${theme.colors.border}`,
-          background: `linear-gradient(145deg, ${theme.colors.backgroundSecondary} 0%, ${theme.colors.background} 100%)`,
+          border: `1px solid ${theme.colors.indigo200}`,
+          backgroundColor: theme.colors.indigo50,
           padding: theme.spacing.md,
           display: "flex",
           flexDirection: "column",
@@ -434,7 +453,7 @@ export default function ReportPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-          <span style={{ fontSize: "1.25rem", lineHeight: 1 }} aria-hidden>✨</span>
+          <span style={{ fontSize: "1.25rem", lineHeight: 1, color: theme.colors.indigo600 }} aria-hidden>✨</span>
           <h2 style={{ margin: 0, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textPrimary }}>
             AI Influence Map
           </h2>
@@ -442,24 +461,9 @@ export default function ReportPage() {
         <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary, lineHeight: 1.5 }}>
           {aiLine}
         </div>
-        {overrideLine ? (
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: theme.spacing.xs }}>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                borderRadius: theme.borderRadius.full,
-                border: `1px solid ${theme.colors.border}`,
-                padding: "2px 8px",
-                fontSize: theme.typography.fontSize.xs,
-                color: theme.colors.textSecondary,
-                backgroundColor: theme.colors.background,
-              }}
-            >
-              Overrides: {formatStepList((ledger.flow ?? []).filter((s) => s.overrideApplied).map((s) => s.step))}
-            </span>
-          </div>
-        ) : null}
+        <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
+          Highlights AI-influenced vs human-controlled steps for auditability.
+        </div>
       </div>
 
       {/* 3) Tabs */}
@@ -482,24 +486,49 @@ export default function ReportPage() {
       {tab === "Decision Flow" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
           {(ledger.flow ?? []).map((s, idx) => (
-            <Card key={s.step ?? idx} title={`Step ${s.step ?? "—"} — ${s.label ?? "—"}`}>
-              <div style={{ marginTop: theme.spacing.sm, display: "flex", flexWrap: "wrap", gap: theme.spacing.sm }}>
-                <Pill>Actor: {s.actor ?? "—"}</Pill>
-                <Pill>AI influenced: {s.aiInfluence ? "Yes" : "No"}</Pill>
-                <Pill>Override applied: {s.overrideApplied ? "Yes" : "No"}</Pill>
-                <Pill>Confidence delta: {s.confidenceDelta ?? "—"}</Pill>
+            <div
+              key={s.step ?? idx}
+              style={{
+                borderRadius: theme.borderRadius.xl,
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                padding: theme.spacing.sm,
+                boxShadow: theme.colors.shadowSm,
+              }}
+            >
+              <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.semibold, marginBottom: theme.spacing.xs }}>
+                Step {s.step ?? "—"} — {s.label ?? "—"}
               </div>
-              {Array.isArray(s.rulesApplied) && s.rulesApplied.length > 0 ? (
-                <div style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSize.sm }}>
-                  <div style={{ fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Rules applied</div>
-                  <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0 }}>
-                    {s.rulesApplied.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: theme.spacing.sm,
+                  alignItems: "flex-start",
+                }}
+              >
+                <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                  {Array.isArray(s.rulesApplied) && s.rulesApplied.length > 0 ? (
+                    <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
+                      <span style={{ fontWeight: theme.typography.fontWeight.semibold }}>Rules applied</span>
+                      <ul style={{ marginTop: 2, paddingLeft: theme.spacing.md, margin: 0, lineHeight: 1.4 }}>
+                        {s.rulesApplied.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textTertiary }}>No rules listed</span>
+                  )}
                 </div>
-              ) : null}
-            </Card>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs, flexShrink: 0, alignSelf: "flex-start" }}>
+                  <Pill>Actor: {s.actor ?? "—"}</Pill>
+                  <Pill>AI influenced: {s.aiInfluence ? "Yes" : "No"}</Pill>
+                  <Pill>Override applied: {s.overrideApplied ? "Yes" : "No"}</Pill>
+                  <Pill>Confidence delta: {s.confidenceDelta ?? "—"}</Pill>
+                </div>
+              </div>
+            </div>
           ))}
           {(!ledger.flow || ledger.flow.length === 0) ? <Card>No decision flow steps.</Card> : null}
         </div>

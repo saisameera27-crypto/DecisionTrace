@@ -38,6 +38,17 @@ export const theme = {
     shadowSm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
     shadowMd: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
     shadowLg: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+
+    // Accent tints (Tailwind-equivalent, tasteful)
+    emerald50: '#ecfdf5',
+    emerald200: '#a7f3d0',
+    emerald500: '#10b981',
+    emerald600: '#059669',
+    indigo50: '#eef2ff',
+    indigo200: '#c7d2fe',
+    indigo500: '#6366f1',
+    indigo600: '#4f46e5',
+    slate900: '#0f172a',
   },
   
   // Typography
