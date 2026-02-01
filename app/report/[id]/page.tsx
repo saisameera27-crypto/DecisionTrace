@@ -222,55 +222,26 @@ export default function ReportPage() {
   };
 
   return (
-    <div data-testid="report-content" className="max-w-7xl mx-auto px-6 py-6">
-      {/* Optional breadcrumbs */}
-      <nav className="mb-4 text-sm text-slate-500" aria-label="Breadcrumb">
-        <ol className="flex flex-wrap items-center gap-1.5 m-0 p-0 list-none">
-          <li>
-            <Link href="/" className="hover:text-slate-700 transition-colors">Home</Link>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden>/</span>
-            <span>Audit</span>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <span aria-hidden>/</span>
-            <span className="text-slate-900 font-medium">Dashboard</span>
-          </li>
-        </ol>
-      </nav>
+    <div data-testid="report-content" className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-4">
+      <ReportHeroCard
+        displayTitle={displayTitle}
+        subtitle={`${meta.filename?.trim() || "—"} • ${createdAtFormatted}`}
+        score={score}
+        rationale={rationale}
+        metrics={[
+          { label: "Evidence used", value: evidenceUsed },
+          { label: "Risks accepted", value: risksAccepted },
+          { label: "Assumptions validated", value: assumptionsValidated },
+          { label: "Overrides", value: overrides },
+        ]}
+        details={{ id, mimeType: meta.mimeType ?? "—", size: meta.size ?? null }}
+        onDownload={handleDownload}
+      />
 
-      {/* Main dashboard grid: left hero, right content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left column: hero card */}
-        <aside className="w-full lg:col-span-4">
-          <ReportHeroCard
-            displayTitle={displayTitle}
-            subtitle={`Decision Ledger • ${meta.filename?.trim() || "—"}`}
-            score={score}
-            rationale={rationale}
-            confidenceLabel={
-              ledger.decision?.confidence
-                ? `${String(ledger.decision.confidence)} confidence`
-                : undefined
-            }
-            metrics={[
-              { label: "Evidence used", value: evidenceUsed },
-              { label: "Risks accepted", value: risksAccepted },
-              { label: "Assumptions validated", value: assumptionsValidated },
-              { label: "Overrides", value: overrides },
-            ]}
-            details={{ id, mimeType: meta.mimeType ?? "—", size: meta.size ?? null }}
-            onDownload={handleDownload}
-          />
-        </aside>
+      <InfluenceMapPanel aiLine={aiLine} />
+      <TabsBar tab={tab} setTab={setTab} />
 
-        {/* Right column: influence map, tab bar, tab content */}
-        <main className="w-full min-w-0 lg:col-span-8 flex flex-col gap-4">
-          <InfluenceMapPanel ledger={ledger} />
-          <TabsBar tab={tab} setTab={setTab} />
-
-          <div className="pt-2 flex flex-col gap-4">
+      <div className="pt-2 flex flex-col gap-4">
       {tab === "Overview" && (
         <div className="flex flex-col gap-2">
           <Card title="Decision outcome">
@@ -441,8 +412,6 @@ export default function ReportPage() {
           ) : null}
         </div>
       )}
-          </div>
-        </main>
       </div>
     </div>
   );
