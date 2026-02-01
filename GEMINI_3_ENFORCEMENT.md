@@ -179,3 +179,4 @@ All tests now assert:
 
 The codebase now **strictly enforces Gemini 3 usage** with no way to accidentally use legacy models! 🎯
 
+

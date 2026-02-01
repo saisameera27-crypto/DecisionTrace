@@ -106,3 +106,4 @@ The app is now optimized for hackathon judging:
 - ✅ Clear UI labels
 - ✅ Optional live mode available if needed
 
+

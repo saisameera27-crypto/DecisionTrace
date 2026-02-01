@@ -104,3 +104,4 @@ The landing page is now optimized for hackathon judges:
 - ✅ Professional appearance
 - ✅ Documentation link for Gemini 3
 
+

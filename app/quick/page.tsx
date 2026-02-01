@@ -164,13 +164,19 @@ export default function QuickStartPage() {
         docIdToUse = saveData.documentId || saveData.artifactId;
         setDocumentId(docIdToUse);
         setUploaded(true);
-        setIsDemoMode(saveData.mode === 'demo');
+        const savedInDemoMode = saveData.mode === 'demo';
+        setIsDemoMode(savedInDemoMode);
         setLoading('analysis'); // Switch back to analysis state
+        
+        // If saved in demo mode, the documentId is a placeholder - don't use it for case creation
+        if (savedInDemoMode) {
+          docIdToUse = null; // Clear docIdToUse so we skip case creation
+        }
       }
 
       // Demo mode: skip DB operations and use deterministic demo case ID
       // Use demo mode if: already in demo mode, or if we just saved and got demo mode response
-      if (isDemoMode) {
+      if (isDemoMode || !docIdToUse) {
         // Generate deterministic demo case ID based on text content
         const textForDemo = inputText || textInput;
         const timestamp = Math.floor(Date.now() / 60000) * 60000; // Round to minute

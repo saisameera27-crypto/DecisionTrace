@@ -187,3 +187,4 @@ The public report page is now:
 - ✅ Professional UI with clear indicators
 - ✅ Fully tested with E2E assertions
 
+
