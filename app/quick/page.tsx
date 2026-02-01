@@ -147,20 +147,25 @@ export default function QuickStartPage() {
         const textToSave = inputText || textInput;
         setLoading('upload'); // Show upload state while saving
         
-        const saveResponse = await fetch('/api/quickstart/text', {
+        const saveUrl = '/api/quickstart/text';
+        console.log("[RunAnalysis] request: URL=" + saveUrl + ", method=POST, bodyType=JSON");
+        const saveResponse = await fetch(saveUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ text: textToSave }),
         });
+        const saveBodyText = await saveResponse.text();
+        console.log("[RunAnalysis] response: URL=" + saveUrl + ", status=" + saveResponse.status + ", body=" + saveBodyText);
 
         if (!saveResponse.ok) {
-          const errorData = await saveResponse.json().catch(() => ({ error: 'Failed to save text' }));
+          let errorData: { error?: string; message?: string } = {};
+          try { errorData = JSON.parse(saveBodyText); } catch { errorData = { error: 'Failed to save text' }; }
           throw new Error(errorData.error || errorData.message || 'Failed to save text');
         }
 
-        const saveData = await saveResponse.json();
+        const saveData = JSON.parse(saveBodyText);
         docIdToUse = saveData.documentId || saveData.artifactId;
         setDocumentId(docIdToUse);
         setUploaded(true);
@@ -190,7 +195,9 @@ export default function QuickStartPage() {
         // docIdToUse is set from text submission or auto-save
 
         // Step 2: Create case with documentId
-        const createResponse = await fetch('/api/case/create', {
+        const createUrl = '/api/case/create';
+        console.log("[RunAnalysis] request: URL=" + createUrl + ", method=POST, bodyType=JSON");
+        const createResponse = await fetch(createUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -200,13 +207,16 @@ export default function QuickStartPage() {
             documentId: docIdToUse,
           }),
         });
+        const createBodyText = await createResponse.text();
+        console.log("[RunAnalysis] response: URL=" + createUrl + ", status=" + createResponse.status + ", body=" + createBodyText);
 
         if (!createResponse.ok) {
-          const errorData = await createResponse.json().catch(() => ({ error: 'Failed to create case' }));
+          let errorData: { error?: string; message?: string } = {};
+          try { errorData = JSON.parse(createBodyText); } catch { errorData = { error: 'Failed to create case' }; }
           throw new Error(errorData.error || errorData.message || 'Failed to create case');
         }
 
-        const createData = await createResponse.json();
+        const createData = JSON.parse(createBodyText);
         newCaseId = createData.caseId;
       } else {
         // Fallback: if no documentId and not demo mode, use demo mode as fallback
@@ -219,15 +229,20 @@ export default function QuickStartPage() {
       }
 
       // Step 3: Run the analysis (works for both demo and live mode)
-      const runResponse = await fetch(`/api/case/${newCaseId}/run`, {
+      const runUrl = `/api/case/${newCaseId}/run`;
+      console.log("[RunAnalysis] request: URL=" + runUrl + ", method=POST, bodyType=JSON");
+      const runResponse = await fetch(runUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
+      const runBodyText = await runResponse.text();
+      console.log("[RunAnalysis] response: URL=" + runUrl + ", status=" + runResponse.status + ", body=" + runBodyText);
 
       if (!runResponse.ok) {
-        const errorData = await runResponse.json().catch(() => ({ error: 'Analysis failed' }));
+        let errorData: { error?: string } = {};
+        try { errorData = JSON.parse(runBodyText); } catch { errorData = { error: 'Analysis failed' }; }
         throw new Error(errorData.error || 'Analysis failed');
       }
 

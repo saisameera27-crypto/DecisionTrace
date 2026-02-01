@@ -54,15 +54,16 @@ export default function CreateCasePage() {
 
         const responseBodyText = await uploadResponse.text();
         console.log('[Upload] response body (text):', responseBodyText);
-        let uploadPayload: { error?: string; documentId?: string } = {};
+        let uploadPayload: { error?: string; detail?: string; documentId?: string } = {};
         try {
           uploadPayload = JSON.parse(responseBodyText);
         } catch {
-          uploadPayload = { error: 'File upload failed' };
+          uploadPayload = { error: "Upload failed" };
         }
 
         if (!uploadResponse.ok) {
-          throw new Error(uploadPayload.error || 'File upload failed');
+          const detail = uploadPayload.detail ?? uploadPayload.error ?? responseBodyText;
+          throw new Error(`Upload failed (${uploadResponse.status})${detail ? ": " + detail : ""}`);
         }
 
         documentId = uploadPayload.documentId || null;

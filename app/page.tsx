@@ -78,7 +78,14 @@ export default function Home() {
         if (res.status === 413) {
           throw new Error("File is too large. Maximum size is 5MB.");
         }
-        throw new Error(`Upload failed: ${res.status} ${text}`);
+        let detail = text;
+        try {
+          const payload = JSON.parse(text) as { error?: string; detail?: string };
+          detail = payload.detail ?? payload.error ?? text;
+        } catch {
+          // use raw text as detail
+        }
+        throw new Error(`Upload failed (${res.status})${detail ? ": " + detail : ""}`);
       }
 
       const data = await res.json();
@@ -175,87 +182,22 @@ export default function Home() {
     setLoading('analysis');
 
     try {
-      let newCaseId: string;
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
 
-      // Demo mode: skip DB operations and use deterministic demo case ID
-      if (isDemoMode) {
-        // Generate deterministic demo case ID based on filename
-        const timestamp = Math.floor(Date.now() / 60000) * 60000; // Round to minute
-        const hash = fileName.split('').reduce((acc, char) => {
-          return ((acc << 5) - acc) + char.charCodeAt(0);
-        }, 0);
-        newCaseId = `demo-case-${Math.abs(hash)}-${timestamp}`;
-      } else {
-        // Live mode: normal flow with DB
-        // Step 1: Upload file to get documentId
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', uploadedFile);
+      const res = await fetch("/api/analyze", { method: "POST", body: formData });
 
-        const filesUploadEndpoint = "/api/files/upload";
-        console.log("[Upload] endpoint URL:", filesUploadEndpoint);
-        const uploadResponse = await fetch(filesUploadEndpoint, {
-          method: "POST",
-          body: uploadFormData,
-        });
-        console.log("[Upload] response.status:", uploadResponse.status);
-
-        const responseBodyText = await uploadResponse.text();
-        console.log("[Upload] response body (text):", responseBodyText);
-        let uploadPayload: { error?: string; documentId?: string } = {};
-        try {
-          uploadPayload = JSON.parse(responseBodyText);
-        } catch {
-          uploadPayload = { error: "File upload failed" };
-        }
-
-        if (!uploadResponse.ok) {
-          throw new Error(uploadPayload.error || "File upload failed");
-        }
-
-        const documentId = uploadPayload.documentId;
-
-        if (!documentId) {
-          throw new Error('File upload succeeded but no documentId returned');
-        }
-
-        // Step 2: Create case with documentId
-        const createResponse = await fetch('/api/case/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            inferMode: true,
-            documentId: documentId,
-          }),
-        });
-
-        if (!createResponse.ok) {
-          const errorData = await createResponse.json().catch(() => ({ error: 'Failed to create case' }));
-          throw new Error(errorData.error || errorData.message || 'Failed to create case');
-        }
-
-        const createData = await createResponse.json();
-        newCaseId = createData.caseId;
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Analyze failed: ${res.status} ${text}`);
       }
 
-      // Step 3: Run the analysis (works for both demo and live mode)
-      const runResponse = await fetch(`/api/case/${newCaseId}/run`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const data = await res.json();
 
-      if (!runResponse.ok) {
-        const errorData = await runResponse.json().catch(() => ({ error: 'Analysis failed' }));
-        throw new Error(errorData.error || 'Analysis failed');
-      }
-
-      // Redirect to report page (keep existing report redirect behavior)
-      router.push(`/case/${newCaseId}`);
+      setLoading(null);
+      setError(null);
     } catch (err: any) {
-      setError(err.message || 'Analysis failed');
+      setError(err.message || "Analysis failed");
       setLoading(null);
     }
   };

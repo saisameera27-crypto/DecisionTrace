@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'File upload failed',
+        error: 'Upload failed',
+        detail: error?.message ?? String(error),
         code: 'UPLOAD_ERROR',
       },
       { status: 500 }
