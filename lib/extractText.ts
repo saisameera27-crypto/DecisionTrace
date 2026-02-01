@@ -71,15 +71,18 @@ export async function extractTextFromUpload(file: File): Promise<ExtractTextResu
       text = (text || "").trim();
     } else {
       const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
+      const buffer = Buffer.from(new Uint8Array(arrayBuffer));
 
       if (kind === "docx") {
         const result = await mammoth.extractRawText({ buffer });
         text = (result.value || "").trim();
       } else if (kind === "pdf") {
         const mod = await import("pdf-parse");
-        const pdfParse = mod.default ?? mod;
-        const pdfData = await pdfParse(buffer);
+        const candidate = (mod as { default?: { default?: unknown } }).default?.default ?? (mod as { default?: unknown }).default ?? mod;
+        if (typeof candidate !== "function") {
+          throw new Error(`pdf-parse did not export a callable. Keys: ${Object.keys(mod).join(", ")}`);
+        }
+        const pdfData = await (candidate as (buf: Buffer) => Promise<{ text?: string }>)(buffer);
         text = (pdfData?.text ?? "").trim();
       } else {
         text = "";
