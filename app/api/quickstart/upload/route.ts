@@ -171,6 +171,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// OPTIONS handler for CORS preflight (prevents 405 on file upload)
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
+
 // GET handler returns helpful error for accidental browser navigation
 export async function GET() {
   return NextResponse.json(
