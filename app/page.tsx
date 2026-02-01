@@ -57,61 +57,20 @@ export default function Home() {
     setError(null);
     setLoading('upload');
     setFileName(file.name);
-    setUploadStatus(null);
+    setUploadStatus("Selected");
 
     try {
       const formData = new FormData();
       formData.append("file", file);
 
-      const uploadEndpoint = "/api/upload";
-      console.log("[Upload] endpoint URL:", uploadEndpoint);
-      const response = await fetch(uploadEndpoint, {
-        method: "POST",
-        body: formData,
-      });
-      console.log("[Upload] response.status:", response.status);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
 
-      // Safely read response body: try JSON first, fall back to text
-      // Note: Response body can only be read once, so we clone it for fallback
-      let data: any;
-      let errorMessage = 'Upload failed';
-
-      // Clone the response so we can read it multiple times if needed
-      const responseClone = response.clone();
-
-      try {
-        // Try to parse as JSON first (most common case)
-        data = await response.json();
-        console.log("[Upload] response body (json):", data);
-      } catch (jsonError) {
-        // If JSON parse fails, fall back to text from the cloned response
-        try {
-          const rawText = await responseClone.text();
-          if (rawText && rawText.trim()) {
-            errorMessage = rawText.length > 300 ? rawText.substring(0, 300) + '...' : rawText;
-          } else {
-            errorMessage = `Server returned ${response.status} ${response.statusText}`;
-          }
-        } catch (textError) {
-          // If text() also fails, use status
-          errorMessage = `Server returned ${response.status} ${response.statusText}`;
-        }
-        console.log("[Upload] response body (text/error):", errorMessage);
-
-        // If response is not ok, throw with the error message
-        if (!response.ok) {
-          throw new Error(errorMessage);
-        }
-
-        // If response is ok but JSON parse failed, this is unexpected
-        throw new Error('Server response was not valid JSON');
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Upload failed: ${res.status} ${text}`);
       }
 
-      // Handle non-ok responses (we have parsed JSON)
-      if (!response.ok) {
-        errorMessage = data.error || data.message || errorMessage || 'Upload failed';
-        throw new Error(errorMessage);
-      }
+      const data = await res.json();
 
       // Handle success response (/api/upload returns { ok: true } or { success: true }; use file for name/type)
       if (data.ok ?? data.success) {
@@ -127,18 +86,16 @@ export default function Home() {
         throw new Error('Upload succeeded but response format was unexpected');
       }
     } catch (err: any) {
-      // Show the actual error message from the server
-      const displayError = err.message || 'An error occurred';
+      const displayError = err.message || "An error occurred";
       setError(displayError);
       setLoading(null);
-      setUploadStatus(null);
+      setUploadStatus("Selected");
       setUploadPreview(null);
       setUploadMimeType(null);
       setShowFullPreview(false);
       setUploadedFile(null);
       setCaseId(null);
       setArtifactId(null);
-      setFileName(null);
     }
   };
 
