@@ -63,10 +63,13 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("/api/upload", {
+      const uploadEndpoint = "/api/upload";
+      console.log("[Upload] endpoint URL:", uploadEndpoint);
+      const response = await fetch(uploadEndpoint, {
         method: "POST",
         body: formData,
       });
+      console.log("[Upload] response.status:", response.status);
 
       // Safely read response body: try JSON first, fall back to text
       // Note: Response body can only be read once, so we clone it for fallback
@@ -79,6 +82,7 @@ export default function Home() {
       try {
         // Try to parse as JSON first (most common case)
         data = await response.json();
+        console.log("[Upload] response body (json):", data);
       } catch (jsonError) {
         // If JSON parse fails, fall back to text from the cloned response
         try {
@@ -92,6 +96,7 @@ export default function Home() {
           // If text() also fails, use status
           errorMessage = `Server returned ${response.status} ${response.statusText}`;
         }
+        console.log("[Upload] response body (text/error):", errorMessage);
 
         // If response is not ok, throw with the error message
         if (!response.ok) {
@@ -218,18 +223,28 @@ export default function Home() {
         const uploadFormData = new FormData();
         uploadFormData.append('file', uploadedFile);
 
-        const uploadResponse = await fetch('/api/files/upload', {
-          method: 'POST',
+        const filesUploadEndpoint = "/api/files/upload";
+        console.log("[Upload] endpoint URL:", filesUploadEndpoint);
+        const uploadResponse = await fetch(filesUploadEndpoint, {
+          method: "POST",
           body: uploadFormData,
         });
+        console.log("[Upload] response.status:", uploadResponse.status);
 
-        if (!uploadResponse.ok) {
-          const errorData = await uploadResponse.json().catch(() => ({ error: 'File upload failed' }));
-          throw new Error(errorData.error || 'File upload failed');
+        const responseBodyText = await uploadResponse.text();
+        console.log("[Upload] response body (text):", responseBodyText);
+        let uploadPayload: { error?: string; documentId?: string } = {};
+        try {
+          uploadPayload = JSON.parse(responseBodyText);
+        } catch {
+          uploadPayload = { error: "File upload failed" };
         }
 
-        const uploadData = await uploadResponse.json();
-        const documentId = uploadData.documentId;
+        if (!uploadResponse.ok) {
+          throw new Error(uploadPayload.error || "File upload failed");
+        }
+
+        const documentId = uploadPayload.documentId;
 
         if (!documentId) {
           throw new Error('File upload succeeded but no documentId returned');

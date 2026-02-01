@@ -44,18 +44,28 @@ export default function CreateCasePage() {
         const formDataUpload = new FormData();
         formDataUpload.append('file', uploadedFile);
 
-        const uploadResponse = await fetch('/api/files/upload', {
+        const filesUploadEndpoint = '/api/files/upload';
+        console.log('[Upload] endpoint URL:', filesUploadEndpoint);
+        const uploadResponse = await fetch(filesUploadEndpoint, {
           method: 'POST',
           body: formDataUpload,
         });
+        console.log('[Upload] response.status:', uploadResponse.status);
 
-        if (!uploadResponse.ok) {
-          const uploadError = await uploadResponse.json().catch(() => ({ error: 'File upload failed' }));
-          throw new Error(uploadError.error || 'File upload failed');
+        const responseBodyText = await uploadResponse.text();
+        console.log('[Upload] response body (text):', responseBodyText);
+        let uploadPayload: { error?: string; documentId?: string } = {};
+        try {
+          uploadPayload = JSON.parse(responseBodyText);
+        } catch {
+          uploadPayload = { error: 'File upload failed' };
         }
 
-        const uploadData = await uploadResponse.json();
-        documentId = uploadData.documentId || null;
+        if (!uploadResponse.ok) {
+          throw new Error(uploadPayload.error || 'File upload failed');
+        }
+
+        documentId = uploadPayload.documentId || null;
       }
 
       // Step 2: Create case (returns immediately with caseId)
