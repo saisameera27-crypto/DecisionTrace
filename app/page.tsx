@@ -113,8 +113,8 @@ export default function Home() {
         throw new Error(errorMessage);
       }
 
-      // Handle success response (/api/upload returns { success: true }; use file for name/type)
-      if (data.success) {
+      // Handle success response (/api/upload returns { ok: true } or { success: true }; use file for name/type)
+      if (data.ok ?? data.success) {
         setFileName(data.filename ?? file.name);
         setUploadStatus('Uploaded');
         setUploadPreview(data.preview ?? null);

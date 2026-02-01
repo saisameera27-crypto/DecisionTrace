@@ -11,25 +11,22 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file");
 
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "No file uploaded" },
-        { status: 400 }
-      );
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Missing file field 'file'" }, { status: 400 });
     }
 
-    const buffer = await file.arrayBuffer();
-    const size = buffer.byteLength;
+    // Read file into memory (no fs write)
+    const buf = await file.arrayBuffer();
 
     return NextResponse.json({
-      success: true,
+      ok: true,
       filename: file.name,
-      size,
-      mimeType: file.type || "application/octet-stream",
+      size: buf.byteLength,
+      mimeType: file.type || "unknown",
     });
-  } catch (err) {
+  } catch (e: any) {
     return NextResponse.json(
-      { error: "Upload failed" },
+      { error: "Upload handler failed", detail: e?.message ?? String(e) },
       { status: 500 }
     );
   }
