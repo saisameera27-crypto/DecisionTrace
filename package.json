@@ -49,6 +49,7 @@
     "@capacitor/core": "^7.4.3",
     "@google/genai": "^1.39.0",
     "@prisma/client": "^5.7.0",
+    "@supabase/supabase-js": "^2.93.3",
     "mammoth": "^1.11.0",
     "next": "^14.0.0",
     "pdf-parse": "^2.4.5",

@@ -4,12 +4,14 @@ import { extractTextFromUpload } from "@/lib/extractText";
 import { generateDecisionLedgerWithGemini } from "@/lib/geminiDecisionLedger";
 import { normalizeLedger, computeTraceScore } from "@/lib/normalizeLedger";
 import { validateDecisionLedger } from "@/lib/validateLedger";
+import { getSupabaseServer } from "@/lib/supabase-server";
 import { MAX_FILE_BYTES, truncateTextForGemini } from "@/lib/analyzeLimits";
 import { deriveScoreRationale } from "@/lib/scoreRationale";
 import type { DecisionLedger } from "@/lib/decisionLedgerSchema";
 import type { ExtractTextMeta } from "@/lib/extractText";
 
 const RAW_EXCERPT_MAX_LENGTH = 2000;
+const TABLE_DECISION_TRACES = "decision_traces";
 
 export const runtime = "nodejs";
 
@@ -18,13 +20,6 @@ export type StoredAnalysis = {
   meta: ExtractTextMeta;
   createdAt: string;
 };
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __DT_ANALYSES__: Map<string, StoredAnalysis> | undefined;
-}
-
-globalThis.__DT_ANALYSES__ ??= new Map<string, StoredAnalysis>();
 
 function analyzeErrorResponse(e: unknown): {
   error: string;
@@ -185,14 +180,40 @@ export async function POST(req: Request) {
     );
     ledger.decision.scoreRationale = deriveScoreRationale(ledger);
 
-    // 6) create analysisId (uuid)
+    // 6) create analysisId and insert into Supabase
     const analysisId = randomUUID();
-
-    // 7) store the normalized ledger + meta in global Map keyed by analysisId
     const createdAt = new Date().toISOString();
-    globalThis.__DT_ANALYSES__!.set(analysisId, { ledger, meta, createdAt });
+    try {
+      const supabase = getSupabaseServer();
+      const { error } = await supabase.from(TABLE_DECISION_TRACES).insert({
+        id: analysisId,
+        created_at: createdAt,
+        filename: meta.filename ?? "",
+        mime_type: meta.mimeType ?? "",
+        size: meta.size ?? 0,
+        report_json: ledger as unknown as Record<string, unknown>,
+      });
+      if (error) {
+        return NextResponse.json(
+          { ok: false, error: "Storage failed", detail: error.message },
+          { status: 502 }
+        );
+      }
+      // Temporary debug log
+      console.log("stored report", analysisId);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Storage failed",
+          detail: message.includes("SUPABASE") ? message : "Failed to persist analysis.",
+        },
+        { status: 502 }
+      );
+    }
 
-    // 8) return { ok: true, analysisId }; do NOT return the whole ledger
+    // 7) return { ok: true, analysisId }; do NOT return the whole ledger
     return NextResponse.json({
       ok: true,
       analysisId,

@@ -213,7 +213,10 @@ export default function ReportPage() {
             <div style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold }}>
               {title}
             </div>
-            <div style={{ marginTop: theme.spacing.xs, display: "flex", flexWrap: "wrap", gap: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
+            <div style={{ marginTop: theme.spacing.xs, display: "flex", flexWrap: "wrap", alignItems: "center", gap: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
+              <span data-testid="report-analysis-id-debug" style={{ fontFamily: "monospace", fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
+                Analysis ID: {id}
+              </span>
               <Pill>ID: {id}</Pill>
               <Pill>Created: {createdAtFormatted}</Pill>
               <Pill>File: {meta.filename ?? "—"}</Pill>
