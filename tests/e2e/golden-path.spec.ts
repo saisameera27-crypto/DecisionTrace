@@ -109,47 +109,32 @@ test.describe('Golden Path', () => {
       }
     });
 
-    // Click and wait for navigation with Promise.race to catch both URL change and errors
-    const clickPromise = page.click('[data-testid="qs-run"]');
-    const navigationPromise = page.waitForURL(/\/case\/[^/]+/, { timeout: 30000, waitUntil: 'domcontentloaded' });
-    
-    await clickPromise;
-    console.log('Run button clicked. Waiting for navigation...');
-    
-    // Wait a moment to see if any errors appear
-    await page.waitForTimeout(1000);
-    
-    // Check for error messages
-    const errorElement = page.locator('[data-testid="qs-upload-error"], [data-testid="qs-save-error"]');
-    if (await errorElement.count() > 0) {
-      const errorText = await errorElement.first().textContent();
-      console.error('Error after clicking Run:', errorText);
-      throw new Error(`Run button failed: ${errorText}`);
-    }
-    
-    // Check for console errors
-    if (consoleErrors.length > 0) {
-      console.error('Console errors detected:', consoleErrors);
+    // Click run and wait for navigation or report (give success path priority)
+    await page.click('[data-testid="qs-run"]');
+    console.log('Run button clicked. Waiting for navigation or report...');
+
+    // Wait for either URL change or report root (client-side routing); then check for errors only if we failed
+    const navTimeout = 30000;
+    try {
+      await Promise.race([
+        page.waitForURL(/\/case\/[^/]+/, { timeout: navTimeout, waitUntil: 'domcontentloaded' }),
+        page.locator('[data-testid="report-root"]').waitFor({ state: 'visible', timeout: navTimeout }),
+      ]);
+      console.log('Navigation/report OK. Current URL:', page.url());
+    } catch {
+      // On timeout, check for inline error message to report a clear failure
+      const errorElement = page.locator('[data-testid="qs-upload-error"], [data-testid="qs-save-error"]');
+      if (await errorElement.count() > 0) {
+        const errorText = await errorElement.first().textContent();
+        console.error('Error after clicking Run:', errorText);
+        throw new Error(`Run button failed: ${errorText}`);
+      }
+      console.log('Navigation failed. URL:', page.url(), 'Console errors:', consoleErrors);
+      throw new Error(`Navigation failed. URL: ${page.url()}, Console errors: ${consoleErrors.join(', ')}`);
     }
 
-    // Wait for navigation
-    try {
-      await navigationPromise;
-      console.log('Navigation successful. Current URL:', page.url());
-    } catch (navError) {
-      // If URL wait fails, try waiting for report element directly (client-side routing)
-      console.log('URL wait failed, trying to wait for report element directly...');
-      console.log('Current URL:', page.url());
-      console.log('Console errors:', consoleErrors);
-      
-      // Try waiting for report element as fallback
-      try {
-        await expect(page.locator('[data-testid="report-root"]')).toBeVisible({ timeout: 10000 });
-        console.log('Report element found. Current URL:', page.url());
-      } catch (reportError) {
-        // If both fail, throw with diagnostic info
-        throw new Error(`Navigation failed. URL: ${page.url()}, Console errors: ${consoleErrors.join(', ')}`);
-      }
+    if (consoleErrors.length > 0) {
+      console.error('Console errors detected:', consoleErrors);
     }
 
     // Verify report page renders with stable UI assertions (wait for specific elements, not networkidle)

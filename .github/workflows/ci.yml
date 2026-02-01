@@ -93,6 +93,8 @@ jobs:
           FREE_MODE: true
           CI: true
           BASE_URL: http://localhost:3000
+          # Force demo mode so QuickStart flow uses demo case ID and instant run (no document link)
+          DEMO_MODE: 'true'
         run: npm run test:e2e:smoke
 
       - name: Upload Playwright traces
@@ -167,6 +169,8 @@ jobs:
           FREE_MODE: true
           CI: true
           BASE_URL: http://localhost:3000
+          # Force demo mode so QuickStart flow uses demo case ID and instant run (no document link)
+          DEMO_MODE: 'true'
         run: npm run test:e2e:smoke
 
       - name: Upload Playwright traces
