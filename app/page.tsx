@@ -205,7 +205,11 @@ export default function Home() {
         throw new Error(`Analysis failed (${res.status})${detail ? ": " + detail : ""}`);
       }
 
-      console.log("[RunAnalysis] analysis complete, clearing loading");
+      const analysisId = data.analysisId as string | undefined;
+      if (analysisId) {
+        console.log("[RunAnalysis] routing to /report/" + analysisId);
+        router.push(`/report/${analysisId}`);
+      }
       setLoading(null);
       setError(null);
     } catch (err: any) {

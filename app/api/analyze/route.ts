@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
+
+// simple in-memory store (works per serverless instance; good enough for demo)
+declare global {
+  // eslint-disable-next-line no-var
+  var __DT_REPORTS__: Map<string, any> | undefined;
+}
+globalThis.__DT_REPORTS__ ??= new Map();
 
 export async function POST(req: Request) {
   try {
@@ -8,24 +16,26 @@ export async function POST(req: Request) {
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Missing file" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Missing file" }, { status: 400 });
     }
 
-    const buf = await file.arrayBuffer();
+    const analysisId = randomUUID();
 
-    // TODO: parse text based on file.type (pdf/docx/txt)
-    // For now: just return metadata so the pipeline works end-to-end.
-    return NextResponse.json({
-      ok: true,
-      filename: file.name,
-      size: buf.byteLength,
-      mimeType: file.type || "unknown",
-      // trace: { ... }  // later
-    });
+    // TODO: replace with real Gemini output
+    const report = {
+      summary: { title: "Decision Trace Report", filename: file.name },
+      tabs: {
+        overview: { bullets: ["Stub report generated"] },
+        evidence: [],
+        risks: [],
+        trace: [],
+      },
+    };
+
+    globalThis.__DT_REPORTS__!.set(analysisId, report);
+
+    return NextResponse.json({ ok: true, analysisId, report });
   } catch (e: any) {
-    return NextResponse.json(
-      { error: "Analyze failed", detail: e?.message ?? String(e) },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok: false, error: e?.message ?? "Analyze failed" }, { status: 500 });
   }
 }
