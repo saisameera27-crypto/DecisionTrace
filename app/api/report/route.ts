@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabase-server";
+import { getSupabaseServer, type DecisionTraceRow } from "@/lib/supabase-server";
 import type { DecisionLedger } from "@/lib/decisionLedgerSchema";
 
 export const runtime = "nodejs";
@@ -51,15 +51,16 @@ export async function GET(req: Request) {
     }
     console.log("fetch report", id, "found");
 
-    const ledger = data.report_json as DecisionLedger;
+    const row = data as DecisionTraceRow;
+    const ledger = row.report_json as DecisionLedger;
     const meta: ReportMeta = {
-      filename: data.filename ?? "",
-      mimeType: data.mime_type ?? "",
-      size: data.size ?? 0,
+      filename: row.filename ?? "",
+      mimeType: row.mime_type ?? "",
+      size: row.size ?? 0,
     };
     const report: ReportPayload = {
-      id: data.id,
-      createdAt: data.created_at,
+      id: row.id,
+      createdAt: row.created_at,
       meta,
       ledger,
       title: deriveTitle(ledger, meta),

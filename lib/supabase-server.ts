@@ -33,6 +33,7 @@ export function getSupabaseServer(): SupabaseServerClient {
   return _client;
 }
 
+/** Row shape for decision_traces table (select/insert). */
 export type DecisionTraceRow = {
   id: string;
   created_at: string;
@@ -41,3 +42,5 @@ export type DecisionTraceRow = {
   size: number;
   report_json: Record<string, unknown>;
 };
+
+export type DecisionTraceInsert = DecisionTraceRow;

@@ -11,7 +11,6 @@ import type { DecisionLedger } from "@/lib/decisionLedgerSchema";
 import type { ExtractTextMeta } from "@/lib/extractText";
 
 const RAW_EXCERPT_MAX_LENGTH = 2000;
-const TABLE_DECISION_TRACES = "decision_traces";
 
 export const runtime = "nodejs";
 
@@ -182,17 +181,22 @@ export async function POST(req: Request) {
 
     // 6) create analysisId and insert into Supabase
     const analysisId = randomUUID();
-    const createdAt = new Date().toISOString();
     try {
       const supabase = getSupabaseServer();
-      const { error } = await supabase.from(TABLE_DECISION_TRACES).insert({
+      const row: {
+        id: string;
+        filename: string;
+        mime_type: string;
+        size: number;
+        report_json: Record<string, unknown>;
+      } = {
         id: analysisId,
-        created_at: createdAt,
         filename: meta.filename ?? "",
-        mime_type: meta.mimeType ?? "",
-        size: meta.size ?? 0,
+        mime_type: String(meta.mimeType ?? ""),
+        size: Number(meta.size ?? 0),
         report_json: ledger as unknown as Record<string, unknown>,
-      });
+      };
+      const { error } = await supabase.from("decision_traces").insert(row as never);
       if (error) {
         return NextResponse.json(
           { ok: false, error: "Storage failed", detail: error.message },
