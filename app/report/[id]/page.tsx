@@ -39,7 +39,7 @@ type ReportPayload = {
 
 function Pill({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-600">
+    <span className="dt-badge">
       {children}
     </span>
   );
@@ -47,9 +47,9 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="report-card dt-card">
       {title ? (
-        <div className="mb-2 text-sm font-semibold text-slate-900">{title}</div>
+        <div className="dt-heading-2 mb-3 border-b border-[var(--color-border-light)] pb-2">{title}</div>
       ) : null}
       {children}
     </div>
@@ -58,12 +58,12 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
 
 function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
-      <table className="w-full min-w-[400px] text-sm border-collapse">
-        <thead className="bg-slate-100">
+    <div className="overflow-x-auto rounded-[var(--dt-radius-card)] border-[var(--color-border-light)] border shadow-sm">
+      <table className="w-full min-w-[400px] text-[var(--dt-font-body)] border-collapse">
+        <thead className="bg-[var(--dt-bg-surface)]">
           <tr>
             {headers.map((h) => (
-              <th key={h} className="p-3 text-left font-semibold text-slate-900 border-b border-slate-200">
+              <th key={h} className="p-3 text-left dt-label border-b border-[var(--color-border-light)] normal-case">
                 {h}
               </th>
             ))}
@@ -73,10 +73,10 @@ function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][]
           {rows.map((r, idx) => (
             <tr
               key={idx}
-              className={`border-b border-slate-200 ${idx % 2 === 1 ? "bg-slate-50/50" : "bg-white"}`}
+              className={`border-b border-[var(--color-border-light)] last:border-b-0 ${idx % 2 === 1 ? "bg-[var(--dt-bg-surface)]" : "bg-[var(--dt-bg-card)]"}`}
             >
               {r.map((cell, j) => (
-                <td key={j} className="p-3 align-top break-words text-slate-700">
+                <td key={j} className="p-3 align-top break-words text-[var(--dt-text-body)]">
                   {cell}
                 </td>
               ))}
@@ -91,7 +91,7 @@ function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][]
 function EmptyStateCard({ title, message }: { title: string; message: string }) {
   return (
     <Card title={title}>
-      <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
+      <p className="dt-muted text-[var(--dt-font-body)] leading-relaxed">{message}</p>
     </Card>
   );
 }
@@ -110,21 +110,19 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
 
 function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
-    <div className="sticky top-0 z-10 -mx-6 px-6 py-3 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-      <div className="flex flex-wrap gap-2">
+    <div className="report-tabs">
+      <div className="report-tabs-list" role="tablist">
         {TABS.map((t) => {
           const isActive = tab === t;
           return (
             <button
               key={t}
               type="button"
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setTab(t)}
               data-testid={`report-tab-${t.toLowerCase().replace(" ", "")}`}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
-                  : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:border-slate-300"
-              }`}
+              className={`report-tab ${isActive ? "report-tab--active" : ""}`}
             >
               {t}
             </button>
@@ -222,30 +220,57 @@ export default function ReportPage() {
   };
 
   return (
-    <div data-testid="report-content" className="max-w-4xl mx-auto px-6 py-8 flex flex-col gap-6">
-      <ReportHeroCard
-        displayTitle={displayTitle}
-        subtitle={`${meta.filename?.trim() || "—"} • ${createdAtFormatted}`}
-        score={score}
-        rationale={rationale}
-        metrics={[
-          { label: "Evidence used", value: evidenceUsed },
-          { label: "Risks accepted", value: risksAccepted },
-          { label: "Assumptions validated", value: assumptionsValidated },
-          { label: "Overrides", value: overrides },
-        ]}
-        details={{ id, mimeType: meta.mimeType ?? "—", size: meta.size ?? null }}
-        onDownload={handleDownload}
-      />
+    <div data-testid="report-content" className="report-shell dt-page h-screen flex flex-col overflow-hidden">
+      <header className="report-header shrink-0 h-14 flex items-center justify-between px-4 border-b border-[var(--color-border-light)] bg-[var(--dt-bg-card)]">
+        <h1 className="dt-heading-1 truncate mr-4">
+          {displayTitle}
+        </h1>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleDownload}
+            data-testid="report-download-json"
+            className="report-btn dt-btn no-underline"
+          >
+            Download Audit JSON
+          </button>
+          <Link
+            href="/"
+            data-testid="report-back-to-upload"
+            className="report-btn dt-btn no-underline"
+          >
+            Back
+          </Link>
+        </div>
+      </header>
 
-      <InfluenceMapPanel aiLine={aiLine} />
-      <TabsBar tab={tab} setTab={setTab} />
+      <main className="report-main flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+        <aside className="report-map min-h-0 flex flex-col gap-4 p-4 overflow-y-auto border-b lg:border-b-0 lg:border-r border-[var(--color-border-light)] bg-[var(--dt-bg-surface)] lg:w-[360px] lg:shrink-0">
+          <ReportHeroCard
+            displayTitle={displayTitle}
+            subtitle={`${meta.filename?.trim() || "—"} • ${createdAtFormatted}`}
+            score={score}
+            rationale={rationale}
+            metrics={[
+              { label: "Evidence used", value: evidenceUsed },
+              { label: "Risks accepted", value: risksAccepted },
+              { label: "Assumptions validated", value: assumptionsValidated },
+              { label: "Overrides", value: overrides },
+            ]}
+            details={{ id, mimeType: meta.mimeType ?? "—", size: meta.size ?? null }}
+            onDownload={handleDownload}
+          />
+          <InfluenceMapPanel aiLine={aiLine} />
+        </aside>
 
-      <div className="pt-2 flex flex-col gap-4">
+        <section className="report-details flex-1 min-w-0 min-h-0 flex flex-col">
+          <TabsBar tab={tab} setTab={setTab} />
+          <div className="report-details-scroll report-tab-content">
+            <div className="dt-container flex flex-col gap-4">
       {tab === "Overview" && (
         <div className="flex flex-col gap-2">
           <Card title="Decision outcome">
-            <div className="text-lg font-semibold text-slate-900">{ledger.decision?.outcome ?? "—"}</div>
+            <div className="dt-heading-2">{ledger.decision?.outcome ?? "—"}</div>
             <div className="mt-2">
               <Pill>Confidence: {ledger.decision?.confidence ?? "—"}</Pill>
             </div>
@@ -258,9 +283,9 @@ export default function ReportPage() {
           {(ledger.flow ?? []).map((s, idx) => (
             <div
               key={s.step ?? idx}
-              className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 shadow-sm"
+              className="dt-card rounded-[var(--dt-radius-card)] p-3"
             >
-              <div className="text-sm font-semibold text-slate-900 mb-1">
+              <div className="dt-heading-2 text-[var(--dt-font-body)] mb-1">
                 Step {s.step ?? "—"} — {s.label ?? "—"}
               </div>
               <div className="flex flex-wrap gap-2 items-start">
@@ -412,7 +437,10 @@ export default function ReportPage() {
           ) : null}
         </div>
       )}
-      </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
