@@ -68,6 +68,8 @@ export default defineConfig({
       PRISMA_SCHEMA_TARGET: 'sqlite',
       GEMINI_TEST_MODE: 'mock',
       NODE_ENV: 'test',
+      // Force demo mode so QuickStart flow uses demo case ID and instant run (no document link required)
+      DEMO_MODE: 'true',
     },
   },
 });

@@ -265,9 +265,17 @@ export async function POST(request: NextRequest) {
           where: { id: documentId },
           data: { caseId: newCase.id },
         });
-      } catch (updateError) {
-        // Log but don't fail - document might not exist or might already be linked
-        console.warn('Could not link document to case:', updateError);
+      } catch (updateError: any) {
+        // Rollback: remove the case we just created so we never leave a case with no documents
+        await prisma.case.delete({ where: { id: newCase.id } }).catch(() => {});
+        const isNotFound = updateError?.code === 'P2025' || (updateError?.message || '').toLowerCase().includes('record') || (updateError?.message || '').toLowerCase().includes('not found');
+        return NextResponse.json(
+          {
+            error: isNotFound ? 'Document not found. Please save your text again and run analysis.' : 'Could not link document to case.',
+            code: 'DOCUMENT_LINK_FAILED',
+          },
+          { status: 400 }
+        );
       }
     }
 
