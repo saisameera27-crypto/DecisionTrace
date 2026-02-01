@@ -3,12 +3,14 @@ import { randomUUID } from "crypto";
 
 export const runtime = "nodejs";
 
-// simple in-memory store (works per serverless instance; good enough for demo)
+type DecisionTraceReport = any;
+
 declare global {
   // eslint-disable-next-line no-var
-  var __DT_REPORTS__: Map<string, unknown> | undefined;
+  var __DT_REPORTS__: Map<string, DecisionTraceReport> | undefined;
 }
-globalThis.__DT_REPORTS__ ??= new Map();
+
+globalThis.__DT_REPORTS__ ??= new Map<string, DecisionTraceReport>();
 
 export async function POST(req: Request) {
   try {

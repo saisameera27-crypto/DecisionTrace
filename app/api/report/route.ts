@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+type DecisionTraceReport = any;
+
 declare global {
   // eslint-disable-next-line no-var
-  var __DT_REPORTS__: Map<string, any> | undefined;
+  var __DT_REPORTS__: Map<string, DecisionTraceReport> | undefined;
 }
-globalThis.__DT_REPORTS__ ??= new Map();
+
+globalThis.__DT_REPORTS__ ??= new Map<string, DecisionTraceReport>();
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
