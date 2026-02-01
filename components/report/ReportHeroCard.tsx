@@ -30,40 +30,32 @@ export default function ReportHeroCard({
   return (
     <div
       data-testid="report-score-card"
-      className="dt-card flex flex-col gap-5 p-5"
+      className="report-hero-summary dt-card flex flex-col gap-4 p-5"
     >
-      <div>
-        <h1 className="dt-heading-1 line-clamp-3">
-          {displayTitle}
-        </h1>
-        <p className="dt-muted mt-2">{subtitle}</p>
-      </div>
+      <h1 className="report-hero-title dt-heading-1 line-clamp-3 m-0">
+        {displayTitle}
+      </h1>
+      <p className="report-hero-meta dt-muted mt-0 text-[var(--dt-font-muted)]">
+        {subtitle}
+      </p>
 
-      <div className="flex flex-wrap items-baseline gap-2">
-        <span className="text-3xl font-bold text-[var(--dt-text-heading)] leading-none">{displayScore}</span>
-        <span className="dt-muted text-base">/100</span>
+      <div className="report-score-pill" aria-label="Trace score">
+        <span className="report-score-value">{displayScore}</span>
+        <span className="report-score-suffix">/100</span>
       </div>
-      <div className="h-2 rounded-full bg-[var(--color-background-tertiary)] overflow-hidden max-w-[200px]">
+      <div className="report-score-bar h-2 rounded-full bg-[var(--color-background-tertiary)] overflow-hidden max-w-[200px]" aria-hidden>
         <div
           className="h-full rounded-full bg-indigo-500 transition-[width]"
           style={{ width: `${progressPct}%` }}
         />
       </div>
 
-      <div className="pt-1 border-t border-[var(--color-border-light)]">
-        <p className="dt-label mb-2">Supported by</p>
-        {rationale.length > 0 ? (
-          <ul className="m-0 pl-5 text-[var(--dt-font-body)] text-[var(--dt-text-body)] leading-relaxed list-disc space-y-1">
-            {rationale.map((r, i) => (
-              <li key={i}>{r}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="dt-muted">No rationale provided.</p>
-        )}
-      </div>
-
-      <MetricPills items={metrics} />
+      <section className="report-supported-by" aria-labelledby="supported-by-heading">
+        <h2 id="supported-by-heading" className="report-supported-by-heading dt-label mb-2 m-0">
+          Supported by
+        </h2>
+        <MetricPills items={metrics} />
+      </section>
 
       <details className="dt-muted pt-1" data-testid="report-details-disclosure">
         <summary className="cursor-pointer list-none select-none underline hover:text-[var(--dt-text-body)]">
