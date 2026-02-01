@@ -290,7 +290,7 @@ button:focus-visible {
   font-size: var(--dt-font-h2);
   font-weight: 600;
   color: var(--dt-text-heading);
-  line-height: 1.35;
+  line-height: 1.5;
   max-width: 65ch;
   margin: 0;
 }
@@ -301,29 +301,38 @@ button:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-8);
 }
 
 .report-card-header-meta-left {
-  font-size: var(--dt-font-muted);
-  color: var(--dt-text-muted);
+  font-size: var(--dt-font-label);
+  color: var(--color-text-muted);
+  line-height: 1.4;
 }
 
 .report-card-header-actions {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-8);
+}
+
+.report-card-header-actions .dt-btn {
+  font-size: var(--dt-font-label);
+  font-weight: 500;
+  padding: var(--space-8) var(--space-12);
+  border-color: var(--color-border-light);
+  color: var(--dt-text-body);
 }
 
 .report-card-header-score {
   display: inline-flex;
   align-items: baseline;
   gap: 0.25rem;
-  padding: 0.25rem 0.5rem;
+  padding: var(--space-8) var(--space-12);
   font-size: var(--dt-font-body);
   color: var(--dt-text-heading);
-  background-color: var(--color-background-tertiary);
+  background-color: var(--color-background-secondary);
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   width: fit-content;
@@ -417,14 +426,15 @@ button:focus-visible {
 
 .report-supported-by-heading {
   margin: 0 0 var(--space-8) 0;
-  font-size: var(--dt-font-muted);
+  font-size: var(--dt-font-label);
   font-weight: 600;
   color: var(--dt-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
 }
 
-/* Compact two-column summary list (Supported by): small muted labels, right-aligned numbers */
+/* Compact two-column summary list (Supported by): muted labels left, values right */
 .report-supported-list {
   list-style: none;
   margin: 0;
@@ -436,24 +446,57 @@ button:focus-visible {
   flex-wrap: nowrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--space-8);
-  padding: 0.125rem 0;
+  gap: var(--space-12);
+  padding: 0.25rem 0;
   font-size: var(--dt-font-muted);
   line-height: 1.4;
 }
 
 .report-supported-list__label {
-  color: var(--dt-text-muted);
+  color: var(--color-text-muted);
   font-weight: 400;
   flex-shrink: 0;
+  text-align: left;
 }
 
 .report-supported-list__value {
-  color: var(--dt-text-heading);
+  color: var(--color-text-secondary);
   font-weight: 500;
   flex-shrink: 0;
   text-align: right;
+  min-width: 1.5em;
   tabular-nums: 1;
+}
+
+/* Details: light divider above + small button-style trigger */
+.report-details-trigger {
+  margin-top: var(--space-8);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.report-details-trigger__summary {
+  display: inline-block;
+  list-style: none;
+  cursor: pointer;
+  font-size: var(--dt-font-label);
+  color: var(--dt-text-muted);
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  background-color: transparent;
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.report-details-trigger__summary:hover {
+  color: var(--dt-text-body);
+  background-color: var(--color-background-secondary);
+  border-color: var(--color-border);
+}
+
+.report-details-trigger__summary::-webkit-details-marker,
+.report-details-trigger__summary::marker {
+  display: none;
 }
 
 .report-details-scroll {
@@ -467,9 +510,9 @@ button:focus-visible {
   margin-right: auto;
 }
 
-/* Report tab content: tight section spacing and consistent section titles */
+/* Report tab content: consistent section spacing (8/12/16/24 rhythm) and section titles */
 .report-tab-content .dt-container {
-  gap: var(--space-8);
+  gap: var(--space-12);
 }
 
 .report-tab-content .dt-container > * {
@@ -479,6 +522,8 @@ button:focus-visible {
 .report-card.dt-card,
 .report-tab-content .dt-card {
   padding: var(--space-12);
+  border: 1px solid var(--color-border-light);
+  box-shadow: none;
 }
 
 .report-card > .dt-heading-2,
@@ -488,6 +533,7 @@ button:focus-visible {
   color: var(--dt-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  line-height: 1.35;
   margin-bottom: var(--space-8);
   padding-bottom: var(--space-8);
   border-bottom: 1px solid var(--color-border-light);
@@ -499,17 +545,17 @@ button:focus-visible {
 
 .dt-card {
   background-color: var(--dt-bg-card);
-  border: var(--dt-border);
+  border: 1px solid var(--color-border-light);
   border-radius: var(--dt-radius-card);
   padding: var(--dt-space-card);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .dt-heading-1 {
   font-size: var(--dt-font-h1);
   font-weight: 600;
   color: var(--dt-text-heading);
-  line-height: 1.3;
+  line-height: 1.4;
   margin: 0;
 }
 
@@ -517,7 +563,7 @@ button:focus-visible {
   font-size: var(--dt-font-h2);
   font-weight: 600;
   color: var(--dt-text-heading);
-  line-height: 1.35;
+  line-height: 1.45;
   margin: 0;
 }
 
@@ -535,16 +581,11 @@ button:focus-visible {
   line-height: 1.5;
 }
 
-.dt-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.25rem 0.5rem;
-  font-size: var(--dt-font-label);
-  color: var(--dt-text-body);
-  background-color: var(--color-background-tertiary);
-  border: var(--dt-border);
-  border-radius: var(--radius-md);
+.report-tab-content .dt-muted {
+  margin-top: var(--space-8);
 }
+
+/* .dt-badge unified with .dt-pill above */
 
 .dt-btn {
   font-size: var(--dt-font-body);
@@ -559,7 +600,7 @@ button:focus-visible {
 
 .dt-btn:hover {
   color: var(--color-text-primary);
-  background-color: var(--color-background-tertiary);
+  background-color: var(--color-background-secondary);
   border-color: var(--color-border);
 }
 
@@ -568,7 +609,7 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-/* Report tabs: real tab styling */
+/* Report tabs: minimal enterprise tab row */
 .report-tabs {
   flex-shrink: 0;
   padding: 0 var(--space-12) var(--space-8);
@@ -579,7 +620,7 @@ button:focus-visible {
 .report-tabs-list {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0;
+  gap: var(--space-8);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
@@ -603,17 +644,24 @@ button:focus-visible {
 
 .report-tab:hover {
   color: var(--dt-text-body);
-  background-color: var(--color-background-tertiary);
+  background-color: var(--color-background-secondary);
 }
 
 .report-tab:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .report-tab--active {
   color: var(--color-primary);
+  font-weight: 600;
   border-bottom-color: var(--color-primary);
+  background-color: var(--color-background-secondary);
+}
+
+.report-tab--active:hover {
+  color: var(--color-primary-hover);
+  background-color: var(--color-background-secondary);
 }
 
 .report-tab-content {

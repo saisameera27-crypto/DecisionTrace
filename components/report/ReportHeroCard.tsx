@@ -35,8 +35,8 @@ export default function ReportHeroCard({
         <MetricPills items={metrics} />
       </section>
 
-      <details className="dt-muted pt-1" data-testid="report-details-disclosure">
-        <summary className="cursor-pointer list-none select-none underline hover:text-[var(--dt-text-body)]">
+      <details className="report-details-trigger dt-muted" data-testid="report-details-disclosure">
+        <summary className="report-details-trigger__summary">
           Details
         </summary>
         <div className="mt-2 pl-0 font-mono space-y-1">

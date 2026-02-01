@@ -247,7 +247,7 @@ export default function ReportPage() {
                 </Link>
               </div>
             </div>
-            <div className="report-card-header-score" aria-label="Trace score">
+            <div className="report-card-header-score dt-pill" aria-label="Trace score">
               Score <span className="report-card-header-score-value">{typeof score === "number" ? score : "—"}</span>/100
             </div>
           </header>
