@@ -133,13 +133,6 @@ function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   );
 }
 
-const RACI_LABELS: Record<string, string> = {
-  R: "Responsible",
-  A: "Accountable",
-  C: "Consulted",
-  I: "Informed",
-};
-
 export default function ReportPage() {
   const params = useParams();
   const id = (params?.id as string) ?? "";
@@ -297,19 +290,19 @@ export default function ReportPage() {
         ) : null}
       </div>
 
-      {/* Score: traceScore supported by scoreRationale bullet points */}
+      {/* Score: decision.traceScore supported by decision.scoreRationale bullet points */}
       <div data-testid="report-score-card">
         <Card title="Decision Trace Score">
           <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: theme.spacing.sm }}>
-              <div style={{ fontSize: theme.typography.fontSize["4xl"], fontWeight: theme.typography.fontWeight.bold }}>{ledger.traceScore}</div>
+              <div style={{ fontSize: theme.typography.fontSize["4xl"], fontWeight: theme.typography.fontWeight.bold }}>{ledger.decision?.traceScore ?? "—"}</div>
               <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>/ 100</div>
             </div>
             <div style={{ marginTop: theme.spacing.sm }}>
               <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Supported by</div>
-              {Array.isArray(ledger.scoreRationale) && ledger.scoreRationale.length > 0 ? (
+              {Array.isArray(ledger.decision?.scoreRationale) && ledger.decision.scoreRationale.length > 0 ? (
                 <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                  {ledger.scoreRationale.map((r, i) => (
+                  {ledger.decision.scoreRationale.map((r, i) => (
                     <li key={i}>{r}</li>
                   ))}
                 </ul>
@@ -329,22 +322,21 @@ export default function ReportPage() {
       {tab === "Overview" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
           <Card title="Decision outcome">
-            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{ledger.decision?.title ?? "—"}</div>
-            <div style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSize.sm }}>{ledger.decision?.description ?? "—"}</div>
+            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{ledger.decision?.outcome ?? "—"}</div>
             <div style={{ marginTop: theme.spacing.sm }}>
               <Pill>Confidence: {ledger.decision?.confidence ?? "—"}</Pill>
             </div>
           </Card>
           <Card title="Trace score & rationale">
             <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-              <span style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold }}>{ledger.traceScore}</span>
+              <span style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold }}>{ledger.decision?.traceScore ?? "—"}</span>
               <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>/ 100</span>
             </div>
             <div style={{ marginTop: theme.spacing.sm }}>
               <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Supported by</div>
-              {Array.isArray(ledger.scoreRationale) && ledger.scoreRationale.length > 0 ? (
+              {Array.isArray(ledger.decision?.scoreRationale) && ledger.decision.scoreRationale.length > 0 ? (
                 <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                  {ledger.scoreRationale.map((r, i) => (
+                  {ledger.decision.scoreRationale.map((r, i) => (
                     <li key={i}>{r}</li>
                   ))}
                 </ul>
@@ -363,12 +355,22 @@ export default function ReportPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
           {(ledger.flow ?? []).map((s, idx) => (
             <Card key={s.step ?? idx} title={`Step ${s.step ?? "—"} — ${s.label ?? "—"}`}>
-              <div style={{ fontSize: theme.typography.fontSize.sm }}>{s.description ?? "—"}</div>
               <div style={{ marginTop: theme.spacing.sm, display: "flex", flexWrap: "wrap", gap: theme.spacing.sm }}>
+                <Pill>Actor: {s.actor ?? "—"}</Pill>
                 <Pill>AI influenced: {s.aiInfluence ? "Yes" : "No"}</Pill>
                 <Pill>Override applied: {s.overrideApplied ? "Yes" : "No"}</Pill>
-                {s.actor ? <Pill>Actor: {s.actor}</Pill> : null}
+                <Pill>Confidence delta: {s.confidenceDelta ?? "—"}</Pill>
               </div>
+              {Array.isArray(s.rulesApplied) && s.rulesApplied.length > 0 ? (
+                <div style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSize.sm }}>
+                  <div style={{ fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Rules applied</div>
+                  <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0 }}>
+                    {s.rulesApplied.map((r, i) => (
+                      <li key={i}>{r}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </Card>
           ))}
           {(!ledger.flow || ledger.flow.length === 0) ? <Card>No decision flow steps.</Card> : null}
@@ -378,27 +380,26 @@ export default function ReportPage() {
       {/* 3) Stakeholders */}
       {tab === "Stakeholders" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-          <Card title="Owner">
-            <div style={{ fontSize: theme.typography.fontSize.sm }}>{ledger.accountability?.owner ?? "—"}</div>
+          <Card title="Responsible">
+            <div style={{ fontSize: theme.typography.fontSize.sm }}>{ledger.accountability?.responsible ?? "—"}</div>
           </Card>
-          <Card title="RACI">
-            <Table
-              headers={["Name", "Role", "Responsibility", "Impact"]}
-              rows={(ledger.accountability?.stakeholders ?? []).map((r, i) => [
-                r.name ?? "—",
-                r.role ?? "—",
-                <Pill key={i}>{RACI_LABELS[r.responsibility] ?? r.responsibility}</Pill>,
-                r.impact ?? "—",
-              ])}
-            />
-            {(!ledger.accountability?.stakeholders || ledger.accountability.stakeholders.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}
+          <Card title="Accountable">
+            <div style={{ fontSize: theme.typography.fontSize.sm }}>{ledger.accountability?.accountable ?? "—"}</div>
           </Card>
-          <Card title="Approvals needed">
+          <Card title="Consulted">
             <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-              {(ledger.accountability?.approvalsNeeded ?? []).map((x, i) => (
+              {(ledger.accountability?.consulted ?? []).map((x, i) => (
                 <li key={i}>{x}</li>
               ))}
-              {(!ledger.accountability?.approvalsNeeded || ledger.accountability.approvalsNeeded.length === 0) ? <li>—</li> : null}
+              {(!ledger.accountability?.consulted || ledger.accountability.consulted.length === 0) ? <li>—</li> : null}
+            </ul>
+          </Card>
+          <Card title="Informed">
+            <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+              {(ledger.accountability?.informed ?? []).map((x, i) => (
+                <li key={i}>{x}</li>
+              ))}
+              {(!ledger.accountability?.informed || ledger.accountability.informed.length === 0) ? <li>—</li> : null}
             </ul>
           </Card>
         </div>
@@ -409,11 +410,13 @@ export default function ReportPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
           <Card title="Evidence ledger">
             <Table
-              headers={["Claim / reason", "Source", "Weight"]}
+              headers={["Evidence", "Used", "Weight", "Confidence impact", "Reason"]}
               rows={(ledger.evidenceLedger ?? []).map((e, i) => [
-                e.claim ?? "—",
-                e.source ?? "—",
-                <Pill key={i}>{e.strength ?? "—"}</Pill>,
+                e.evidence ?? "—",
+                e.used ? "Yes" : "No",
+                <Pill key={i}>{e.weight ?? "—"}</Pill>,
+                String(e.confidenceImpact ?? "—"),
+                e.reason ?? "—",
               ])}
             />
             {(!ledger.evidenceLedger || ledger.evidenceLedger.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>No evidence items.</div> : null}
@@ -426,12 +429,13 @@ export default function ReportPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
           <Card title="Risk ledger">
             <Table
-              headers={["Risk", "Likelihood", "Impact / severity", "Owner / accepted by", "Mitigation"]}
+              headers={["Risk", "Identified", "Accepted", "Severity", "Accepted by", "Mitigation"]}
               rows={(ledger.riskLedger ?? []).map((r, i) => [
                 r.risk ?? "—",
-                <Pill key={`l-${i}`}>{r.likelihood ?? "—"}</Pill>,
-                <Pill key={`i-${i}`}>{r.impact ?? "—"}</Pill>,
-                r.owner ?? "—",
+                r.identified ? "Yes" : "No",
+                r.accepted ? "Yes" : "No",
+                r.severity ?? "—",
+                r.acceptedBy ?? "—",
                 r.mitigation ?? "—",
               ])}
             />
@@ -445,11 +449,13 @@ export default function ReportPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
           <Card title="Assumption ledger">
             <Table
-              headers={["Assumption", "Validated", "How to validate"]}
+              headers={["Assumption", "Explicit", "Validated", "Owner", "Invalidation impact"]}
               rows={(ledger.assumptionLedger ?? []).map((a, i) => [
                 a.assumption ?? "—",
+                a.explicit ? "Yes" : "No",
                 <Pill key={i}>{a.validated ? "Yes" : "No"}</Pill>,
-                a.howToValidate ?? "—",
+                a.owner ?? "—",
+                a.invalidationImpact ?? "—",
               ])}
             />
             {(!ledger.assumptionLedger || ledger.assumptionLedger.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}

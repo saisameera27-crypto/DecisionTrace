@@ -24,7 +24,7 @@ globalThis.__DT_ANALYSES__ ??= new Map<string, StoredAnalysis>();
 
 function deriveTitle(analysis: StoredAnalysis): string {
   const { ledger, meta } = analysis;
-  const outcome = ledger?.decision?.title?.trim();
+  const outcome = ledger?.decision?.outcome?.trim();
   const doc = meta?.filename?.trim();
   if (outcome && doc) return `${outcome} – ${doc}`;
   if (outcome) return outcome;

@@ -18,16 +18,25 @@ const MODEL_FALLBACK = "gemini-3-flash-preview";
 const SYSTEM_INSTRUCTION = `You produce a decision ledger (audit trail). Output ONLY valid JSON that conforms exactly to the provided response schema. No markdown, no preamble.
 
 Ledger semantics (mandatory):
-- For each flow step: set aiInfluence (true/false) and overrideApplied (true/false). In description, state explicitly e.g. "AI influenced this step only" or "Human override applied; AI did not influence this step."
-- evidenceLedger: assign strength (low/medium/high) to every claim; cite short snippets only, never paste long paragraphs from the document.
-- riskLedger: record risk acceptance and owner; likelihood and impact required.
-- decision.description: cite evidenceLedger by short snippet or reference (e.g. "Per evidence item 1: …"). Do not dump raw document text.
+- decision: outcome (string), confidence (low/medium/high), traceScore (0–100), scoreRationale (array of short strings).
+- flow: step, label, actor (AI|Human|System), aiInfluence, overrideApplied, rulesApplied (string[]), confidenceDelta (number).
+- evidenceLedger: evidence, used (boolean), weight (low/medium/high), confidenceImpact (number), reason.
+- riskLedger: risk, identified, accepted, severity, acceptedBy, mitigation.
+- assumptionLedger: assumption, explicit, validated, owner, invalidationImpact.
+- accountability: responsible, accountable, consulted (string[]), informed (string[]).
+
+Schema compliance checklist:
+- Include decision.traceScore and decision.scoreRationale (required).
+- Use field names exactly as schema: outcome, traceScore, scoreRationale (no typos or alternatives).
+- flow.actor must be one of: AI, Human, or System—not role names or other labels.
+- Provide rulesApplied and confidenceDelta for every flow step.
+- Evidence must be in evidenceLedger with used, weight, confidenceImpact, and reason for each entry.
+- Risks must include identified, accepted, and acceptedBy for each entry.
 
 Strict rules:
-- traceScore: integer 0–100. scoreRationale: array of short strings (reasons for the score).
 - Do not copy long paragraphs from the source. Use brief quotes or references.
-- Decisions and flow steps must reference evidenceLedger entries (short snippets), not raw doc content.
-- Be concise. Enforce full JSON schema compliance: all required fields, correct types and enums.`;
+- Be concise. Enforce full JSON schema compliance: all required fields, correct types and enums.
+- Return ONLY valid JSON. No markdown.`;
 
 /**
  * Calls Gemini with the given model and returns the raw text from the first candidate.
@@ -127,8 +136,6 @@ export async function generateDecisionLedgerWithGemini(
     "riskLedger",
     "assumptionLedger",
     "accountability",
-    "traceScore",
-    "scoreRationale",
   ] as const;
   for (const key of required) {
     if (!(key in parsed) || (parsed as Record<string, unknown>)[key] === undefined) {

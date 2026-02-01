@@ -9,14 +9,15 @@ export type Confidence = "low" | "medium" | "high";
 
 export type Weight = "low" | "medium" | "high";
 
-export type Severity = "low" | "medium" | "high";
+export type Actor = "AI" | "Human" | "System";
 
-// --- Decision ---
+// --- Decision (outcome, confidence, traceScore, scoreRationale) ---
 
 export type DecisionEntry = {
-  title: string;
-  description: string;
+  outcome: string;
   confidence: Confidence;
+  traceScore: number;
+  scoreRationale: string[];
 };
 
 // --- Flow (decision flow steps) ---
@@ -24,51 +25,51 @@ export type DecisionEntry = {
 export type FlowStep = {
   step: number;
   label: string;
-  description: string;
-  actor: string;
+  actor: Actor;
   aiInfluence: boolean;
   overrideApplied: boolean;
+  rulesApplied: string[];
+  confidenceDelta: number;
 };
 
 // --- Evidence ledger ---
 
 export type EvidenceEntry = {
-  claim: string;
-  source: string;
-  strength: Weight;
+  evidence: string;
+  used: boolean;
+  weight: Weight;
+  confidenceImpact: number;
+  reason: string;
 };
 
 // --- Risk ledger ---
 
 export type RiskEntry = {
   risk: string;
-  likelihood: Weight;
-  impact: Severity;
+  identified: boolean;
+  accepted: boolean;
+  severity: string;
+  acceptedBy: string;
   mitigation: string;
-  owner: string;
 };
 
 // --- Assumption ledger ---
 
 export type AssumptionEntry = {
   assumption: string;
+  explicit: boolean;
   validated: boolean;
-  howToValidate: string;
+  owner: string;
+  invalidationImpact: string;
 };
 
 // --- Accountability ---
 
-export type StakeholderEntry = {
-  name: string;
-  role: string;
-  responsibility: "R" | "A" | "C" | "I";
-  impact: string;
-};
-
 export type AccountabilityEntry = {
-  owner: string;
-  stakeholders: StakeholderEntry[];
-  approvalsNeeded: string[];
+  responsible: string;
+  accountable: string;
+  consulted: string[];
+  informed: string[];
 };
 
 // --- Top-level Decision Ledger ---
@@ -80,16 +81,13 @@ export type DecisionLedger = {
   riskLedger: RiskEntry[];
   assumptionLedger: AssumptionEntry[];
   accountability: AccountabilityEntry;
-  traceScore: number;
-  scoreRationale: string[];
 };
 
 // --- JSON Schema (mirrors types, required fields, enums) ---
 
 const confidenceEnum = ["low", "medium", "high"] as const;
 const weightEnum = ["low", "medium", "high"] as const;
-const severityEnum = ["low", "medium", "high"] as const;
-const responsibilityEnum = ["R", "A", "C", "I"] as const;
+const actorEnum = ["AI", "Human", "System"] as const;
 
 export const DECISION_LEDGER_SCHEMA = {
   $schema: "http://json-schema.org/draft-07/schema#",
@@ -99,25 +97,27 @@ export const DECISION_LEDGER_SCHEMA = {
   properties: {
     decision: {
       type: "object",
-      required: ["title", "description", "confidence"],
+      required: ["outcome", "confidence"],
       properties: {
-        title: { type: "string" },
-        description: { type: "string" },
+        outcome: { type: "string" },
         confidence: { type: "string", enum: [...confidenceEnum] },
+        traceScore: { type: "number" },
+        scoreRationale: { type: "array", items: { type: "string" } },
       },
     },
     flow: {
       type: "array",
       items: {
         type: "object",
-        required: ["step", "label", "description", "actor", "aiInfluence", "overrideApplied"],
+        required: ["step", "label", "actor", "aiInfluence", "overrideApplied", "rulesApplied", "confidenceDelta"],
         properties: {
           step: { type: "number" },
           label: { type: "string" },
-          description: { type: "string" },
-          actor: { type: "string" },
+          actor: { type: "string", enum: [...actorEnum] },
           aiInfluence: { type: "boolean" },
           overrideApplied: { type: "boolean" },
+          rulesApplied: { type: "array", items: { type: "string" } },
+          confidenceDelta: { type: "number" },
         },
       },
     },
@@ -125,11 +125,13 @@ export const DECISION_LEDGER_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["claim", "source", "strength"],
+        required: ["evidence", "used", "weight", "confidenceImpact", "reason"],
         properties: {
-          claim: { type: "string" },
-          source: { type: "string" },
-          strength: { type: "string", enum: [...weightEnum] },
+          evidence: { type: "string" },
+          used: { type: "boolean" },
+          weight: { type: "string", enum: [...weightEnum] },
+          confidenceImpact: { type: "number" },
+          reason: { type: "string" },
         },
       },
     },
@@ -137,13 +139,14 @@ export const DECISION_LEDGER_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["risk", "likelihood", "impact", "mitigation", "owner"],
+        required: ["risk", "identified", "accepted", "severity", "acceptedBy", "mitigation"],
         properties: {
           risk: { type: "string" },
-          likelihood: { type: "string", enum: [...weightEnum] },
-          impact: { type: "string", enum: [...severityEnum] },
+          identified: { type: "boolean" },
+          accepted: { type: "boolean" },
+          severity: { type: "string" },
+          acceptedBy: { type: "string" },
           mitigation: { type: "string" },
-          owner: { type: "string" },
         },
       },
     },
@@ -151,36 +154,24 @@ export const DECISION_LEDGER_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["assumption", "validated", "howToValidate"],
+        required: ["assumption", "explicit", "validated", "owner", "invalidationImpact"],
         properties: {
           assumption: { type: "string" },
+          explicit: { type: "boolean" },
           validated: { type: "boolean" },
-          howToValidate: { type: "string" },
+          owner: { type: "string" },
+          invalidationImpact: { type: "string" },
         },
       },
     },
     accountability: {
       type: "object",
-      required: ["owner", "stakeholders", "approvalsNeeded"],
+      required: ["responsible", "accountable", "consulted", "informed"],
       properties: {
-        owner: { type: "string" },
-        stakeholders: {
-          type: "array",
-          items: {
-            type: "object",
-            required: ["name", "role", "responsibility", "impact"],
-            properties: {
-              name: { type: "string" },
-              role: { type: "string" },
-              responsibility: { type: "string", enum: [...responsibilityEnum] },
-              impact: { type: "string" },
-            },
-          },
-        },
-        approvalsNeeded: {
-          type: "array",
-          items: { type: "string" },
-        },
+        responsible: { type: "string" },
+        accountable: { type: "string" },
+        consulted: { type: "array", items: { type: "string" } },
+        informed: { type: "array", items: { type: "string" } },
       },
     },
   },

@@ -29,22 +29,24 @@ export function deriveScoreRationale(ledger: DecisionLedger): string[] {
 
   const evidence = ledger.evidenceLedger ?? [];
   if (evidence.length > 0) {
-    const high = evidence.filter((e) => e.strength === "high").length;
-    const medium = evidence.filter((e) => e.strength === "medium").length;
-    const low = evidence.filter((e) => e.strength === "low").length;
+    const high = evidence.filter((e) => e.weight === "high").length;
+    const medium = evidence.filter((e) => e.weight === "medium").length;
+    const low = evidence.filter((e) => e.weight === "low").length;
+    const used = evidence.filter((e) => e.used).length;
     const parts: string[] = [];
     if (high) parts.push(`${high} high`);
     if (medium) parts.push(`${medium} medium`);
     if (low) parts.push(`${low} low`);
-    reasons.push(`Evidence: ${evidence.length} item(s) (${parts.join(", ")} strength).`);
+    reasons.push(`Evidence: ${evidence.length} item(s), ${used} used (${parts.join(", ")} weight).`);
   } else {
     reasons.push("Evidence: no evidence items recorded.");
   }
 
   const risks = ledger.riskLedger ?? [];
   if (risks.length > 0) {
+    const accepted = risks.filter((r) => r.accepted).length;
     const withMitigation = risks.filter((r) => (r.mitigation ?? "").trim().length > 0).length;
-    reasons.push(`Risks: ${risks.length} identified; ${withMitigation} with mitigation, ${risks.length - withMitigation} without.`);
+    reasons.push(`Risks: ${risks.length} identified; ${accepted} accepted; ${withMitigation} with mitigation.`);
   } else {
     reasons.push("Risks: none recorded.");
   }
@@ -68,10 +70,11 @@ export function deriveScoreRationale(ledger: DecisionLedger): string[] {
 
   const acc = ledger.accountability;
   if (acc) {
-    const hasOwner = (acc.owner ?? "").trim().length > 0;
-    const stakeholderCount = acc.stakeholders?.length ?? 0;
-    const approvalCount = acc.approvalsNeeded?.length ?? 0;
-    reasons.push(`Accountability: owner ${hasOwner ? "set" : "not set"}; ${stakeholderCount} stakeholder(s); ${approvalCount} approval(s) needed.`);
+    const hasResponsible = (acc.responsible ?? "").trim().length > 0;
+    const hasAccountable = (acc.accountable ?? "").trim().length > 0;
+    const consultedCount = acc.consulted?.length ?? 0;
+    const informedCount = acc.informed?.length ?? 0;
+    reasons.push(`Accountability: responsible ${hasResponsible ? "set" : "not set"}; accountable ${hasAccountable ? "set" : "not set"}; ${consultedCount} consulted; ${informedCount} informed.`);
   } else {
     reasons.push("Accountability: not recorded.");
   }
@@ -80,21 +83,23 @@ export function deriveScoreRationale(ledger: DecisionLedger): string[] {
 }
 
 /**
- * Ensures ledger.scoreRationale supports the score: if missing or too generic,
+ * Ensures ledger.decision.scoreRationale supports the score: if missing or too generic,
  * sets or appends 3–6 concrete reasons derived from evidence, risks, and assumptions.
  * Mutates ledger in place. Deterministic and explainable.
  */
 export function ensureScoreRationale(ledger: DecisionLedger): void {
-  const current = ledger.scoreRationale ?? [];
+  const decision = ledger.decision;
+  if (!decision) return;
+  const current = decision.scoreRationale ?? [];
 
   if (current.length === 0) {
-    ledger.scoreRationale = deriveScoreRationale(ledger);
+    decision.scoreRationale = deriveScoreRationale(ledger);
     return;
   }
 
   if (isScoreRationaleTooGeneric(current)) {
     const derived = deriveScoreRationale(ledger);
     const combined = [...current, ...derived];
-    ledger.scoreRationale = combined.slice(0, MAX_RATIONALE_ITEMS);
+    decision.scoreRationale = combined.slice(0, MAX_RATIONALE_ITEMS);
   }
 }

@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { extractTextFromUpload } from "@/lib/extractText";
 import { generateDecisionLedgerWithGemini } from "@/lib/geminiDecisionLedger";
+import { normalizeLedger, computeTraceScore } from "@/lib/normalizeLedger";
 import { validateDecisionLedger } from "@/lib/validateLedger";
 import { MAX_FILE_BYTES, truncateTextForGemini } from "@/lib/analyzeLimits";
-import { ensureScoreRationale } from "@/lib/scoreRationale";
+import { deriveScoreRationale } from "@/lib/scoreRationale";
 import type { DecisionLedger } from "@/lib/decisionLedgerSchema";
 import type { ExtractTextMeta } from "@/lib/extractText";
+
+const RAW_EXCERPT_MAX_LENGTH = 2000;
 
 export const runtime = "nodejs";
 
@@ -127,34 +130,69 @@ export async function POST(req: Request) {
     const ANALYZE_TIMEOUT_MS = 90_000;
     const timeoutSignal = AbortSignal.timeout(ANALYZE_TIMEOUT_MS);
 
-    let ledger: DecisionLedger;
+    let raw: unknown;
     try {
-      ledger = await generateDecisionLedgerWithGemini(text, { signal: timeoutSignal });
+      raw = await generateDecisionLedgerWithGemini(text, { signal: timeoutSignal });
     } catch (e: unknown) {
       const { error, detail, status } = analyzeErrorResponse(e);
       return NextResponse.json({ ok: false, error, detail }, { status });
     }
 
-    // 4) validateDecisionLedger(ledger) and return 500 with explanation if invalid
-    const validation = validateDecisionLedger(ledger);
-    if (!validation.ok) {
+    // 4) normalizeLedger(raw) then validate; store normalized ledger
+    let ledger: DecisionLedger;
+    try {
+      ledger = normalizeLedger(raw);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      const rawExcerpt =
+        typeof raw === "object" && raw !== null
+          ? JSON.stringify(raw).slice(0, RAW_EXCERPT_MAX_LENGTH)
+          : String(raw).slice(0, RAW_EXCERPT_MAX_LENGTH);
       return NextResponse.json(
-        { ok: false, error: "Gemini returned invalid schema", detail: validation.error },
-        { status: 500 }
+        {
+          ok: false,
+          error: "Normalization failed",
+          detail: message,
+          rawExcerpt,
+        },
+        { status: 502 }
       );
     }
 
-    // 4b) Ensure score rationale supports traceScore: fill or append concrete reasons from evidence/risks/assumptions
-    ensureScoreRationale(ledger);
+    const validation = validateDecisionLedger(ledger);
+    if (!validation.ok) {
+      const rawExcerpt =
+        typeof raw === "object" && raw !== null
+          ? JSON.stringify(raw).slice(0, RAW_EXCERPT_MAX_LENGTH)
+          : String(raw).slice(0, RAW_EXCERPT_MAX_LENGTH);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Gemini returned invalid schema",
+          detail: validation.error,
+          missingFields: validation.missingFields ?? [],
+          rawExcerpt,
+        },
+        { status: 502 }
+      );
+    }
 
-    // 5) create analysisId (uuid)
+    // 5) Always compute traceScore + scoreRationale server-side and inject before storing
+    ledger.decision.traceScore = computeTraceScore(
+      ledger.evidenceLedger,
+      ledger.riskLedger,
+      ledger.assumptionLedger
+    );
+    ledger.decision.scoreRationale = deriveScoreRationale(ledger);
+
+    // 6) create analysisId (uuid)
     const analysisId = randomUUID();
 
-    // 6) store the ledger + meta in global Map keyed by analysisId
+    // 7) store the normalized ledger + meta in global Map keyed by analysisId
     const createdAt = new Date().toISOString();
     globalThis.__DT_ANALYSES__!.set(analysisId, { ledger, meta, createdAt });
 
-    // 7) return { ok: true, analysisId }; do NOT return the whole ledger
+    // 8) return { ok: true, analysisId }; do NOT return the whole ledger
     return NextResponse.json({
       ok: true,
       analysisId,
