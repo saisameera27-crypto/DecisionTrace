@@ -30,30 +30,30 @@ export default function ReportHeroCard({
   return (
     <div
       data-testid="report-score-card"
-      className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 flex flex-col gap-4 shadow-sm"
+      className="rounded-xl border border-slate-200 bg-white p-6 flex flex-col gap-5 shadow-sm"
     >
       <div>
-        <h1 className="text-xl font-bold text-slate-900 leading-tight m-0 line-clamp-2">
+        <h1 className="text-xl font-bold text-slate-900 leading-tight m-0 line-clamp-3">
           {displayTitle}
         </h1>
-        <p className="text-xs text-slate-500 mt-1">{subtitle}</p>
+        <p className="text-sm text-slate-500 mt-2">{subtitle}</p>
       </div>
 
       <div className="flex flex-wrap items-baseline gap-2">
         <span className="text-4xl font-bold text-slate-900 leading-none">{displayScore}</span>
         <span className="text-lg text-slate-500">/100</span>
       </div>
-      <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden max-w-[160px]">
+      <div className="h-2 rounded-full bg-slate-200 overflow-hidden max-w-[200px]">
         <div
-          className="h-full rounded-full bg-indigo-500"
+          className="h-full rounded-full bg-indigo-500 transition-[width]"
           style={{ width: `${progressPct}%` }}
         />
       </div>
 
-      <div>
-        <p className="text-xs font-semibold text-slate-600 mb-1">Supported by</p>
+      <div className="pt-1 border-t border-slate-100">
+        <p className="text-xs font-semibold text-slate-600 mb-2 uppercase tracking-wide">Supported by</p>
         {rationale.length > 0 ? (
-          <ul className="m-0 pl-5 text-sm text-slate-800 leading-relaxed list-disc">
+          <ul className="m-0 pl-5 text-sm text-slate-700 leading-relaxed list-disc space-y-1">
             {rationale.map((r, i) => (
               <li key={i}>{r}</li>
             ))}
@@ -65,33 +65,30 @@ export default function ReportHeroCard({
 
       <MetricPills items={metrics} />
 
-      <details className="text-xs text-slate-500" data-testid="report-details-disclosure">
-        <summary className="cursor-pointer list-none select-none underline">Details</summary>
-        <div className="mt-1 pl-0">
-          <div
-            className="font-mono tracking-wide"
-            data-testid="report-analysis-id-debug"
-          >
-            Analysis ID: {details.id}
-          </div>
-          <div className="mt-1">File type: {details.mimeType || "—"}</div>
-          <div className="mt-1">File size: {details.size != null ? `${details.size} B` : "—"}</div>
+      <details className="text-xs text-slate-500 pt-1" data-testid="report-details-disclosure">
+        <summary className="cursor-pointer list-none select-none underline hover:text-slate-700">
+          Details
+        </summary>
+        <div className="mt-2 pl-0 font-mono text-slate-600 space-y-1">
+          <div data-testid="report-analysis-id-debug">Analysis ID: {details.id}</div>
+          <div>File type: {details.mimeType || "—"}</div>
+          <div>File size: {details.size != null ? `${details.size} B` : "—"}</div>
         </div>
       </details>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 pt-1 border-t border-slate-100">
         <button
           type="button"
           onClick={onDownload}
           data-testid="report-download-json"
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs bg-white hover:bg-slate-50 transition-colors text-slate-700"
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-colors"
         >
           Download Audit JSON
         </button>
         <Link
           href="/"
           data-testid="report-back-to-upload"
-          className="rounded-full border border-slate-200 px-3 py-1.5 text-xs text-slate-900 no-underline hover:bg-slate-50 transition-colors"
+          className="inline-flex items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900 no-underline hover:bg-slate-50 hover:border-slate-300 transition-colors"
         >
           Back
         </Link>

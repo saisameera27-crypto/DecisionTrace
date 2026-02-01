@@ -58,12 +58,12 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
 
 function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200">
-      <table className="w-full min-w-[400px] text-sm">
-        <thead className="bg-slate-50">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+      <table className="w-full min-w-[400px] text-sm border-collapse">
+        <thead className="bg-slate-100">
           <tr>
             {headers.map((h) => (
-              <th key={h} className="p-2 text-left font-semibold text-slate-900">
+              <th key={h} className="p-3 text-left font-semibold text-slate-900 border-b border-slate-200">
                 {h}
               </th>
             ))}
@@ -73,10 +73,10 @@ function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][]
           {rows.map((r, idx) => (
             <tr
               key={idx}
-              className={`border-t border-slate-200 ${idx % 2 === 1 ? "bg-slate-50" : "bg-white"}`}
+              className={`border-b border-slate-200 ${idx % 2 === 1 ? "bg-slate-50/50" : "bg-white"}`}
             >
               {r.map((cell, j) => (
-                <td key={j} className="p-2 align-top break-words">
+                <td key={j} className="p-3 align-top break-words text-slate-700">
                   {cell}
                 </td>
               ))}
@@ -110,8 +110,8 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
 
 function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
-    <div className="sticky top-0 z-10 -mx-6 px-6 pt-2 pb-2 border-b border-slate-200 bg-slate-100/70">
-      <div className="flex w-full gap-0.5 rounded-t-lg">
+    <div className="sticky top-0 z-10 -mx-6 px-6 py-3 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+      <div className="flex flex-wrap gap-2">
         {TABS.map((t) => {
           const isActive = tab === t;
           return (
@@ -120,13 +120,13 @@ function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
               type="button"
               onClick={() => setTab(t)}
               data-testid={`report-tab-${t.toLowerCase().replace(" ", "")}`}
-              className={`flex-1 min-w-0 rounded-t-md border border-b-0 px-3 py-2.5 text-sm font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? "border-slate-200 border-b-white bg-white text-slate-900 shadow-sm -mb-px"
-                  : "border-transparent bg-transparent text-slate-500 hover:bg-slate-200/60 hover:text-slate-700"
+                  ? "border-indigo-600 bg-indigo-600 text-white shadow-sm"
+                  : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:border-slate-300"
               }`}
             >
-              <span className={isActive ? "font-bold" : ""}>{t}</span>
+              {t}
             </button>
           );
         })}
@@ -222,7 +222,7 @@ export default function ReportPage() {
   };
 
   return (
-    <div data-testid="report-content" className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-4">
+    <div data-testid="report-content" className="max-w-4xl mx-auto px-6 py-8 flex flex-col gap-6">
       <ReportHeroCard
         displayTitle={displayTitle}
         subtitle={`${meta.filename?.trim() || "—"} • ${createdAtFormatted}`}
