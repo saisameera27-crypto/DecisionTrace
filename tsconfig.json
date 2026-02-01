@@ -36,6 +36,7 @@
   },
   "include": [
     "app/**/*",
+    "components/**/*",
     "tests/**/*",
     "lib/**/*",
     "scripts/**/*",

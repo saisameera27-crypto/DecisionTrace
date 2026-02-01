@@ -1,7 +1,11 @@
 /**
- * Global Styles with CSS Variables
+ * Global Styles with CSS Variables + Tailwind
  * Supports light theme (default) and dark theme via prefers-color-scheme
  */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 * {
   box-sizing: border-box;

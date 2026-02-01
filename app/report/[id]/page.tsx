@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { theme } from "@/styles/theme";
 import type { DecisionLedger, FlowStep } from "@/lib/decisionLedgerSchema";
 import type { ExtractTextMeta } from "@/lib/extractText";
+import ReportHeroCard from "@/components/report/ReportHeroCard";
+import InfluenceMapPanel from "@/components/report/InfluenceMapPanel";
+import TabDescription from "@/components/report/TabDescription";
 
 /** Format step numbers for display: "Step 3" or "Steps 3, 4, 5" */
 function formatStepList(steps: number[]): string {
@@ -35,21 +37,9 @@ type ReportPayload = {
   title: string;
 };
 
-const MAX_WIDTH_6XL = "72rem"; // 1152px
-
 function Pill({ children }: { children: React.ReactNode }) {
   return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        borderRadius: theme.borderRadius.full,
-        border: `1px solid ${theme.colors.border}`,
-        padding: "2px 8px",
-        fontSize: theme.typography.fontSize.xs,
-        color: theme.colors.textSecondary,
-      }}
-    >
+    <span className="inline-flex items-center rounded-full border border-slate-200 px-2 py-0.5 text-xs text-slate-600">
       {children}
     </span>
   );
@@ -57,38 +47,23 @@ function Pill({ children }: { children: React.ReactNode }) {
 
 function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        borderRadius: theme.borderRadius.xl,
-        border: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.background,
-        padding: theme.spacing.md,
-        boxShadow: theme.colors.shadowSm,
-      }}
-    >
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       {title ? (
-        <div style={{ marginBottom: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.semibold }}>
-          {title}
-        </div>
+        <div className="mb-2 text-sm font-semibold text-slate-900">{title}</div>
       ) : null}
       {children}
     </div>
   );
 }
 
-const tableCellWrap: React.CSSProperties = {
-  wordBreak: "break-word",
-  overflowWrap: "break-word",
-};
-
 function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) {
   return (
-    <div style={{ overflowX: "auto", borderRadius: theme.borderRadius.xl, border: `1px solid ${theme.colors.border}` }}>
-      <table style={{ width: "100%", minWidth: 400, fontSize: theme.typography.fontSize.sm }}>
-        <thead style={{ backgroundColor: theme.colors.backgroundSecondary }}>
+    <div className="overflow-x-auto rounded-xl border border-slate-200">
+      <table className="w-full min-w-[400px] text-sm">
+        <thead className="bg-slate-50">
           <tr>
             {headers.map((h) => (
-              <th key={h} style={{ padding: theme.spacing.sm, textAlign: "left", fontWeight: theme.typography.fontWeight.semibold }}>
+              <th key={h} className="p-2 text-left font-semibold text-slate-900">
                 {h}
               </th>
             ))}
@@ -98,14 +73,10 @@ function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][]
           {rows.map((r, idx) => (
             <tr
               key={idx}
-              style={{
-                borderTop: `1px solid ${theme.colors.border}`,
-                backgroundColor: idx % 2 === 1 ? theme.colors.backgroundSecondary : theme.colors.background,
-                transition: "background-color 0.15s ease",
-              }}
+              className={`border-t border-slate-200 ${idx % 2 === 1 ? "bg-slate-50" : "bg-white"}`}
             >
               {r.map((cell, j) => (
-                <td key={j} style={{ padding: theme.spacing.sm, verticalAlign: "top", ...tableCellWrap }}>
+                <td key={j} className="p-2 align-top break-words">
                   {cell}
                 </td>
               ))}
@@ -120,9 +91,7 @@ function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][]
 function EmptyStateCard({ title, message }: { title: string; message: string }) {
   return (
     <Card title={title}>
-      <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary, lineHeight: 1.6 }}>
-        {message}
-      </div>
+      <p className="text-sm text-slate-600 leading-relaxed">{message}</p>
     </Card>
   );
 }
@@ -132,7 +101,7 @@ type Tab = (typeof TABS)[number];
 
 const TAB_DESCRIPTIONS: Record<Tab, string> = {
   Overview: "Decision summary, confidence, and what would change the outcome.",
-  "Decision Flow": "Step-by-step audit trail showing where AI influenced decisions and which rules applied.",
+  "Decision Flow": "Step-by-step audit trail of AI influence and applied controls.",
   Stakeholders: "RACI accountability: who owned, approved, and was consulted.",
   Evidence: "Evidence used vs missing, with strength and confidence impact.",
   Risks: "Risk register with severity, acceptance, and mitigations.",
@@ -141,23 +110,8 @@ const TAB_DESCRIPTIONS: Record<Tab, string> = {
 
 function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
-    <div
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 10,
-        padding: `${theme.spacing.sm} 0`,
-        marginLeft: -theme.spacing.xl,
-        marginRight: -theme.spacing.xl,
-        paddingLeft: theme.spacing.xl,
-        paddingRight: theme.spacing.xl,
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        backgroundColor: "rgba(255, 255, 255, 0.85)",
-        borderBottom: `1px solid ${theme.colors.border}`,
-      }}
-    >
-      <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs }}>
+    <div className="sticky top-0 z-10 -mx-6 px-6 pt-2 pb-2 border-b border-slate-200 bg-slate-100/70">
+      <div className="flex w-full gap-0.5 rounded-t-lg">
         {TABS.map((t) => {
           const isActive = tab === t;
           return (
@@ -166,34 +120,18 @@ function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
               type="button"
               onClick={() => setTab(t)}
               data-testid={`report-tab-${t.toLowerCase().replace(" ", "")}`}
-              style={{
-                borderRadius: theme.borderRadius.full,
-                border: `1px solid ${isActive ? theme.colors.indigo600 : theme.colors.border}`,
-                padding: `${theme.spacing.xs} ${theme.spacing.md}`,
-                fontSize: theme.typography.fontSize.sm,
-                fontWeight: isActive ? theme.typography.fontWeight.semibold : theme.typography.fontWeight.normal,
-                backgroundColor: isActive ? theme.colors.indigo600 : "transparent",
-                color: isActive ? "#ffffff" : theme.colors.textPrimary,
-                cursor: "pointer",
-                boxShadow: isActive ? theme.colors.shadowSm : "none",
-              }}
+              className={`flex-1 min-w-0 rounded-t-md border border-b-0 px-3 py-2.5 text-sm font-medium transition-colors ${
+                isActive
+                  ? "border-slate-200 border-b-white bg-white text-slate-900 shadow-sm -mb-px"
+                  : "border-transparent bg-transparent text-slate-500 hover:bg-slate-200/60 hover:text-slate-700"
+              }`}
             >
-              {t}
+              <span className={isActive ? "font-bold" : ""}>{t}</span>
             </button>
           );
         })}
       </div>
-      <div
-        style={{
-          marginTop: theme.spacing.xs,
-          fontSize: theme.typography.fontSize.xs,
-          color: theme.colors.textSecondary,
-          lineHeight: 1.4,
-        }}
-        data-testid="report-tab-description"
-      >
-        {TAB_DESCRIPTIONS[tab]}
-      </div>
+      <TabDescription description={TAB_DESCRIPTIONS[tab]} />
     </div>
   );
 }
@@ -233,19 +171,12 @@ export default function ReportPage() {
 
   if (err) {
     return (
-      <div data-testid="report-error" style={{ maxWidth: 1024, margin: theme.spacing.xl, marginLeft: "auto", marginRight: "auto", padding: theme.spacing.lg }}>
-        <div
-          style={{
-            borderRadius: theme.borderRadius.xl,
-            border: `1px solid ${theme.colors.error}`,
-            padding: theme.spacing.md,
-            color: theme.colors.error,
-          }}
-        >
-          <div style={{ fontWeight: theme.typography.fontWeight.semibold }}>Error</div>
-          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSize.sm }}>{err}</div>
-          <div style={{ marginTop: theme.spacing.md }}>
-            <Link href="/" style={{ fontSize: theme.typography.fontSize.sm, textDecoration: "underline", color: theme.colors.primary }} data-testid="report-back-to-upload">
+      <div data-testid="report-error" className="max-w-3xl mx-auto my-8 px-6">
+        <div className="rounded-xl border border-red-200 bg-red-50/80 p-4 text-red-800">
+          <div className="font-semibold">Error</div>
+          <div className="mt-1 text-sm">{err}</div>
+          <div className="mt-4">
+            <Link href="/" className="text-sm underline text-indigo-600 hover:text-indigo-700" data-testid="report-back-to-upload">
               Back to upload
             </Link>
           </div>
@@ -256,8 +187,8 @@ export default function ReportPage() {
 
   if (!report) {
     return (
-      <div data-testid="report-loading" style={{ maxWidth: 1024, margin: theme.spacing.xl, marginLeft: "auto", marginRight: "auto", padding: theme.spacing.lg }}>
-        <div style={{ borderRadius: theme.borderRadius.xl, border: `1px solid ${theme.colors.border}`, padding: theme.spacing.lg }}>
+      <div data-testid="report-loading" className="max-w-3xl mx-auto my-8 px-6">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 text-slate-600">
           Loading report…
         </div>
       </div>
@@ -270,258 +201,113 @@ export default function ReportPage() {
   const extReport = report as ReportPayload & { openQuestions?: string[]; nextActions?: string[] };
   const { aiLine } = flowBannerLines(ledger.flow);
 
+  const score = ledger.decision?.traceScore ?? 0;
+  const rationale = Array.isArray(ledger.decision?.scoreRationale) ? ledger.decision.scoreRationale.slice(0, 5) : [];
+  const evidenceUsed = (ledger.evidenceLedger ?? []).filter((e) => e.used).length;
+  const risksAccepted = (ledger.riskLedger ?? []).filter((r) => r.accepted).length;
+  const assumptionsValidated = (ledger.assumptionLedger ?? []).filter((a) => a.validated).length;
+  const overrides = (ledger.flow ?? []).filter((s) => s.overrideApplied).length;
+
+  const handleDownload = () => {
+    const payload = { reportId: id, createdAt, meta, ledger };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `decision-trace-${id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div data-testid="report-content" style={{ maxWidth: MAX_WIDTH_6XL, margin: "0 auto", padding: theme.spacing.xl, display: "flex", flexDirection: "column", gap: theme.spacing.md }}>
-      {/* Header */}
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md }}>
-        <div style={{ flex: "1 1 0", minWidth: 0 }}>
-          <h1
-            style={{
-              fontSize: theme.typography.fontSize["2xl"],
-              fontWeight: theme.typography.fontWeight.bold,
-              margin: 0,
-              lineHeight: theme.typography.lineHeight.tight,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-              textWrap: "balance",
-            }}
-          >
-            {displayTitle}
-          </h1>
-          <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
-            {meta.filename?.trim() || "—"} • {createdAtFormatted}
-          </div>
-          <details
-            style={{
-              marginTop: theme.spacing.sm,
-              fontSize: theme.typography.fontSize.xs,
-              color: theme.colors.textTertiary,
-            }}
-            data-testid="report-details-disclosure"
-          >
-            <summary style={{ cursor: "pointer", listStyle: "none", userSelect: "none" }}>
-              <span style={{ textDecoration: "underline" }}>Details</span>
-            </summary>
-            <div style={{ marginTop: theme.spacing.xs, paddingLeft: 0 }}>
-              <div style={{ fontFamily: "ui-monospace, monospace", letterSpacing: "0.02em" }} data-testid="report-analysis-id-debug">
-                Analysis ID: {id}
-              </div>
-              <div style={{ marginTop: theme.spacing.xs }}>File type: {meta.mimeType ?? "—"}</div>
-              <div style={{ marginTop: theme.spacing.xs }}>File size: {meta.size != null ? `${meta.size} B` : "—"}</div>
-            </div>
-          </details>
-        </div>
+    <div data-testid="report-content" className="max-w-7xl mx-auto px-6 py-6">
+      {/* Optional breadcrumbs */}
+      <nav className="mb-4 text-sm text-slate-500" aria-label="Breadcrumb">
+        <ol className="flex flex-wrap items-center gap-1.5 m-0 p-0 list-none">
+          <li>
+            <Link href="/" className="hover:text-slate-700 transition-colors">Home</Link>
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden>/</span>
+            <span>Audit</span>
+          </li>
+          <li className="flex items-center gap-1.5">
+            <span aria-hidden>/</span>
+            <span className="text-slate-900 font-medium">Dashboard</span>
+          </li>
+        </ol>
+      </nav>
 
-        <div style={{ display: "flex", gap: theme.spacing.xs, flexShrink: 0, alignItems: "center" }}>
-          <button
-            type="button"
-            style={{
-              borderRadius: theme.borderRadius.full,
-              border: `1px solid ${theme.colors.border}`,
-              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-              fontSize: theme.typography.fontSize.xs,
-              cursor: "pointer",
-              backgroundColor: theme.colors.background,
-            }}
-            onClick={() => {
-              const payload = { reportId: id, createdAt, meta, ledger };
-              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url;
-              a.download = `decision-trace-${id}.json`;
-              document.body.appendChild(a);
-              a.click();
-              a.remove();
-              URL.revokeObjectURL(url);
-            }}
-            data-testid="report-download-json"
-          >
-            Download Audit JSON
-          </button>
-          <Link
-            href="/"
-            style={{
-              borderRadius: theme.borderRadius.full,
-              border: `1px solid ${theme.colors.border}`,
-              padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-              fontSize: theme.typography.fontSize.xs,
-              color: theme.colors.textPrimary,
-              textDecoration: "none",
-            }}
-            data-testid="report-back-to-upload"
-          >
-            Back
-          </Link>
-        </div>
-      </div>
+      {/* Main dashboard grid: left hero, right content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left column: hero card */}
+        <aside className="w-full lg:col-span-4">
+          <ReportHeroCard
+            displayTitle={displayTitle}
+            subtitle={`Decision Ledger • ${meta.filename?.trim() || "—"}`}
+            score={score}
+            rationale={rationale}
+            confidenceLabel={
+              ledger.decision?.confidence
+                ? `${String(ledger.decision.confidence)} confidence`
+                : undefined
+            }
+            metrics={[
+              { label: "Evidence used", value: evidenceUsed },
+              { label: "Risks accepted", value: risksAccepted },
+              { label: "Assumptions validated", value: assumptionsValidated },
+              { label: "Overrides", value: overrides },
+            ]}
+            details={{ id, mimeType: meta.mimeType ?? "—", size: meta.size ?? null }}
+            onDownload={handleDownload}
+          />
+        </aside>
 
-      {/* 1) Decision Trace Score hero card */}
-      {(() => {
-        const score = ledger.decision?.traceScore ?? 0;
-        const rationale = Array.isArray(ledger.decision?.scoreRationale) ? ledger.decision.scoreRationale.slice(0, 5) : [];
-        const evidenceUsed = (ledger.evidenceLedger ?? []).filter((e) => e.used).length;
-        const risksAccepted = (ledger.riskLedger ?? []).filter((r) => r.accepted).length;
-        const assumptionsValidated = (ledger.assumptionLedger ?? []).filter((a) => a.validated).length;
-        const overrides = (ledger.flow ?? []).filter((s) => s.overrideApplied).length;
-        return (
-          <div
-            data-testid="report-score-card"
-            style={{
-              borderRadius: theme.borderRadius.xl,
-              border: `1px solid ${theme.colors.border}`,
-              background: `linear-gradient(145deg, ${theme.colors.background} 0%, ${theme.colors.backgroundSecondary} 100%)`,
-              padding: theme.spacing.xl,
-              display: "flex",
-              flexDirection: "column",
-              gap: theme.spacing.lg,
-            }}
-          >
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "stretch", gap: theme.spacing.xl }}>
-              <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm, minWidth: 120 }}>
-                <div style={{ display: "flex", alignItems: "baseline", gap: theme.spacing.xs }}>
-                  <span style={{ fontSize: "3.5rem", fontWeight: theme.typography.fontWeight.bold, lineHeight: 1 }}>{typeof score === "number" ? score : "—"}</span>
-                  <span style={{ fontSize: theme.typography.fontSize.lg, color: theme.colors.textTertiary }}>/100</span>
-                </div>
-                <div
-                  style={{
-                    height: 6,
-                    borderRadius: theme.borderRadius.full,
-                    backgroundColor: theme.colors.borderLight,
-                    overflow: "hidden",
-                    width: "100%",
-                    maxWidth: 160,
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${Math.min(100, Math.max(0, Number(score)))}%`,
-                      borderRadius: theme.borderRadius.full,
-                      backgroundColor: theme.colors.primary,
-                      opacity: 0.6,
-                    }}
-                  />
-                </div>
-              </div>
-              <div style={{ flex: "1 1 240px", minWidth: 0 }}>
-                <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary, marginBottom: theme.spacing.xs }}>Supported by</div>
-                {rationale.length > 0 ? (
-                  <ul style={{ margin: 0, paddingLeft: theme.spacing.lg, fontSize: theme.typography.fontSize.sm, color: theme.colors.textPrimary, lineHeight: 1.6 }}>
-                    {rationale.map((r, i) => (
-                      <li key={i}>{r}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textTertiary }}>No rationale provided.</div>
-                )}
-              </div>
-            </div>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: theme.spacing.lg,
-                paddingTop: theme.spacing.sm,
-                borderTop: `1px solid ${theme.colors.emerald200}`,
-                fontSize: theme.typography.fontSize.xs,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              <span>Evidence used: <strong style={{ color: theme.colors.textPrimary }}>{evidenceUsed}</strong></span>
-              <span>Risks accepted: <strong style={{ color: theme.colors.textPrimary }}>{risksAccepted}</strong></span>
-              <span>Assumptions validated: <strong style={{ color: theme.colors.textPrimary }}>{assumptionsValidated}</strong></span>
-              <span>Overrides: <strong style={{ color: theme.colors.textPrimary }}>{overrides}</strong></span>
-            </div>
-          </div>
-        );
-      })()}
+        {/* Right column: influence map, tab bar, tab content */}
+        <main className="w-full min-w-0 lg:col-span-8 flex flex-col gap-4">
+          <InfluenceMapPanel ledger={ledger} />
+          <TabsBar tab={tab} setTab={setTab} />
 
-      {/* 2) AI Influence Map banner */}
-      <div
-        data-testid="report-ai-override-banner"
-        style={{
-          borderRadius: theme.borderRadius.xl,
-          border: `1px solid ${theme.colors.indigo200}`,
-          backgroundColor: theme.colors.indigo50,
-          padding: theme.spacing.md,
-          display: "flex",
-          flexDirection: "column",
-          gap: theme.spacing.sm,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-          <span style={{ fontSize: "1.25rem", lineHeight: 1, color: theme.colors.indigo600 }} aria-hidden>✨</span>
-          <h2 style={{ margin: 0, fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textPrimary }}>
-            AI Influence Map
-          </h2>
-        </div>
-        <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary, lineHeight: 1.5 }}>
-          {aiLine}
-        </div>
-        <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
-          Highlights AI-influenced vs human-controlled steps for auditability.
-        </div>
-      </div>
-
-      {/* 3) Tabs */}
-      <TabsBar tab={tab} setTab={setTab} />
-
-      {/* Tab content area */}
-      <div style={{ paddingTop: theme.spacing.md, display: "flex", flexDirection: "column", gap: theme.spacing.md }}>
+          <div className="pt-2 flex flex-col gap-4">
       {tab === "Overview" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+        <div className="flex flex-col gap-2">
           <Card title="Decision outcome">
-            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{ledger.decision?.outcome ?? "—"}</div>
-            <div style={{ marginTop: theme.spacing.sm }}>
+            <div className="text-lg font-semibold text-slate-900">{ledger.decision?.outcome ?? "—"}</div>
+            <div className="mt-2">
               <Pill>Confidence: {ledger.decision?.confidence ?? "—"}</Pill>
             </div>
           </Card>
         </div>
       )}
 
-      {/* 2) Decision Flow */}
       {tab === "Decision Flow" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+        <div className="flex flex-col gap-2">
           {(ledger.flow ?? []).map((s, idx) => (
             <div
               key={s.step ?? idx}
-              style={{
-                borderRadius: theme.borderRadius.xl,
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.background,
-                padding: theme.spacing.sm,
-                boxShadow: theme.colors.shadowSm,
-              }}
+              className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 shadow-sm"
             >
-              <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.semibold, marginBottom: theme.spacing.xs }}>
+              <div className="text-sm font-semibold text-slate-900 mb-1">
                 Step {s.step ?? "—"} — {s.label ?? "—"}
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: theme.spacing.sm,
-                  alignItems: "flex-start",
-                }}
-              >
-                <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+              <div className="flex flex-wrap gap-2 items-start">
+                <div className="flex-1 min-w-[200px]">
                   {Array.isArray(s.rulesApplied) && s.rulesApplied.length > 0 ? (
-                    <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
-                      <span style={{ fontWeight: theme.typography.fontWeight.semibold }}>Rules applied</span>
-                      <ul style={{ marginTop: 2, paddingLeft: theme.spacing.md, margin: 0, lineHeight: 1.4 }}>
+                    <div className="text-sm text-slate-600">
+                      <span className="font-semibold">Rules applied</span>
+                      <ul className="mt-0.5 pl-4 m-0 leading-snug list-disc">
                         {s.rulesApplied.map((r, i) => (
                           <li key={i}>{r}</li>
                         ))}
                       </ul>
                     </div>
                   ) : (
-                    <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textTertiary }}>No rules listed</span>
+                    <span className="text-sm text-slate-500">No rules listed</span>
                   )}
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.xs, flexShrink: 0, alignSelf: "flex-start" }}>
+                <div className="flex flex-wrap gap-1 shrink-0 self-start">
                   <Pill>Actor: {s.actor ?? "—"}</Pill>
                   <Pill>AI influenced: {s.aiInfluence ? "Yes" : "No"}</Pill>
                   <Pill>Override applied: {s.overrideApplied ? "Yes" : "No"}</Pill>
@@ -534,17 +320,16 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* 3) Stakeholders */}
       {tab === "Stakeholders" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+        <div className="flex flex-col gap-2">
           <Card title="Responsible">
-            <div style={{ fontSize: theme.typography.fontSize.sm }}>{ledger.accountability?.responsible ?? "—"}</div>
+            <div className="text-sm text-slate-800">{ledger.accountability?.responsible ?? "—"}</div>
           </Card>
           <Card title="Accountable">
-            <div style={{ fontSize: theme.typography.fontSize.sm }}>{ledger.accountability?.accountable ?? "—"}</div>
+            <div className="text-sm text-slate-800">{ledger.accountability?.accountable ?? "—"}</div>
           </Card>
           <Card title="Consulted">
-            <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+            <ul className="list-disc pl-6 m-0 text-sm text-slate-800">
               {(ledger.accountability?.consulted ?? []).map((x, i) => (
                 <li key={i}>{x}</li>
               ))}
@@ -552,7 +337,7 @@ export default function ReportPage() {
             </ul>
           </Card>
           <Card title="Informed">
-            <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+            <ul className="list-disc pl-6 m-0 text-sm text-slate-800">
               {(ledger.accountability?.informed ?? []).map((x, i) => (
                 <li key={i}>{x}</li>
               ))}
@@ -562,9 +347,8 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* 4) Evidence */}
       {tab === "Evidence" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+        <div className="flex flex-col gap-2">
           {(!ledger.evidenceLedger || ledger.evidenceLedger.length === 0) ? (
             <EmptyStateCard
               title="Evidence ledger"
@@ -587,9 +371,8 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* 5) Risks */}
       {tab === "Risks" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+        <div className="flex flex-col gap-2">
           {(!ledger.riskLedger || ledger.riskLedger.length === 0) ? (
             <EmptyStateCard
               title="Risk ledger"
@@ -613,9 +396,8 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* 6) Assumptions */}
       {tab === "Assumptions" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+        <div className="flex flex-col gap-2">
           {(!ledger.assumptionLedger || ledger.assumptionLedger.length === 0) ? (
             <EmptyStateCard
               title="Assumption ledger"
@@ -636,10 +418,10 @@ export default function ReportPage() {
             </Card>
           )}
           {(extReport.openQuestions?.length ?? 0) > 0 || (extReport.nextActions?.length ?? 0) > 0 ? (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.sm }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               {extReport.openQuestions && extReport.openQuestions.length > 0 ? (
                 <Card title="Open questions">
-                  <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                  <ul className="list-disc pl-6 m-0 text-sm text-slate-800">
                     {extReport.openQuestions.map((x, i) => (
                       <li key={i}>{x}</li>
                     ))}
@@ -648,7 +430,7 @@ export default function ReportPage() {
               ) : null}
               {extReport.nextActions && extReport.nextActions.length > 0 ? (
                 <Card title="Next actions">
-                  <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                  <ul className="list-disc pl-6 m-0 text-sm text-slate-800">
                     {extReport.nextActions.map((x, i) => (
                       <li key={i}>{x}</li>
                     ))}
@@ -659,6 +441,8 @@ export default function ReportPage() {
           ) : null}
         </div>
       )}
+          </div>
+        </main>
       </div>
     </div>
   );
