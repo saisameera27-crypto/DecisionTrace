@@ -173,31 +173,45 @@ export default function Home() {
   };
 
   const handleRunAnalysis = async () => {
+    console.log("[RunAnalysis] clicked");
+    const fileSelected = !!(uploadedFile && fileName);
+    console.log("[RunAnalysis] file selected:", fileSelected, fileName ?? "(none)");
+
     if (!uploadedFile || !fileName) {
-      setError('Please upload a file first');
+      setError("Please upload a file first");
       return;
     }
 
     setError(null);
-    setLoading('analysis');
+    setLoading("analysis");
 
     try {
       const formData = new FormData();
       formData.append("file", uploadedFile);
 
+      console.log("[RunAnalysis] calling /api/analyze");
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
+      const text = await res.text();
+      let data: { ok?: boolean; error?: string; detail?: string; [key: string]: unknown } = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { error: text || "Unknown response" };
+      }
+      console.log("[RunAnalysis] res.status:", res.status, "body:", data);
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Analyze failed: ${res.status} ${text}`);
+        const detail = data.detail ?? data.error ?? text;
+        throw new Error(`Analysis failed (${res.status})${detail ? ": " + detail : ""}`);
       }
 
-      const data = await res.json();
-
+      console.log("[RunAnalysis] analysis complete, clearing loading");
       setLoading(null);
       setError(null);
     } catch (err: any) {
-      setError(err.message || "Analysis failed");
+      const message = err?.message ?? String(err);
+      console.error("[RunAnalysis] error:", message);
+      setError(message);
       setLoading(null);
     }
   };
@@ -751,7 +765,7 @@ export default function Home() {
             }}
             data-testid="run-analysis"
           >
-            {loading === 'analysis' ? 'Analyzing...' : 'Run Gemini 3 Analysis'}
+            {loading === 'analysis' ? 'Running...' : 'Run Gemini 3 Analysis'}
           </button>
         </div>
 
