@@ -46,6 +46,8 @@ export default function Home() {
       });
   }, []);
 
+  const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
+
   const handleFileSelect = async (file: File) => {
     if (!file) return;
 
@@ -59,6 +61,12 @@ export default function Home() {
     setFileName(file.name);
     setUploadStatus("Selected");
 
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError(`File is too large. Maximum size is 5MB (${(file.size / 1024 / 1024).toFixed(1)}MB selected).`);
+      setLoading(null);
+      return;
+    }
+
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -67,6 +75,9 @@ export default function Home() {
 
       if (!res.ok) {
         const text = await res.text();
+        if (res.status === 413) {
+          throw new Error("File is too large. Maximum size is 5MB.");
+        }
         throw new Error(`Upload failed: ${res.status} ${text}`);
       }
 

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
+
 export async function GET() {
   return NextResponse.json({ status: "ok" });
 }
@@ -13,6 +15,13 @@ export async function POST(req: Request) {
 
     if (!(file instanceof File)) {
       return NextResponse.json({ error: "Missing file field 'file'" }, { status: 400 });
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: "File too large", maxSizeMB: 5 },
+        { status: 413 }
+      );
     }
 
     // Read file into memory (no fs write)
