@@ -75,6 +75,11 @@
   --dt-space-page: 1rem;
   --dt-space-card: 1rem;
   --dt-radius-card: var(--radius-lg);
+  /* Report spacing scale (8/12/16/24px for tight Quick Start–style layout) */
+  --space-8: 0.5rem;
+  --space-12: 0.75rem;
+  --space-16: 1rem;
+  --space-24: 1.5rem;
   --dt-border: 1px solid var(--color-border-light);
   --dt-bg-page: var(--color-background);
   --dt-bg-card: var(--color-background);
@@ -225,16 +230,108 @@ button:focus-visible {
   margin-right: 0.5rem;
 }
 
+/* Quick Start–style container + card (reused for report page) */
+.qs-container {
+  max-width: 56.25rem; /* ~900px */
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 var(--spacing-xl) var(--spacing-2xl) var(--spacing-xl);
+  min-height: 100vh;
+}
+
+.qs-card {
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-16);
+  box-shadow: var(--shadow-md);
+}
+
+/* Report page: wrap in Quick Start–style container + card */
+.report-page-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.report-page-wrap .qs-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--space-12);
+}
+
 /* Report app-shell: contained layout, only details panel scrolls */
 .report-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
 .report-shell .report-hero-actions {
   display: none;
+}
+
+/* Report card header: title, one meta row, compact score pill */
+.report-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  padding: 0 0 var(--space-8) 0;
+  margin-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border-light);
+  flex-shrink: 0;
+}
+
+.report-card-header-title {
+  font-size: var(--dt-font-h2);
+  font-weight: 600;
+  color: var(--dt-text-heading);
+  line-height: 1.35;
+  max-width: 65ch;
+  margin: 0;
+}
+
+.report-card-header-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.report-card-header-meta-left {
+  font-size: var(--dt-font-muted);
+  color: var(--dt-text-muted);
+}
+
+.report-card-header-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.report-card-header-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: var(--dt-font-body);
+  color: var(--dt-text-heading);
+  background-color: var(--color-background-tertiary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  width: fit-content;
+}
+
+.report-card-header-score strong,
+.report-card-header-score .report-card-header-score-value {
+  font-weight: 600;
 }
 
 .report-main {
@@ -248,6 +345,8 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  gap: var(--space-8);
+  padding: var(--space-12);
 }
 
 .report-map-panel {
@@ -261,7 +360,9 @@ button:focus-visible {
 
 /* Top summary: spacing, alignment, max-width (CSS-only polish) */
 .report-hero-summary {
-  gap: 0.25rem;
+  gap: var(--space-8);
+  padding: var(--space-12);
+  margin-bottom: 0;
 }
 
 .report-hero-title {
@@ -309,42 +410,50 @@ button:focus-visible {
 }
 
 .report-supported-by {
-  padding-top: 0.375rem;
-  margin-top: 0.25rem;
+  padding-top: var(--space-8);
+  margin-top: var(--space-8);
   border-top: 1px solid var(--color-border-light);
 }
 
 .report-supported-by-heading {
-  margin: 0 0 0.125rem 0;
+  margin: 0 0 var(--space-8) 0;
+  font-size: var(--dt-font-muted);
+  font-weight: 600;
+  color: var(--dt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-/* Compact summary block: one line per item, muted label + value */
-.report-summary-block {
-  padding: 0.25rem 0.5rem;
-  background-color: var(--color-background-tertiary);
-  border-radius: var(--radius-md);
-  border: none;
+/* Compact two-column summary list (Supported by): small muted labels, right-aligned numbers */
+.report-supported-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.report-summary-line {
+.report-supported-list__row {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: nowrap;
   align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.0625rem 0;
-  font-size: var(--dt-font-body);
-  line-height: 1.35;
-  min-height: 1.5em;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: 0.125rem 0;
+  font-size: var(--dt-font-muted);
+  line-height: 1.4;
 }
 
-.report-summary-label {
+.report-supported-list__label {
   color: var(--dt-text-muted);
   font-weight: 400;
+  flex-shrink: 0;
 }
 
-.report-summary-value {
+.report-supported-list__value {
   color: var(--dt-text-heading);
   font-weight: 500;
+  flex-shrink: 0;
+  text-align: right;
+  tabular-nums: 1;
 }
 
 .report-details-scroll {
@@ -356,6 +465,32 @@ button:focus-visible {
   max-width: var(--dt-container-max);
   margin-left: auto;
   margin-right: auto;
+}
+
+/* Report tab content: tight section spacing and consistent section titles */
+.report-tab-content .dt-container {
+  gap: var(--space-8);
+}
+
+.report-tab-content .dt-container > * {
+  margin-bottom: 0;
+}
+
+.report-card.dt-card,
+.report-tab-content .dt-card {
+  padding: var(--space-12);
+}
+
+.report-card > .dt-heading-2,
+.report-tab-content .dt-card > .dt-heading-2 {
+  font-size: var(--dt-font-label);
+  font-weight: 600;
+  color: var(--dt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-8);
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .dt-page {
@@ -436,7 +571,7 @@ button:focus-visible {
 /* Report tabs: real tab styling */
 .report-tabs {
   flex-shrink: 0;
-  padding: 0 var(--dt-space-page) var(--dt-space-card);
+  padding: 0 var(--space-12) var(--space-8);
   background-color: var(--dt-bg-card);
   border-bottom: 1px solid var(--color-border-light);
 }
@@ -448,12 +583,12 @@ button:focus-visible {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-8);
 }
 
 .report-tab {
   flex-shrink: 0;
-  padding: 0.625rem 1rem;
+  padding: var(--space-8) var(--space-12);
   font-size: var(--dt-font-body);
   font-weight: 500;
   color: var(--dt-text-muted);
@@ -485,7 +620,7 @@ button:focus-visible {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--dt-space-card);
+  padding: var(--space-12);
   background-color: var(--dt-bg-surface);
   -webkit-overflow-scrolling: touch;
 }

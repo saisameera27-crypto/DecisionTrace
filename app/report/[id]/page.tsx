@@ -220,31 +220,39 @@ export default function ReportPage() {
   };
 
   return (
-    <div data-testid="report-content" className="report-shell dt-page h-screen flex flex-col overflow-hidden">
-      <header className="report-header shrink-0 h-14 flex items-center justify-between px-4 border-b border-[var(--color-border-light)] bg-[var(--dt-bg-card)]">
-        <h1 className="dt-heading-1 truncate mr-4">
-          {displayTitle}
-        </h1>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleDownload}
-            data-testid="report-download-json"
-            className="report-btn dt-btn no-underline"
-          >
-            Download Audit JSON
-          </button>
-          <Link
-            href="/"
-            data-testid="report-back-to-upload"
-            className="report-btn dt-btn no-underline"
-          >
-            Back
-          </Link>
-        </div>
-      </header>
+    <div data-testid="report-content" className="report-page-wrap qs-container dt-page">
+      <div className="qs-card">
+        <div className="report-shell">
+          <header className="report-card-header" role="banner">
+            <h2 className="report-card-header-title">{displayTitle}</h2>
+            <div className="report-card-header-meta">
+              <span className="report-card-header-meta-left">
+                {meta.filename?.trim() || "—"} · {createdAtFormatted}
+              </span>
+              <div className="report-card-header-actions">
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  data-testid="report-download-json"
+                  className="dt-btn no-underline"
+                >
+                  Download Audit JSON
+                </button>
+                <Link
+                  href="/"
+                  data-testid="report-back-to-upload"
+                  className="dt-btn inline-flex no-underline"
+                >
+                  Back
+                </Link>
+              </div>
+            </div>
+            <div className="report-card-header-score" aria-label="Trace score">
+              Score <span className="report-card-header-score-value">{typeof score === "number" ? score : "—"}</span>/100
+            </div>
+          </header>
 
-      <main className="report-main flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+          <main className="report-main flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
         <aside className="report-map min-h-0 flex flex-col gap-4 p-4 overflow-y-auto border-b lg:border-b-0 lg:border-r border-[var(--color-border-light)] bg-[var(--dt-bg-surface)] lg:w-[360px] lg:shrink-0">
           <ReportHeroCard
             displayTitle={displayTitle}
@@ -440,7 +448,9 @@ export default function ReportPage() {
             </div>
           </div>
         </section>
-      </main>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }
