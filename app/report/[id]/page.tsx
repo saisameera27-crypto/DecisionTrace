@@ -7,13 +7,11 @@ import { theme } from "@/styles/theme";
 import type { DecisionLedger, FlowStep } from "@/lib/decisionLedgerSchema";
 import type { ExtractTextMeta } from "@/lib/extractText";
 
-/** Format step numbers for display: "Step 3 only" or "Steps 2, 3, and 5" */
+/** Format step numbers for display: "Step 3" or "Steps 3, 4, 5" */
 function formatStepList(steps: number[]): string {
   if (steps.length === 0) return "";
-  if (steps.length === 1) return `Step ${steps[0]} only`;
-  const last = steps[steps.length - 1];
-  const rest = steps.slice(0, -1);
-  return `Steps ${rest.join(", ")}, and ${last}`;
+  if (steps.length === 1) return `Step ${steps[0]}`;
+  return `Steps ${steps.join(", ")}`;
 }
 
 function flowBannerLines(flow: FlowStep[] | undefined): { aiLine: string; overrideLine: string | null } {
@@ -25,7 +23,7 @@ function flowBannerLines(flow: FlowStep[] | undefined): { aiLine: string; overri
   const aiLine =
     aiSteps.length === 0
       ? "AI did not influence any step."
-      : `AI influenced ${formatStepList(aiSteps)}.`;
+      : `AI influenced steps in Decision Flow: ${formatStepList(aiSteps)}`;
   const overrideLine = anyOverride ? "Override applied in one or more steps." : null;
   return { aiLine, overrideLine };
 }
@@ -199,7 +197,8 @@ export default function ReportPage() {
     );
   }
 
-  const { ledger, meta, createdAt, title } = report;
+  const { ledger, meta, createdAt } = report;
+  const displayTitle = (ledger?.decision?.outcome?.trim()) || "Decision Trace Report";
   const createdAtFormatted = createdAt ? new Date(createdAt).toLocaleString() : "—";
   const extReport = report as ReportPayload & { openQuestions?: string[]; nextActions?: string[] };
   const { aiLine, overrideLine } = flowBannerLines(ledger.flow);
@@ -210,9 +209,14 @@ export default function ReportPage() {
       <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md }}>
           <div>
-            <div style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold }}>
-              {title}
-            </div>
+            <h1 style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold, margin: 0 }}>
+              {displayTitle}
+            </h1>
+            {meta.filename?.trim() ? (
+              <div style={{ marginTop: theme.spacing.xs, fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
+                {meta.filename}
+              </div>
+            ) : null}
             <div style={{ marginTop: theme.spacing.xs, display: "flex", flexWrap: "wrap", alignItems: "center", gap: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
               <span data-testid="report-analysis-id-debug" style={{ fontFamily: "monospace", fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
                 Analysis ID: {id}
@@ -270,30 +274,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      {/* AI / Override banner */}
-      <div
-        data-testid="report-ai-override-banner"
-        style={{
-          borderRadius: theme.borderRadius.xl,
-          border: `2px solid ${theme.colors.primary}`,
-          backgroundColor: theme.colors.backgroundSecondary,
-          padding: theme.spacing.md,
-          display: "flex",
-          flexDirection: "column",
-          gap: theme.spacing.xs,
-        }}
-      >
-        <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textPrimary }}>
-          {aiLine}
-        </div>
-        {overrideLine ? (
-          <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
-            {overrideLine}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Score: decision.traceScore supported by decision.scoreRationale bullet points */}
+      {/* 1) Decision Trace Score card */}
       <div data-testid="report-score-card">
         <Card title="Decision Trace Score">
           <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
@@ -319,6 +300,33 @@ export default function ReportPage() {
         </Card>
       </div>
 
+      {/* 2) AI influenced steps banner */}
+      <div
+        data-testid="report-ai-override-banner"
+        style={{
+          borderRadius: theme.borderRadius.xl,
+          border: `2px solid ${theme.colors.primary}`,
+          backgroundColor: theme.colors.backgroundSecondary,
+          padding: theme.spacing.md,
+          display: "flex",
+          flexDirection: "column",
+          gap: theme.spacing.xs,
+        }}
+      >
+        <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textPrimary }}>
+          {aiLine}
+        </div>
+        {overrideLine ? (
+          <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
+            {overrideLine}
+          </div>
+        ) : null}
+        <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textTertiary }}>
+          This highlights which steps were influenced by AI vs human-controlled for auditability.
+        </div>
+      </div>
+
+      {/* 3) Tabs */}
       <TabsBar tab={tab} setTab={setTab} />
 
       {/* 1) Overview */}
@@ -328,26 +336,6 @@ export default function ReportPage() {
             <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{ledger.decision?.outcome ?? "—"}</div>
             <div style={{ marginTop: theme.spacing.sm }}>
               <Pill>Confidence: {ledger.decision?.confidence ?? "—"}</Pill>
-            </div>
-          </Card>
-          <Card title="Trace score & rationale">
-            <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
-              <span style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold }}>{ledger.decision?.traceScore ?? "—"}</span>
-              <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>/ 100</span>
-            </div>
-            <div style={{ marginTop: theme.spacing.sm }}>
-              <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Supported by</div>
-              {Array.isArray(ledger.decision?.scoreRationale) && ledger.decision.scoreRationale.length > 0 ? (
-                <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                  {ledger.decision.scoreRationale.map((r, i) => (
-                    <li key={i}>{r}</li>
-                  ))}
-                </ul>
-              ) : (
-                <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                  <li>No rationale provided.</li>
-                </ul>
-              )}
             </div>
           </Card>
         </div>
