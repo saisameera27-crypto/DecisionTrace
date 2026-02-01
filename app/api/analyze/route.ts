@@ -95,7 +95,7 @@ export async function POST(req: Request) {
       nextActions: ["Run full Gemini analysis.", "Link real stakeholders and evidence."],
     };
 
-    globalThis.__DT_REPORTS__!.set(analysisId, reportPayload);
+    globalThis.__DT_REPORTS__!.set(analysisId, report);
 
     return NextResponse.json({ ok: true, analysisId });
   } catch (e: unknown) {
