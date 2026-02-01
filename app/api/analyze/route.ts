@@ -1,105 +1,167 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { extractTextFromUpload } from "@/lib/extractText";
+import { generateDecisionLedgerWithGemini } from "@/lib/geminiDecisionLedger";
+import { validateDecisionLedger } from "@/lib/validateLedger";
+import { MAX_FILE_BYTES, truncateTextForGemini } from "@/lib/analyzeLimits";
+import { ensureScoreRationale } from "@/lib/scoreRationale";
+import type { DecisionLedger } from "@/lib/decisionLedgerSchema";
+import type { ExtractTextMeta } from "@/lib/extractText";
 
 export const runtime = "nodejs";
 
-type DecisionTraceReport = any;
+export type StoredAnalysis = {
+  ledger: DecisionLedger;
+  meta: ExtractTextMeta;
+  createdAt: string;
+};
 
 declare global {
   // eslint-disable-next-line no-var
-  var __DT_REPORTS__: Map<string, DecisionTraceReport> | undefined;
+  var __DT_ANALYSES__: Map<string, StoredAnalysis> | undefined;
 }
 
-globalThis.__DT_REPORTS__ ??= new Map<string, DecisionTraceReport>();
+globalThis.__DT_ANALYSES__ ??= new Map<string, StoredAnalysis>();
+
+function analyzeErrorResponse(e: unknown): {
+  error: string;
+  detail: string;
+  status: number;
+} {
+  const message = e instanceof Error ? e.message : String(e);
+  const detail = message;
+
+  if (e instanceof Error && e.name === "AbortError") {
+    return { error: "Request timed out", detail: "Analysis took too long. Try a shorter document.", status: 504 };
+  }
+  if (message.toLowerCase().includes("timeout") || message.toLowerCase().includes("aborted")) {
+    return { error: "Request timed out", detail, status: 504 };
+  }
+  if (message.includes("Unsupported file type")) {
+    return { error: "Unsupported file type", detail, status: 400 };
+  }
+  if (message.includes("File too large") || message.includes("maximum size")) {
+    return { error: "File too large", detail, status: 413 };
+  }
+  if (message.startsWith("DOCX extraction failed:")) {
+    return { error: "DOCX extraction failed", detail, status: 422 };
+  }
+  if (message.startsWith("PDF extraction failed:")) {
+    return { error: "PDF extraction failed", detail, status: 422 };
+  }
+  if (
+    message.includes("GEMINI_API_KEY") ||
+    message.includes("GOOGLE_API_KEY") ||
+    message.includes("quota") ||
+    message.includes("API key") ||
+    message.includes("429") ||
+    message.includes("401") ||
+    message.includes("403") ||
+    message.includes("Unauthorized") ||
+    message.includes("Forbidden") ||
+    message.includes("Gemini failed")
+  ) {
+    return { error: "Gemini error (quota/auth)", detail, status: 502 };
+  }
+  if (
+    message.includes("Decision ledger missing required key") ||
+    message.includes("JSON parse failed") ||
+    message.includes("Decision ledger JSON parse failed")
+  ) {
+    return { error: "Gemini returned invalid schema", detail, status: 502 };
+  }
+
+  return { error: "Analyze failed", detail, status: 500 };
+}
 
 export async function POST(req: Request) {
   try {
+    // 0) Server-only: require GEMINI_API_KEY for analysis
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey || apiKey.trim() === "") {
+      return NextResponse.json(
+        { ok: false, error: "Missing GEMINI_API_KEY", detail: "Set GEMINI_API_KEY in environment variables to enable analysis." },
+        { status: 500 }
+      );
+    }
+
+    // 1) Read multipart/form-data, get file
     const formData = await req.formData();
     const file = formData.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ ok: false, error: "Missing file" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Missing file", detail: "No file in request." },
+        { status: 400 }
+      );
     }
 
+    if (file.size > MAX_FILE_BYTES) {
+      const maxMb = (MAX_FILE_BYTES / (1024 * 1024)).toFixed(1);
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "File too large",
+          detail: `Maximum file size is ${maxMb} MB. Your file is ${sizeMb} MB.`,
+        },
+        { status: 413 }
+      );
+    }
+
+    // 2) extractTextFromUpload(file)
+    let text: string;
+    let meta: ExtractTextMeta;
+    try {
+      const result = await extractTextFromUpload(file);
+      text = result.text;
+      meta = result.meta;
+    } catch (e: unknown) {
+      const { error, detail, status } = analyzeErrorResponse(e);
+      return NextResponse.json({ ok: false, error, detail }, { status });
+    }
+
+    text = truncateTextForGemini(text);
+
+    // 3) generateDecisionLedgerWithGemini(text) with request timeout
+    const ANALYZE_TIMEOUT_MS = 90_000;
+    const timeoutSignal = AbortSignal.timeout(ANALYZE_TIMEOUT_MS);
+
+    let ledger: DecisionLedger;
+    try {
+      ledger = await generateDecisionLedgerWithGemini(text, { signal: timeoutSignal });
+    } catch (e: unknown) {
+      const { error, detail, status } = analyzeErrorResponse(e);
+      return NextResponse.json({ ok: false, error, detail }, { status });
+    }
+
+    // 4) validateDecisionLedger(ledger) and return 500 with explanation if invalid
+    const validation = validateDecisionLedger(ledger);
+    if (!validation.ok) {
+      return NextResponse.json(
+        { ok: false, error: "Gemini returned invalid schema", detail: validation.error },
+        { status: 500 }
+      );
+    }
+
+    // 4b) Ensure score rationale supports traceScore: fill or append concrete reasons from evidence/risks/assumptions
+    ensureScoreRationale(ledger);
+
+    // 5) create analysisId (uuid)
     const analysisId = randomUUID();
+
+    // 6) store the ledger + meta in global Map keyed by analysisId
     const createdAt = new Date().toISOString();
+    globalThis.__DT_ANALYSES__!.set(analysisId, { ledger, meta, createdAt });
 
-    const report: DecisionTraceReport = {
-      id: analysisId,
-      title: "Decision Trace Report",
-      createdAt,
-      source: {
-        filename: file.name,
-        mimeType: file.type || "application/octet-stream",
-        size: file.size,
-      },
-      overview: {
-        decision: "Proceed with analysis of uploaded document.",
-        recommendation: "Review the decision flow and evidence before finalizing.",
-        confidence: "medium" as const,
-        keyTakeaways: [
-          "Mock report generated from uploaded file.",
-          "Decision context and key takeaways will appear here after full analysis.",
-        ],
-        whatWouldChange: [
-          "Additional stakeholder input could shift the recommendation.",
-          "New evidence or risk findings would update the trace.",
-        ],
-      },
-      decisionFlow: [
-        {
-          step: 1,
-          label: "Input received",
-          rationale: "File uploaded for analysis.",
-          inputsUsed: [file.name],
-          outputsProduced: [],
-          aiInvolved: false,
-        },
-        {
-          step: 2,
-          label: "Analysis run",
-          rationale: "Mock report generated with canonical shape.",
-          inputsUsed: ["Uploaded file"],
-          outputsProduced: ["Report JSON"],
-          aiInvolved: true,
-        },
-        {
-          step: 3,
-          label: "Report ready",
-          rationale: "Six-tab structure and score computed from contents.",
-          inputsUsed: ["Report JSON"],
-          outputsProduced: ["Decision Trace Score", "Tabs"],
-          aiInvolved: false,
-        },
-      ],
-      stakeholders: {
-        raci: [
-          { name: "—", role: "Decision owner", responsibility: "R" as const, impact: "To be identified from content" },
-          { name: "—", role: "Influencers", responsibility: "I" as const, impact: "To be extracted from document" },
-        ],
-        approvalsNeeded: ["Stakeholder sign-off pending"],
-      },
-      evidence: [
-        { claim: "Document upload provides primary input.", snippet: "Uploaded file used as source.", strength: "medium" as const },
-        { claim: "Additional evidence to be extracted by analysis.", snippet: "—", strength: "weak" as const },
-      ],
-      risks: [
-        { risk: "Mock data only; real analysis not yet run.", likelihood: "medium" as const, impact: "low" as const, severity: 3, mitigation: "Run full analysis.", owner: "—" },
-        { risk: "Stakeholder and risk data placeholder.", likelihood: "low" as const, impact: "low" as const, severity: 2, mitigation: "Populate from analysis.", owner: "—" },
-      ],
-      assumptions: [
-        { assumption: "Input document is relevant to the decision.", validated: false, howToValidate: "Cross-check with decision context." },
-        { assumption: "Structured output will match this schema.", validated: true, howToValidate: "API returns canonical shape." },
-      ],
-      openQuestions: ["Who is the decision owner?", "What is the approval threshold?"],
-      nextActions: ["Run full Gemini analysis.", "Link real stakeholders and evidence."],
-    };
-
-    globalThis.__DT_REPORTS__!.set(analysisId, report);
-
-    return NextResponse.json({ ok: true, analysisId });
+    // 7) return { ok: true, analysisId }; do NOT return the whole ledger
+    return NextResponse.json({
+      ok: true,
+      analysisId,
+      mode: "gemini",
+    });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : "Analyze failed";
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    const { error, detail, status } = analyzeErrorResponse(e);
+    return NextResponse.json({ ok: false, error, detail }, { status });
   }
 }

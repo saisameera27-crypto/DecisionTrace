@@ -263,14 +263,28 @@ See `.github/workflows/ci.yml` for configuration.
 2. **Get Gemini API key** (optional - app works without it)
 3. **Deploy to Vercel**:
    - Import GitHub repository
-   - Set environment variables:
-     - `DATABASE_URL` (from Neon)
-     - `GEMINI_API_KEY` (optional)
-     - `FREE_MODE=true`
-     - `NODE_ENV=production`
+   - Set environment variables (see **Vercel environment variables** below)
    - Deploy!
 
 **See [DEPLOY_LIVE.md](DEPLOY_LIVE.md) for step-by-step guide.**
+
+### Vercel environment variables
+
+Configure these in **Vercel → Project → Settings → Environment Variables** (server-only; never exposed to the client):
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GEMINI_API_KEY` | **Yes** for analysis | Google AI Studio API key. Required for `/api/analyze` (file upload → decision ledger). If missing, the analyze endpoint returns 500 with `"Missing GEMINI_API_KEY"`. Get a key at [Google AI Studio](https://aistudio.google.com/apikey). |
+| `DATABASE_URL` | Optional | Neon (or other) Postgres connection string for production DB. |
+| `FREE_MODE` | Optional | Set to `true` for free-tier limits. |
+| `NODE_ENV` | Optional | Set to `production` for production builds. |
+
+**Setup steps:**
+
+1. In Vercel, open your project → **Settings** → **Environment Variables**.
+2. Add `GEMINI_API_KEY` with your API key; enable for **Production**, **Preview**, and **Development** as needed.
+3. (Optional) Add `DATABASE_URL`, `FREE_MODE`, `NODE_ENV`.
+4. Redeploy so new variables take effect.
 
 ---
 

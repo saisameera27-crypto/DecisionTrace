@@ -1,78 +1,41 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { theme } from "@/styles/theme";
+import type { DecisionLedger, FlowStep } from "@/lib/decisionLedgerSchema";
+import type { ExtractTextMeta } from "@/lib/extractText";
 
-type Report = any;
-
-type ScoreBreakdown = {
-  score: number;
-  traceability: number;
-  accountability: number;
-  evidence: number;
-  riskControls: number;
-  notes: string[];
-};
-
-function clamp(n: number, min = 0, max = 100) {
-  return Math.max(min, Math.min(max, n));
+/** Format step numbers for display: "Step 3 only" or "Steps 2, 3, and 5" */
+function formatStepList(steps: number[]): string {
+  if (steps.length === 0) return "";
+  if (steps.length === 1) return `Step ${steps[0]} only`;
+  const last = steps[steps.length - 1];
+  const rest = steps.slice(0, -1);
+  return `Steps ${rest.join(", ")}, and ${last}`;
 }
 
-function computeDecisionTraceScore(report: Report | null): ScoreBreakdown {
-  if (!report) {
-    return { score: 0, traceability: 0, accountability: 0, evidence: 0, riskControls: 0, notes: ["No report loaded."] };
+function flowBannerLines(flow: FlowStep[] | undefined): { aiLine: string; overrideLine: string | null } {
+  if (!flow?.length) {
+    return { aiLine: "No decision flow steps.", overrideLine: null };
   }
-
-  const flowCount = Array.isArray(report.decisionFlow) ? report.decisionFlow.length : 0;
-  const hasAIFlags = Array.isArray(report.decisionFlow) ? report.decisionFlow.some((s: any) => s?.aiInvolved) : false;
-
-  const raciCount = report?.stakeholders?.raci?.length ?? 0;
-  const approvalsCount = report?.stakeholders?.approvalsNeeded?.length ?? 0;
-
-  const evidenceCount = Array.isArray(report.evidence) ? report.evidence.length : 0;
-  const strongEvidenceCount = Array.isArray(report.evidence)
-    ? report.evidence.filter((e: any) => e?.strength === "strong").length
-    : 0;
-
-  const risksCount = Array.isArray(report.risks) ? report.risks.length : 0;
-  const mitigationsCount = Array.isArray(report.risks)
-    ? report.risks.filter((r: any) => (r?.mitigation ?? "").trim().length > 0).length
-    : 0;
-
-  const assumptionsCount = Array.isArray(report.assumptions) ? report.assumptions.length : 0;
-  const validatedAssumptions = Array.isArray(report.assumptions)
-    ? report.assumptions.filter((a: any) => a?.validated).length
-    : 0;
-
-  const traceability = clamp(flowCount * 12 + (hasAIFlags ? 10 : 0));
-  const accountability = clamp(raciCount * 12 + approvalsCount * 8);
-  const evidence = clamp(evidenceCount * 10 + strongEvidenceCount * 8);
-  const riskControls = clamp(risksCount * 12 + mitigationsCount * 8 + Math.min(assumptionsCount, 5) * 4 + validatedAssumptions * 3);
-
-  const score = clamp(Math.round(traceability * 0.30 + accountability * 0.25 + evidence * 0.25 + riskControls * 0.20));
-
-  const notes: string[] = [];
-  if (flowCount < 4) notes.push("Decision Flow is short—add more steps for traceability.");
-  if (raciCount < 3) notes.push("Stakeholder accountability is thin—add a stronger RACI.");
-  if (evidenceCount < 3) notes.push("Evidence list is small—add more claim→snippet mappings.");
-  if (risksCount < 2) notes.push("Risk coverage is minimal—add risk + mitigation owners.");
-
-  return { score, traceability, accountability, evidence, riskControls, notes };
+  const aiSteps = flow.filter((s) => s.aiInfluence === true).map((s) => s.step);
+  const anyOverride = flow.some((s) => s.overrideApplied === true);
+  const aiLine =
+    aiSteps.length === 0
+      ? "AI did not influence any step."
+      : `AI influenced ${formatStepList(aiSteps)}.`;
+  const overrideLine = anyOverride ? "Override applied in one or more steps." : null;
+  return { aiLine, overrideLine };
 }
 
-function downloadJson(filename: string, data: any) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
+type ReportPayload = {
+  ledger: DecisionLedger;
+  meta: ExtractTextMeta;
+  createdAt: string;
+  title: string;
+};
 
 function Pill({ children }: { children: React.ReactNode }) {
   return (
@@ -170,10 +133,17 @@ function TabsBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   );
 }
 
+const RACI_LABELS: Record<string, string> = {
+  R: "Responsible",
+  A: "Accountable",
+  C: "Consulted",
+  I: "Informed",
+};
+
 export default function ReportPage() {
   const params = useParams();
   const id = (params?.id as string) ?? "";
-  const [report, setReport] = useState<Report | null>(null);
+  const [report, setReport] = useState<ReportPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("Overview");
 
@@ -192,14 +162,16 @@ export default function ReportPage() {
         if (!res.ok || !data?.ok) {
           throw new Error(data?.error ?? `Failed to load report (${res.status})`);
         }
-        setReport(data.report);
+        const payload = data.report;
+        if (!payload?.ledger) {
+          throw new Error("Report format not supported (missing ledger).");
+        }
+        setReport(payload);
       } catch (e: unknown) {
         setErr(e instanceof Error ? e.message : "Unexpected error");
       }
     })();
   }, [id]);
-
-  const score = useMemo(() => computeDecisionTraceScore(report), [report]);
 
   if (err) {
     return (
@@ -234,8 +206,10 @@ export default function ReportPage() {
     );
   }
 
-  const source = report.source ?? {};
-  const createdAt = report.createdAt ? new Date(report.createdAt).toLocaleString() : "—";
+  const { ledger, meta, createdAt, title } = report;
+  const createdAtFormatted = createdAt ? new Date(createdAt).toLocaleString() : "—";
+  const extReport = report as ReportPayload & { openQuestions?: string[]; nextActions?: string[] };
+  const { aiLine, overrideLine } = flowBannerLines(ledger.flow);
 
   return (
     <div data-testid="report-content" style={{ maxWidth: 1024, margin: "0 auto", padding: theme.spacing.lg, display: "flex", flexDirection: "column", gap: theme.spacing.md }}>
@@ -244,13 +218,14 @@ export default function ReportPage() {
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.md }}>
           <div>
             <div style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold }}>
-              {report.title ?? "Decision Trace Report"}
+              {title}
             </div>
             <div style={{ marginTop: theme.spacing.xs, display: "flex", flexWrap: "wrap", gap: theme.spacing.sm, fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
-              <Pill>ID: {report.id ?? id}</Pill>
-              <Pill>Created: {createdAt}</Pill>
-              <Pill>File: {source.filename ?? "—"}</Pill>
-              <Pill>Type: {source.mimeType ?? "—"}</Pill>
+              <Pill>ID: {id}</Pill>
+              <Pill>Created: {createdAtFormatted}</Pill>
+              <Pill>File: {meta.filename ?? "—"}</Pill>
+              <Pill>Type: {meta.mimeType ?? "—"}</Pill>
+              {meta.size != null ? <Pill>Size: {meta.size} B</Pill> : null}
             </div>
           </div>
 
@@ -265,7 +240,18 @@ export default function ReportPage() {
                 cursor: "pointer",
                 backgroundColor: theme.colors.background,
               }}
-              onClick={() => downloadJson(`decision-trace-${report.id ?? id}.json`, report)}
+              onClick={() => {
+                const payload = { reportId: id, createdAt, meta, ledger };
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `decision-trace-${id}.json`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+              }}
               data-testid="report-download-json"
             >
               Download Audit JSON
@@ -288,204 +274,208 @@ export default function ReportPage() {
         </div>
       </div>
 
-      {/* Score */}
-      <div data-testid="report-score-card">
-      <Card title="Decision Trace Score">
-        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: theme.spacing.md }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: theme.spacing.sm }}>
-              <div style={{ fontSize: theme.typography.fontSize["4xl"], fontWeight: theme.typography.fontWeight.bold }}>{score.score}</div>
-              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>/ 100</div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: theme.spacing.sm }}>
-              <div style={{ borderRadius: theme.borderRadius.xl, border: `1px solid ${theme.colors.border}`, padding: theme.spacing.sm }}>
-                <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textSecondary }}>Traceability</div>
-                <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{score.traceability}</div>
-              </div>
-              <div style={{ borderRadius: theme.borderRadius.xl, border: `1px solid ${theme.colors.border}`, padding: theme.spacing.sm }}>
-                <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textSecondary }}>Accountability</div>
-                <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{score.accountability}</div>
-              </div>
-              <div style={{ borderRadius: theme.borderRadius.xl, border: `1px solid ${theme.colors.border}`, padding: theme.spacing.sm }}>
-                <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textSecondary }}>Evidence</div>
-                <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{score.evidence}</div>
-              </div>
-              <div style={{ borderRadius: theme.borderRadius.xl, border: `1px solid ${theme.colors.border}`, padding: theme.spacing.sm }}>
-                <div style={{ fontSize: theme.typography.fontSize.xs, color: theme.colors.textSecondary }}>Risk Controls</div>
-                <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{score.riskControls}</div>
-              </div>
-            </div>
-          </div>
-
-          {score.notes.length > 0 ? (
-            <div style={{ marginTop: theme.spacing.sm, borderRadius: theme.borderRadius.xl, backgroundColor: theme.colors.backgroundSecondary, padding: theme.spacing.sm, fontSize: theme.typography.fontSize.sm }}>
-              <div style={{ fontWeight: theme.typography.fontWeight.semibold }}>Quick improvements</div>
-              <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0 }}>
-                {score.notes.map((n) => (
-                  <li key={n}>{n}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+      {/* AI / Override banner */}
+      <div
+        data-testid="report-ai-override-banner"
+        style={{
+          borderRadius: theme.borderRadius.xl,
+          border: `2px solid ${theme.colors.primary}`,
+          backgroundColor: theme.colors.backgroundSecondary,
+          padding: theme.spacing.md,
+          display: "flex",
+          flexDirection: "column",
+          gap: theme.spacing.xs,
+        }}
+      >
+        <div style={{ fontSize: theme.typography.fontSize.sm, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textPrimary }}>
+          {aiLine}
         </div>
-      </Card>
+        {overrideLine ? (
+          <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>
+            {overrideLine}
+          </div>
+        ) : null}
       </div>
 
-      {/* Tabs */}
+      {/* Score: traceScore supported by scoreRationale bullet points */}
+      <div data-testid="report-score-card">
+        <Card title="Decision Trace Score">
+          <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: theme.spacing.sm }}>
+              <div style={{ fontSize: theme.typography.fontSize["4xl"], fontWeight: theme.typography.fontWeight.bold }}>{ledger.traceScore}</div>
+              <div style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>/ 100</div>
+            </div>
+            <div style={{ marginTop: theme.spacing.sm }}>
+              <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Supported by</div>
+              {Array.isArray(ledger.scoreRationale) && ledger.scoreRationale.length > 0 ? (
+                <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                  {ledger.scoreRationale.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              ) : (
+                <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                  <li>No rationale provided.</li>
+                </ul>
+              )}
+            </div>
+          </div>
+        </Card>
+      </div>
+
       <TabsBar tab={tab} setTab={setTab} />
 
-      {/* Tab content */}
+      {/* 1) Overview */}
       {tab === "Overview" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: theme.spacing.sm }}>
-          <Card title="Decision">
-            <div style={{ fontSize: theme.typography.fontSize.sm }}>{report.overview?.decision ?? "—"}</div>
-          </Card>
-          <Card title="Recommendation">
-            <div style={{ fontSize: theme.typography.fontSize.sm }}>{report.overview?.recommendation ?? "—"}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+          <Card title="Decision outcome">
+            <div style={{ fontSize: theme.typography.fontSize.lg, fontWeight: theme.typography.fontWeight.semibold }}>{ledger.decision?.title ?? "—"}</div>
+            <div style={{ marginTop: theme.spacing.sm, fontSize: theme.typography.fontSize.sm }}>{ledger.decision?.description ?? "—"}</div>
             <div style={{ marginTop: theme.spacing.sm }}>
-              <Pill>Confidence: {report.overview?.confidence ?? "—"}</Pill>
+              <Pill>Confidence: {ledger.decision?.confidence ?? "—"}</Pill>
             </div>
           </Card>
-
-          <Card title="Key takeaways">
-            <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-              {(report.overview?.keyTakeaways ?? []).map((x: string, i: number) => (
-                <li key={i}>{x}</li>
-              ))}
-              {(!report.overview?.keyTakeaways || report.overview.keyTakeaways.length === 0) ? <li>—</li> : null}
-            </ul>
-          </Card>
-
-          <Card title="What would change the decision">
-            <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-              {(report.overview?.whatWouldChange ?? []).map((x: string, i: number) => (
-                <li key={i}>{x}</li>
-              ))}
-              {(!report.overview?.whatWouldChange || report.overview.whatWouldChange.length === 0) ? <li>—</li> : null}
-            </ul>
+          <Card title="Trace score & rationale">
+            <div style={{ display: "flex", alignItems: "center", gap: theme.spacing.sm }}>
+              <span style={{ fontSize: theme.typography.fontSize["2xl"], fontWeight: theme.typography.fontWeight.bold }}>{ledger.traceScore}</span>
+              <span style={{ fontSize: theme.typography.fontSize.sm, color: theme.colors.textSecondary }}>/ 100</span>
+            </div>
+            <div style={{ marginTop: theme.spacing.sm }}>
+              <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Supported by</div>
+              {Array.isArray(ledger.scoreRationale) && ledger.scoreRationale.length > 0 ? (
+                <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                  {ledger.scoreRationale.map((r, i) => (
+                    <li key={i}>{r}</li>
+                  ))}
+                </ul>
+              ) : (
+                <ul style={{ marginTop: theme.spacing.xs, paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                  <li>No rationale provided.</li>
+                </ul>
+              )}
+            </div>
           </Card>
         </div>
       )}
 
+      {/* 2) Decision Flow */}
       {tab === "Decision Flow" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-          {(report.decisionFlow ?? []).map((s: any, idx: number) => (
+          {(ledger.flow ?? []).map((s, idx) => (
             <Card key={s.step ?? idx} title={`Step ${s.step ?? "—"} — ${s.label ?? "—"}`}>
-              <div style={{ fontSize: theme.typography.fontSize.sm }}>{s.rationale ?? "—"}</div>
+              <div style={{ fontSize: theme.typography.fontSize.sm }}>{s.description ?? "—"}</div>
               <div style={{ marginTop: theme.spacing.sm, display: "flex", flexWrap: "wrap", gap: theme.spacing.sm }}>
-                <Pill>AI involved: {s.aiInvolved ? "Yes" : "No"}</Pill>
-                <Pill>Inputs: {(s.inputsUsed ?? []).length}</Pill>
-                <Pill>Outputs: {(s.outputsProduced ?? []).length}</Pill>
-              </div>
-              <div style={{ marginTop: theme.spacing.sm, display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.sm }}>
-                <div>
-                  <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Inputs used</div>
-                  <ul style={{ marginTop: theme.spacing.xs, listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                    {(s.inputsUsed ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
-                    {(!s.inputsUsed || s.inputsUsed.length === 0) ? <li>—</li> : null}
-                  </ul>
-                </div>
-                <div>
-                  <div style={{ fontSize: theme.typography.fontSize.xs, fontWeight: theme.typography.fontWeight.semibold, color: theme.colors.textSecondary }}>Outputs produced</div>
-                  <ul style={{ marginTop: theme.spacing.xs, listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                    {(s.outputsProduced ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
-                    {(!s.outputsProduced || s.outputsProduced.length === 0) ? <li>—</li> : null}
-                  </ul>
-                </div>
+                <Pill>AI influenced: {s.aiInfluence ? "Yes" : "No"}</Pill>
+                <Pill>Override applied: {s.overrideApplied ? "Yes" : "No"}</Pill>
+                {s.actor ? <Pill>Actor: {s.actor}</Pill> : null}
               </div>
             </Card>
           ))}
-          {(!report.decisionFlow || report.decisionFlow.length === 0) ? <Card>No decision flow steps found.</Card> : null}
+          {(!ledger.flow || ledger.flow.length === 0) ? <Card>No decision flow steps.</Card> : null}
         </div>
       )}
 
+      {/* 3) Stakeholders */}
       {tab === "Stakeholders" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
+          <Card title="Owner">
+            <div style={{ fontSize: theme.typography.fontSize.sm }}>{ledger.accountability?.owner ?? "—"}</div>
+          </Card>
           <Card title="RACI">
             <Table
-              headers={["Name", "Role", "RACI", "Impact"]}
-              rows={(report.stakeholders?.raci ?? []).map((r: any) => [
+              headers={["Name", "Role", "Responsibility", "Impact"]}
+              rows={(ledger.accountability?.stakeholders ?? []).map((r, i) => [
                 r.name ?? "—",
                 r.role ?? "—",
-                <Pill key="raci">{r.responsibility ?? "—"}</Pill>,
+                <Pill key={i}>{RACI_LABELS[r.responsibility] ?? r.responsibility}</Pill>,
                 r.impact ?? "—",
               ])}
             />
-            {(!report.stakeholders?.raci || report.stakeholders.raci.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}
+            {(!ledger.accountability?.stakeholders || ledger.accountability.stakeholders.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}
           </Card>
-
           <Card title="Approvals needed">
             <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-              {(report.stakeholders?.approvalsNeeded ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
-              {(!report.stakeholders?.approvalsNeeded || report.stakeholders.approvalsNeeded.length === 0) ? <li>—</li> : null}
+              {(ledger.accountability?.approvalsNeeded ?? []).map((x, i) => (
+                <li key={i}>{x}</li>
+              ))}
+              {(!ledger.accountability?.approvalsNeeded || ledger.accountability.approvalsNeeded.length === 0) ? <li>—</li> : null}
             </ul>
           </Card>
         </div>
       )}
 
+      {/* 4) Evidence */}
       {tab === "Evidence" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-          {(report.evidence ?? []).map((e: any, i: number) => (
-            <Card key={i} title={e.claim ?? "Claim"}>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
-                <Pill>Strength: {e.strength ?? "—"}</Pill>
-                {e.location ? <Pill>Location: {e.location}</Pill> : null}
-              </div>
-              <div style={{ fontSize: theme.typography.fontSize.sm, whiteSpace: "pre-wrap" }}>{e.snippet ?? "—"}</div>
-            </Card>
-          ))}
-          {(!report.evidence || report.evidence.length === 0) ? <Card>No evidence items found.</Card> : null}
+          <Card title="Evidence ledger">
+            <Table
+              headers={["Claim / reason", "Source", "Weight"]}
+              rows={(ledger.evidenceLedger ?? []).map((e, i) => [
+                e.claim ?? "—",
+                e.source ?? "—",
+                <Pill key={i}>{e.strength ?? "—"}</Pill>,
+              ])}
+            />
+            {(!ledger.evidenceLedger || ledger.evidenceLedger.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>No evidence items.</div> : null}
+          </Card>
         </div>
       )}
 
+      {/* 5) Risks */}
       {tab === "Risks" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-          <Card title="Risk register">
+          <Card title="Risk ledger">
             <Table
-              headers={["Risk", "Likelihood", "Impact", "Severity", "Owner", "Mitigation"]}
-              rows={(report.risks ?? []).map((r: any, i: number) => [
+              headers={["Risk", "Likelihood", "Impact / severity", "Owner / accepted by", "Mitigation"]}
+              rows={(ledger.riskLedger ?? []).map((r, i) => [
                 r.risk ?? "—",
                 <Pill key={`l-${i}`}>{r.likelihood ?? "—"}</Pill>,
                 <Pill key={`i-${i}`}>{r.impact ?? "—"}</Pill>,
-                String(r.severity ?? "—"),
                 r.owner ?? "—",
                 r.mitigation ?? "—",
               ])}
             />
-            {(!report.risks || report.risks.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}
+            {(!ledger.riskLedger || ledger.riskLedger.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}
           </Card>
         </div>
       )}
 
+      {/* 6) Assumptions */}
       {tab === "Assumptions" && (
         <div style={{ display: "flex", flexDirection: "column", gap: theme.spacing.sm }}>
-          <Card title="Assumptions">
+          <Card title="Assumption ledger">
             <Table
               headers={["Assumption", "Validated", "How to validate"]}
-              rows={(report.assumptions ?? []).map((a: any, i: number) => [
+              rows={(ledger.assumptionLedger ?? []).map((a, i) => [
                 a.assumption ?? "—",
-                <Pill key={`v-${i}`}>{a.validated ? "Yes" : "No"}</Pill>,
+                <Pill key={i}>{a.validated ? "Yes" : "No"}</Pill>,
                 a.howToValidate ?? "—",
               ])}
             />
-            {(!report.assumptions || report.assumptions.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}
+            {(!ledger.assumptionLedger || ledger.assumptionLedger.length === 0) ? <div style={{ fontSize: theme.typography.fontSize.sm }}>—</div> : null}
           </Card>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.sm }}>
-            <Card title="Open questions">
-              <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                {(report.openQuestions ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
-                {(!report.openQuestions || report.openQuestions.length === 0) ? <li>—</li> : null}
-              </ul>
-            </Card>
-            <Card title="Next actions">
-              <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
-                {(report.nextActions ?? []).map((x: string, i: number) => <li key={i}>{x}</li>)}
-                {(!report.nextActions || report.nextActions.length === 0) ? <li>—</li> : null}
-              </ul>
-            </Card>
-          </div>
+          {(extReport.openQuestions?.length ?? 0) > 0 || (extReport.nextActions?.length ?? 0) > 0 ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: theme.spacing.sm }}>
+              {extReport.openQuestions && extReport.openQuestions.length > 0 ? (
+                <Card title="Open questions">
+                  <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                    {extReport.openQuestions.map((x, i) => (
+                      <li key={i}>{x}</li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+              {extReport.nextActions && extReport.nextActions.length > 0 ? (
+                <Card title="Next actions">
+                  <ul style={{ listStyle: "disc", paddingLeft: theme.spacing.lg, margin: 0, fontSize: theme.typography.fontSize.sm }}>
+                    {extReport.nextActions.map((x, i) => (
+                      <li key={i}>{x}</li>
+                    ))}
+                  </ul>
+                </Card>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

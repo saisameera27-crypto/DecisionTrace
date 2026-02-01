@@ -185,7 +185,12 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", uploadedFile);
 
-      const res = await fetch("/api/analyze", { method: "POST", body: formData });
+      const FETCH_TIMEOUT_MS = 100_000;
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
       let data: { ok?: boolean; error?: string; detail?: string; analysisId?: string; raw?: string } = {};
       try {
         data = await res.json();
@@ -195,9 +200,8 @@ export default function Home() {
       }
 
       if (!res.ok || !data?.ok || !data?.analysisId) {
-        const statusMsg = `Analysis failed (${res.status})`;
         const serverMsg = [data?.error, data?.detail].filter(Boolean).join(" — ");
-        setError(serverMsg ? `${statusMsg}: ${serverMsg}` : statusMsg);
+        setError(serverMsg || `Analysis failed (${res.status})`);
         setLoading(null);
         return;
       }
@@ -210,7 +214,10 @@ export default function Home() {
         setError(msg);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      const message = isAbort
+        ? "Request timed out. Try again or use a shorter document."
+        : err instanceof Error ? err.message : String(err);
       setError(message);
     } finally {
       setLoading(null);

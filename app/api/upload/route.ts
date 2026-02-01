@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+// Node runtime required. Do NOT use Edge (formData, file.arrayBuffer).
 export const runtime = "nodejs";
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB
