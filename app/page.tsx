@@ -63,7 +63,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/quickstart/upload', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -108,17 +108,15 @@ export default function Home() {
         throw new Error(errorMessage);
       }
 
-      // Handle success response with preview
+      // Handle success response (/api/upload returns { success: true }; use file for name/type)
       if (data.success) {
-        setFileName(data.filename);
+        setFileName(data.filename ?? file.name);
         setUploadStatus('Uploaded');
-        setUploadPreview(data.preview || null);
-        setUploadMimeType(data.mimeType || null);
+        setUploadPreview(data.preview ?? null);
+        setUploadMimeType(data.mimeType ?? file.type ?? null);
         setUploadedFile(file); // Store file for case creation
         setShowFullPreview(false); // Reset preview expansion
-        // Store demo mode status from server response
-        setIsDemoMode(data.mode === 'demo');
-        // Note: We don't set caseId/artifactId here since upload doesn't create them
+        if (data.mode !== undefined) setIsDemoMode(data.mode === 'demo');
         setLoading(null);
       } else {
         throw new Error('Upload succeeded but response format was unexpected');
