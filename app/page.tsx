@@ -174,9 +174,6 @@ export default function Home() {
 
   const handleRunAnalysis = async () => {
     console.log("[RunAnalysis] clicked");
-    const fileSelected = !!(uploadedFile && fileName);
-    console.log("[RunAnalysis] file selected:", fileSelected, fileName ?? "(none)");
-
     if (!uploadedFile || !fileName) {
       setError("Please upload a file first");
       return;
@@ -191,31 +188,26 @@ export default function Home() {
 
       console.log("[RunAnalysis] calling /api/analyze");
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
-      const text = await res.text();
-      let data: { ok?: boolean; error?: string; detail?: string; [key: string]: unknown } = {};
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { error: text || "Unknown response" };
-      }
+      const data = await res.json().catch(async () => ({ raw: await res.text() }));
       console.log("[RunAnalysis] res.status:", res.status, "body:", data);
 
-      if (!res.ok) {
-        const detail = data.detail ?? data.error ?? text;
-        throw new Error(`Analysis failed (${res.status})${detail ? ": " + detail : ""}`);
+      if (!res.ok || !data?.ok || !data?.analysisId) {
+        throw new Error(data?.error ?? `Analyze failed (${res.status})`);
       }
 
-      const analysisId = data.analysisId as string | undefined;
-      if (analysisId) {
-        console.log("[RunAnalysis] routing to /report/" + analysisId);
+      const analysisId = data.analysisId as string;
+      console.log("[RunAnalysis] routing to /report/" + analysisId);
+      try {
         router.push(`/report/${analysisId}`);
+      } catch (navErr: unknown) {
+        const msg = navErr instanceof Error ? navErr.message : "Navigation failed";
+        setError(msg);
       }
-      setLoading(null);
-      setError(null);
-    } catch (err: any) {
-      const message = err?.message ?? String(err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error("[RunAnalysis] error:", message);
       setError(message);
+    } finally {
       setLoading(null);
     }
   };
