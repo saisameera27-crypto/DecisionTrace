@@ -173,7 +173,6 @@ export default function Home() {
   };
 
   const handleRunAnalysis = async () => {
-    console.log("[RunAnalysis] clicked");
     if (!uploadedFile || !fileName) {
       setError("Please upload a file first");
       return;
@@ -186,17 +185,24 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", uploadedFile);
 
-      console.log("[RunAnalysis] calling /api/analyze");
       const res = await fetch("/api/analyze", { method: "POST", body: formData });
-      const data = await res.json().catch(async () => ({ raw: await res.text() }));
-      console.log("[RunAnalysis] res.status:", res.status, "body:", data);
+      let data: { ok?: boolean; error?: string; detail?: string; analysisId?: string; raw?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        const raw = await res.text();
+        data = { error: raw || "Invalid response" };
+      }
 
       if (!res.ok || !data?.ok || !data?.analysisId) {
-        throw new Error(data?.error ?? `Analyze failed (${res.status})`);
+        const statusMsg = `Analysis failed (${res.status})`;
+        const serverMsg = [data?.error, data?.detail].filter(Boolean).join(" — ");
+        setError(serverMsg ? `${statusMsg}: ${serverMsg}` : statusMsg);
+        setLoading(null);
+        return;
       }
 
       const analysisId = data.analysisId as string;
-      console.log("[RunAnalysis] routing to /report/" + analysisId);
       try {
         router.push(`/report/${analysisId}`);
       } catch (navErr: unknown) {
@@ -205,7 +211,6 @@ export default function Home() {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.error("[RunAnalysis] error:", message);
       setError(message);
     } finally {
       setLoading(null);
@@ -737,8 +742,11 @@ export default function Home() {
           </label>
           
           <button
+            type="button"
             onClick={handleRunAnalysis}
             disabled={isAnalysisDisabled}
+            aria-busy={loading === 'analysis'}
+            aria-disabled={isAnalysisDisabled}
             style={isAnalysisDisabled ? buttonDisabledStyle : primaryButtonStyle}
             onMouseEnter={(e) => {
               if (!isAnalysisDisabled) {
@@ -761,7 +769,14 @@ export default function Home() {
             }}
             data-testid="run-analysis"
           >
-            {loading === 'analysis' ? 'Running...' : 'Run Gemini 3 Analysis'}
+            {loading === 'analysis' ? (
+              <>
+                <span className="spinner" aria-hidden />
+                <span role="status">Running analysis…</span>
+              </>
+            ) : (
+              'Run Gemini 3 Analysis'
+            )}
           </button>
         </div>
 
