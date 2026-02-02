@@ -31,13 +31,12 @@ Decision Trace turns unstructured decision content into structured **Decision Le
 
 | Step | Action |
 |------|--------|
-| 1. **Input** | Paste text (max 5000 words) or upload PDF/DOCX/TXT |
+| 1. **Input** | Upload PDF/DOCX/TXT |
 | 2. **Analyze** | Gemini 3 extracts structured data with schema enforcement |
 | 3. **Output** | Decision Ledger: decision, flow, evidence, risks, assumptions, RACI |
 | 4. **View** | 6-tab report: Overview, Decision Flow, Stakeholders, Evidence, Risks, Assumptions |
 
 **Entry points:**
-- **[QuickStart](http://localhost:3000/quick)** – Paste text, Save, Run (recommended)
 - **[Home](http://localhost:3000)** – File upload flow
 
 ---
@@ -46,7 +45,7 @@ Decision Trace turns unstructured decision content into structured **Decision Le
 
 ### 🤖 AI-Powered Analysis
 
-- **Paste or upload** – Textarea (max 5000 words) or file upload (PDF, DOCX, TXT)
+- **Upload** – File upload (PDF, DOCX, TXT)
 - **Decision Ledger** – Single Gemini call produces structured JSON (decision, flow, evidence, risks, assumptions, RACI)
 - **6-step pipeline** – Full case flow: document processing → decision extraction → context → outcomes → risks → report
 - **Gemini 3** – Pro Preview with Flash fallback; schema-enforced output
