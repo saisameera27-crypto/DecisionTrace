@@ -37,7 +37,7 @@ Decision Trace turns unstructured decision content into structured **Decision Le
 | 4. **View** | 6-tab report: Overview, Decision Flow, Stakeholders, Evidence, Risks, Assumptions |
 
 **Entry points:**
-- **[Home](http://localhost:3000)** – File upload flow
+- **[Home](https://decision-trace-chi.vercel.app/)** – File upload flow
 
 ---
 
