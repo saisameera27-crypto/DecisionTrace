@@ -104,22 +104,6 @@ npx prisma migrate deploy
 
 For SQLite (dev/tests): `npm run prisma:generate:sqlite`
 
-### Run Locally
-
-```bash
-npm run dev
-```
-
-- **QuickStart:** [http://localhost:3000/quick](http://localhost:3000/quick)
-- **Home:** [http://localhost:3000](https://decision-trace-chi.vercel.app/)
-
-### QuickStart Workflow
-
-1. **Paste text** into the textarea (max 5000 words, min 50 chars)
-2. **Save Text** – POST to `/api/quickstart/text`, enables Run button
-3. **Run Gemini 3 Analysis** – Creates case, runs analysis, redirects to report
-4. **View report** – 6 tabs with enterprise styling
-
 ### Demo Mode (Default)
 
 Demo mode is **enabled by default** when `GEMINI_API_KEY` is missing or `DEMO_MODE=true`:
