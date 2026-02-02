@@ -291,32 +291,51 @@ export default function ReportPage() {
           {(ledger.flow ?? []).map((s, idx) => (
             <div
               key={s.step ?? idx}
-              className="dt-card rounded-[var(--dt-radius-card)] p-3"
+              className="report-step-card dt-card"
             >
-              <div className="dt-heading-2 text-[var(--dt-font-body)] mb-1">
-                Step {s.step ?? "—"} — {s.label ?? "—"}
+              <div className="report-step-header">
+                <span className="report-step-header__label">
+                  Step {s.step ?? "—"} — {s.label ?? "—"}
+                </span>
+                <div className="report-step-header__meta">
+                  <Pill>Actor: {s.actor ?? "—"}</Pill>
+                  <span className="report-step-meta-item">
+                    <span className="report-step-meta-label">AI influenced</span>
+                    <span
+                      className={`tag ${s.aiInfluence ? "tag--yes" : "tag--no"}`}
+                      aria-label={`AI influenced: ${s.aiInfluence ? "Yes" : "No"}`}
+                    >
+                      {s.aiInfluence ? "Yes" : "No"}
+                    </span>
+                  </span>
+                  <span className="report-step-meta-item">
+                    <span className="report-step-meta-label">Override</span>
+                    <span
+                      className={`tag ${s.overrideApplied ? "tag--yes" : "tag--no"}`}
+                      aria-label={`Override applied: ${s.overrideApplied ? "Yes" : "No"}`}
+                    >
+                      {s.overrideApplied ? "Yes" : "No"}
+                    </span>
+                  </span>
+                  <Pill>Δ Confidence: {s.confidenceDelta ?? "—"}</Pill>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2 items-start">
-                <div className="flex-1 min-w-[200px]">
+              <div className="report-step-body">
+                <div className="report-step-body__left">
                   {Array.isArray(s.rulesApplied) && s.rulesApplied.length > 0 ? (
-                    <div className="text-sm text-slate-600">
-                      <span className="font-semibold">Rules applied</span>
-                      <ul className="mt-0.5 pl-4 m-0 leading-snug list-disc">
+                    <div>
+                      <span className="report-step-body__title">Rules applied</span>
+                      <ul className="report-step-body__list">
                         {s.rulesApplied.map((r, i) => (
                           <li key={i}>{r}</li>
                         ))}
                       </ul>
                     </div>
                   ) : (
-                    <span className="text-sm text-slate-500">No rules listed</span>
+                    <span className="report-step-body__empty">No rules listed</span>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1 shrink-0 self-start">
-                  <Pill>Actor: {s.actor ?? "—"}</Pill>
-                  <Pill>AI influenced: {s.aiInfluence ? "Yes" : "No"}</Pill>
-                  <Pill>Override applied: {s.overrideApplied ? "Yes" : "No"}</Pill>
-                  <Pill>Confidence delta: {s.confidenceDelta ?? "—"}</Pill>
-                </div>
+                <div className="report-step-body__right" aria-hidden="true" />
               </div>
             </div>
           ))}

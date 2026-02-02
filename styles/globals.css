@@ -503,6 +503,164 @@ button:focus-visible {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Decision Flow: step card structure + modern scannable styling */
+.report-step-card {
+  padding: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  background-color: var(--dt-bg-card);
+  margin-bottom: var(--space-12);
+}
+
+.report-step-card:last-child {
+  margin-bottom: 0;
+}
+
+.report-tab-content .report-step-card {
+  padding: var(--space-16);
+  border-radius: var(--radius-xl);
+}
+
+.report-step-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.report-step-header__label {
+  font-size: var(--dt-font-body);
+  font-weight: 600;
+  color: var(--dt-text-heading);
+  line-height: 1.35;
+  flex-shrink: 0;
+}
+
+.report-step-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+}
+
+.report-step-header__meta .dt-badge,
+.report-step-header__meta .dt-pill {
+  font-size: var(--dt-font-label);
+  padding: var(--space-8) var(--space-12);
+  background-color: var(--color-background-secondary);
+  border-color: var(--color-border-light);
+  color: var(--dt-text-body);
+}
+
+/* Label + status tag (AI influenced, Override): compact, neutral */
+.report-step-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.report-step-meta-label {
+  font-size: var(--dt-font-label);
+  color: var(--dt-text-muted);
+  font-weight: 500;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--space-8);
+  font-size: var(--dt-font-label);
+  font-weight: 500;
+  line-height: 1.35;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  background-color: var(--color-background-secondary);
+  color: var(--dt-text-body);
+}
+
+.tag--yes {
+  border-color: var(--color-border);
+  background-color: var(--color-background-secondary);
+  color: var(--dt-text-heading);
+}
+
+.tag--no {
+  border-color: var(--color-border-light);
+  background-color: var(--color-background);
+  color: var(--dt-text-muted);
+}
+
+.report-step-body {
+  display: flex;
+  flex-direction: row;
+  gap: var(--space-12);
+}
+
+.report-step-body__left {
+  flex: 1;
+  min-width: 0;
+}
+
+.report-step-body__right {
+  flex: 0 0 0;
+  min-width: 0;
+}
+
+/* Rules applied: audit-grade section heading */
+.report-step-body__title {
+  display: block;
+  font-size: var(--dt-font-label);
+  font-weight: 600;
+  color: var(--dt-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-8);
+  line-height: 1.35;
+}
+
+/* Rules list: compact rows with marker left, rule text right */
+.report-step-body__list {
+  margin: 0;
+  padding-left: 0;
+  font-size: var(--dt-font-body);
+  color: var(--dt-text-body);
+  line-height: 1.45;
+  list-style: none;
+}
+
+.report-step-body__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+  padding-left: 0;
+}
+
+.report-step-body__list li:last-child {
+  margin-bottom: 0;
+}
+
+.report-step-body__list li::before {
+  content: "";
+  display: block;
+  flex-shrink: 0;
+  width: 4px;
+  height: 4px;
+  margin-top: 0.5em;
+  border-radius: 1px;
+  background-color: var(--dt-text-muted);
+}
+
+.report-step-body__empty {
+  font-size: var(--dt-font-body);
+  color: var(--dt-text-muted);
+}
+
 /* Design token utilities (minimal) */
 .dt-container {
   max-width: var(--dt-container-max);
