@@ -2,26 +2,34 @@
 
 [![CI](https://github.com/saisameera27-crypto/DecisionTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/saisameera27-crypto/DecisionTrace/actions/workflows/ci.yml)
 
-**AI-powered decision analysis using Google Gemini 3**
+**AI-powered decision audit trails using Google Gemini 3**
 
-Decision Trace is an intelligent application that analyzes decision documents using Google Gemini 3 Flash Preview. It performs a comprehensive 6-step analysis to extract insights, identify risks, and generate detailed reports.
+Decision Trace turns unstructured decision documents (memos, emails, notes) into structured **Decision Ledgers**—audit-ready reports that capture outcomes, evidence, risks, assumptions, and accountability. It uses Google Gemini 3 to extract and structure decision data for compliance, governance, and AI transparency.
 
 ---
 
 ## 🌟 Features
 
 ### 🤖 AI-Powered Analysis
-- **6-Step Analysis Process**: Document processing → Decision extraction → Context analysis → Outcome analysis → Risk assessment → Report generation
-- **Google Gemini 3 Integration**: Uses latest Gemini 3 Flash Preview for fast, cost-effective analysis
-- **Structured Output**: JSON responses validated with Zod schemas
-- **Multimodal Support**: Processes text documents and PDFs
+- **Decision Ledger Generation**: Single-call structured output with schema enforcement (decision, flow, evidence, risks, assumptions, RACI)
+- **6-Step Orchestration** (optional): Document processing → Decision extraction → Context analysis → Outcome analysis → Risk assessment → Report generation
+- **Google Gemini 3 Integration**: Uses Gemini 3 Pro Preview (with Flash fallback) for structured JSON output
+- **Structured Output**: `responseMimeType: application/json` + JSON schema for type-safe, parseable responses
+- **System Instructions**: Audit-trail semantics (actor: AI/Human/System, AI influence, overrides)
 
-### 📊 Decision Analysis
-- **Decision Extraction**: Identifies decision title, date, maker, rationale, and risks
-- **Context Analysis**: Analyzes business context, stakeholders, and market conditions
-- **Outcome Analysis**: Compares expected vs actual outcomes
-- **Risk Assessment**: Identifies materialized risks and failure indicators
-- **Comprehensive Reports**: Generates detailed narratives with lessons learned
+### 📊 Decision Ledger Output
+- **Decision**: Outcome, confidence (low/medium/high), trace score (0–100), rationale
+- **Flow**: Steps with actor, AI influence, override applied, rules applied, confidence delta
+- **Evidence**: Evidence items with used/not used, weight, confidence impact
+- **Risks**: Risk register with identified, accepted, severity, mitigation
+- **Assumptions**: Assumption, explicit, validated, owner, invalidation impact
+- **Accountability**: RACI (Responsible, Accountable, Consulted, Informed)
+
+### 📝 QuickStart Flow
+- **Textarea Input**: Paste decision notes (max 5000 words)—no file upload required
+- **Save Text** → **Run Gemini 3 Analysis** → View report
+- **Report UI**: 6 tabs—Overview, Decision Flow, Stakeholders, Evidence, Risks, Assumptions
+- **Demo Mode**: "Load Sample Case" works instantly without API key
 
 ### 🆓 Free Tier Compatible
 - **Zero Cost**: Runs entirely on free tiers (Vercel + Neon + Gemini)
@@ -40,42 +48,48 @@ Decision Trace is an intelligent application that analyzes decision documents us
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ and npm
-- (Optional) Google Gemini API key for real analysis
+- Node.js 20+ and npm
+- (Optional) Google Gemini API key for live analysis
 - (Optional) Neon Postgres for production database
+- (Optional) Supabase for Decision Ledger report storage
 
 ### Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/saisameera27-crypto/DecisionTrace.git
-cd decision-trace
+cd DecisionTrace
 
 # Install dependencies
 npm install
 
-# Generate Prisma client (uses SQLite schema by default)
-npx prisma generate
+# Generate Prisma client (Postgres by default)
+npm run prisma:generate
 
-# For Postgres production, use:
-# npm run prisma:generate:postgres
+# For SQLite (dev/tests):
+# npm run prisma:generate:sqlite
 
-# Run migrations (uses SQLite by default for local dev)
-npx prisma migrate dev
+# Run migrations
+npx prisma migrate deploy
 ```
 
 ### Run Locally
 
 ```bash
-# Development mode (uses mock Gemini responses)
-npm run dev
-
-# Or with real Gemini API (requires GEMINI_API_KEY)
-export GEMINI_API_KEY=your-api-key
+# Development mode (demo mode by default—no API key needed)
 npm run dev
 ```
 
-### Demo Mode (Default for Production)
+Open **http://localhost:3000/quick** for the QuickStart flow.
+
+### QuickStart Workflow
+
+1. **Paste text** into the textarea (decision notes, memos, emails—max 5000 words)
+2. **Save Text** – POST to `/api/quickstart/text` (stores text, enables Run button)
+3. **Run Gemini 3 Analysis** – Creates case, runs analysis, redirects to report
+4. **View report** – 6 tabs: Overview, Decision Flow, Stakeholders, Evidence, Risks, Assumptions
+
+### Demo Mode (Default)
 
 **Demo mode is the DEFAULT for hackathon deployments!**
 
@@ -83,52 +97,58 @@ The app works fully without a Gemini API key:
 - ✅ **Auto-enabled** when `GEMINI_API_KEY` is missing OR `DEMO_MODE=true`
 - ✅ Uses mock responses for unlimited testing
 - ✅ No costs, no API calls
-- ✅ Perfect for demos and hackathon judging
 - ✅ "Load Sample Case" works instantly
 - ✅ All features work except real Gemini analysis
 
 **To use Demo Mode:**
 ```bash
-# Option 1: Set DEMO_MODE=true (recommended)
 DEMO_MODE=true npm run dev
-
-# Option 2: Simply omit GEMINI_API_KEY (auto-enables demo mode)
+# Or simply omit GEMINI_API_KEY
 npm run dev
 ```
 
-**To use Live Gemini 3 (Optional):**
+**To use Live Gemini 3:**
 ```bash
-# Set GEMINI_API_KEY to enable live mode
 GEMINI_API_KEY=your-api-key npm run dev
 ```
 
 **Production Deployment:**
-- Demo mode is **default** - no API key required
-- Set `DEMO_MODE=true` in Vercel environment variables
-- Or simply omit `GEMINI_API_KEY` (demo mode auto-enables)
+- Demo mode is **default**—no API key required
+- Set `DEMO_MODE=true` in Vercel (or omit `GEMINI_API_KEY`)
 - Judges can try the app instantly with "Load Sample Case"
 
 ---
 
 ## 🤖 Google Gemini Integration
 
-Decision Trace uses **Google Gemini 3 Flash Preview** to perform intelligent analysis of decision documents.
+Decision Trace uses **Google Gemini 3** (Pro Preview primary, Flash Preview fallback) for decision analysis.
 
-### How Gemini Works
+### Decision Ledger Flow (Structured Output)
 
-**6-Step Analysis Process:**
-1. **Document Processing** - Gemini reads and extracts text from documents
-2. **Decision Extraction** - Identifies decision details (title, date, maker, rationale)
-3. **Context Analysis** - Analyzes business context and stakeholders
-4. **Outcome Analysis** - Compares expected vs actual outcomes
-5. **Risk Assessment** - Identifies risks and failure indicators
-6. **Report Generation** - Synthesizes insights into comprehensive report
+The Decision Ledger pipeline uses:
 
-**Key Features:**
-- ✅ Structured JSON output (validated with Zod schemas)
-- ✅ Multimodal support (text documents + PDFs)
-- ✅ Context-aware analysis
-- ✅ Cost-effective (Gemini 3 Flash, free tier compatible)
+- **Structured JSON output** – `responseMimeType: "application/json"` with a JSON schema (`DECISION_LEDGER_SCHEMA`) so responses are valid, parseable JSON
+- **System instructions** – Audit-trail semantics: `actor` (AI/Human/System), `aiInfluence`, `overrideApplied`, required fields, no long paragraphs
+- **Model fallback** – `gemini-3-pro-preview` → `gemini-3-flash-preview` on error
+- **Schema enforcement** – All required keys (decision, flow, evidenceLedger, riskLedger, assumptionLedger, accountability) validated before use
+
+### 6-Step Orchestration (Case Flow)
+
+For the full case pipeline:
+
+1. **Document Processing** – Forensic extraction (decision candidates, evidence, assumptions, risks)
+2. **Decision Extraction** – Decision details (title, maker, rationale)
+3. **Context Analysis** – Business context and stakeholders
+4. **Outcome Analysis** – Expected vs actual outcomes
+5. **Risk Assessment** – Materialized risks and failure indicators
+6. **Report Generation** – Final narrative and Mermaid diagram
+
+### Key Features
+
+- ✅ Structured JSON output (Zod + JSON schema validation)
+- ✅ Text input (textarea) and file upload (PDF, DOCX, TXT)
+- ✅ Gemini Files API for document upload
+- ✅ Cost-effective (Gemini 3 Flash fallback, free tier compatible)
 - ✅ Production-ready (error handling, retries, rate limiting)
 
 **See [GEMINI_USAGE.md](GEMINI_USAGE.md) for complete documentation.**
@@ -143,10 +163,15 @@ Decision Trace can run entirely on **free tiers** with strict cost controls. Per
 
 - **Hosting**: Vercel Free Tier (100 GB bandwidth/month)
 - **Database**: Neon Free Postgres (0.5 GB storage)
-- **API**: Gemini API Free Tier (optional - app works without it)
+- **Report Storage**: Supabase Free Tier (optional, for Decision Ledger persistence)
+- **API**: Gemini API Free Tier (optional - app works without it in demo mode)
 - **Cost**: **$0/month** ✅
 
 ### Free Mode Limits
+
+**Text/Input Limits (QuickStart):**
+- Max 5000 words per paste
+- Min 50 characters to enable Run
 
 **File Limits:**
 - Max 1 file per case (demo cases can have more)
@@ -188,15 +213,13 @@ See **[DEPLOY_LIVE.md](DEPLOY_LIVE.md)** for complete free-tier deployment guide
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: Next.js (or your framework)
-- **Backend**: Node.js with TypeScript
-- **Database**: Prisma ORM (SQLite for dev/tests, Postgres for production)
-  - Postgres schema: `prisma/schema.prisma` (default for production)
-  - SQLite schema: `prisma/schema.sqlite.prisma` (for tests)
-  - Postgres schema (explicit): `prisma/schema.postgres.prisma`
-- **AI**: Google Gemini 3 Flash Preview API
-- **Validation**: Zod schemas
-- **Testing**: Vitest (unit), Playwright (E2E)
+- **Frontend**: Next.js 14 (App Router), React 18, Tailwind CSS
+- **Backend**: Node.js with TypeScript, Next.js API Routes
+- **AI**: Google Gemini 3 (Pro/Flash Preview) via `@google/genai`
+- **Database**: Prisma ORM (PostgreSQL for production, SQLite for tests)
+- **Report Storage**: Supabase (`decision_traces` table for Decision Ledger)
+- **Validation**: Zod schemas, JSON schema for structured output
+- **Testing**: Vitest (unit/integration), Playwright (E2E)
 - **CI/CD**: GitHub Actions
 
 ---
@@ -204,21 +227,31 @@ See **[DEPLOY_LIVE.md](DEPLOY_LIVE.md)** for complete free-tier deployment guide
 ## 📁 Project Structure
 
 ```
-decision-trace/
-├── lib/                    # Core application code
-│   ├── gemini.ts          # Gemini API client
-│   ├── schema-validators.ts  # Zod schemas
-│   ├── free-tier-limits.ts   # Cost controls
+DecisionTrace/
+├── app/
+│   ├── quick/page.tsx           # QuickStart (textarea input)
+│   ├── case/[id]/page.tsx       # Case report view (6-step narrative)
+│   ├── report/[id]/page.tsx     # Decision Ledger report view
+│   └── api/
+│       ├── quickstart/text/      # POST text (save)
+│       ├── case/[id]/run/        # Run 6-step orchestrator
+│       ├── analyze/              # File → Decision Ledger (Gemini)
+│       └── report/               # GET report by id (Supabase)
+├── lib/
+│   ├── geminiDecisionLedger.ts  # Decision Ledger generation (Gemini)
+│   ├── decisionLedgerSchema.ts   # TypeScript + JSON schema
+│   ├── gemini.ts                # Gemini API client (6-step)
+│   ├── orchestrator.ts          # 6-step analysis pipeline
+│   ├── extractText.ts           # PDF/DOCX/TXT extraction
 │   └── ...
-├── tests/                 # Test suite
-│   ├── unit/              # Unit tests
-│   ├── integration/       # Integration tests
-│   └── e2e/               # End-to-end tests
-├── test-data/             # Test fixtures
-├── scripts/               # Utility scripts
-├── prisma/                # Database schema
-├── .github/               # CI/CD workflows
-└── DEPLOY_LIVE.md         # Deployment guide
+├── components/report/            # ReportHeroCard, MetricPills, etc.
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+├── prisma/
+├── supabase/migrations/
+└── .github/workflows/
 ```
 
 ---
@@ -260,8 +293,9 @@ See `.github/workflows/ci.yml` for configuration.
 ### Deploy to Vercel (Free Tier)
 
 1. **Set up Neon Postgres** (free tier)
-2. **Get Gemini API key** (optional - app works without it)
-3. **Deploy to Vercel**:
+2. **Set up Supabase** (optional - for Decision Ledger report storage)
+3. **Get Gemini API key** (optional - app works without it in demo mode)
+4. **Deploy to Vercel**:
    - Import GitHub repository
    - Set environment variables (see **Vercel environment variables** below)
    - Deploy!
@@ -274,8 +308,10 @@ Configure these in **Vercel → Project → Settings → Environment Variables**
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | **Yes** for analysis | Google AI Studio API key. Required for `/api/analyze` (file upload → decision ledger). If missing, the analyze endpoint returns 500 with `"Missing GEMINI_API_KEY"`. Get a key at [Google AI Studio](https://aistudio.google.com/apikey). |
+| `GEMINI_API_KEY` | **Yes** for live analysis | Google AI Studio API key. Required for `/api/analyze` and case run. If missing, demo mode is used. Get a key at [Google AI Studio](https://aistudio.google.com/apikey). |
 | `DATABASE_URL` | Optional | Neon (or other) Postgres connection string for production DB. |
+| `SUPABASE_URL` | For `/api/report` | Supabase project URL for Decision Ledger storage. |
+| `SUPABASE_SERVICE_ROLE_KEY` | For `/api/report` | Supabase service role key (server-only). |
 | `FREE_MODE` | Optional | Set to `true` for free-tier limits. |
 | `NODE_ENV` | Optional | Set to `production` for production builds. |
 
@@ -283,7 +319,7 @@ Configure these in **Vercel → Project → Settings → Environment Variables**
 
 1. In Vercel, open your project → **Settings** → **Environment Variables**.
 2. Add `GEMINI_API_KEY` with your API key; enable for **Production**, **Preview**, and **Development** as needed.
-3. (Optional) Add `DATABASE_URL`, `FREE_MODE`, `NODE_ENV`.
+3. (Optional) Add `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FREE_MODE`, `NODE_ENV`.
 4. Redeploy so new variables take effect.
 
 ---
@@ -324,6 +360,7 @@ This project is licensed under the ISC License.
 
 - Google Gemini 3 for powerful AI capabilities
 - Vercel and Neon for free hosting and database
+- Supabase for Decision Ledger report storage
 - The open-source community for amazing tools
 
 ---
