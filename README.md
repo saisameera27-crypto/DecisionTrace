@@ -178,7 +178,6 @@ Decision Trace runs on **free tiers** with strict cost controls.
 | **Files** | Max 1.5 MB, 30k characters |
 | **API** | 6 Gemini calls/run, 3 runs/IP/day, 10 req/min |
 
-**See [DEPLOY_LIVE.md](DEPLOY_LIVE.md) for deployment guide.**
 
 ---
 
@@ -235,15 +234,16 @@ DecisionTrace/
 
 ## 🧪 Testing
 
-```bash
-npm test              # All tests
-npm run test:unit     # Unit tests
-npm run test:integration  # Integration tests
-npm run test:e2e      # E2E tests
-npm run test:e2e:smoke   # Smoke tests
-```
+### End-to-End User Testing (Manual)
 
-CI runs TypeScript, Vitest, and Playwright. All tests use mocked Gemini (no real API calls).
+Steps to test the app like a real user:
+
+1. **Start the app** – open (https://decision-trace-chi.vercel.app/)
+2. **Upload text** – Upload document - DOC/PDF
+3. **Run** – Click "Run Gemini 3 Analysis"; wait for redirect
+4. **Check report** – You should see a report with 6 tabs (Overview, Decision Flow, Stakeholders, Evidence, Risks, Assumptions)
+5. **Try demo** – Go back, click "Load Sample Case"; report should load without pasting text
+6. **Download** – Click "Download Audit JSON"; a JSON file should download
 
 
 ---
