@@ -465,6 +465,80 @@ button:focus-visible {
   tabular-nums: 1;
 }
 
+/* RACI Ledger: one compact card, four rows, label chip + stakeholder pills */
+.report-raci-ledger {
+  padding: var(--space-12);
+}
+
+.report-raci-ledger__title {
+  font-size: var(--dt-font-label);
+  font-weight: 600;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  margin: 0 0 var(--space-8) 0;
+  padding-bottom: var(--space-8);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.report-raci-ledger__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.report-raci-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--color-border-light);
+  font-size: var(--dt-font-body);
+  line-height: 1.4;
+}
+
+.report-raci-row:last-child {
+  border-bottom: none;
+}
+
+.report-raci-row__label {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.25rem;
+  font-size: var(--dt-font-label);
+  font-weight: 600;
+  color: #000;
+  background-color: var(--color-pill-bg);
+  border: 1px solid var(--color-pill-border);
+  border-radius: var(--radius-md);
+}
+
+.report-raci-row__values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.report-raci-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--space-8);
+  font-size: var(--dt-font-body);
+  font-weight: 500;
+  color: #000;
+  background-color: var(--color-pill-bg);
+  border: 1px solid var(--color-pill-border);
+  border-radius: var(--radius-md);
+  line-height: 1.35;
+}
+
 /* Details: light divider above + small button-style trigger */
 .report-details-trigger {
   margin-top: var(--space-8);

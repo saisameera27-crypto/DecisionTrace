@@ -345,28 +345,43 @@ export default function ReportPage() {
 
       {tab === "Stakeholders" && (
         <div className="flex flex-col gap-2">
-          <Card title="Responsible">
-            <div className="text-sm text-slate-800">{ledger.accountability?.responsible ?? "—"}</div>
-          </Card>
-          <Card title="Accountable">
-            <div className="text-sm text-slate-800">{ledger.accountability?.accountable ?? "—"}</div>
-          </Card>
-          <Card title="Consulted">
-            <ul className="list-disc pl-6 m-0 text-sm text-slate-800">
-              {(ledger.accountability?.consulted ?? []).map((x, i) => (
-                <li key={i}>{x}</li>
-              ))}
-              {(!ledger.accountability?.consulted || ledger.accountability.consulted.length === 0) ? <li>—</li> : null}
-            </ul>
-          </Card>
-          <Card title="Informed">
-            <ul className="list-disc pl-6 m-0 text-sm text-slate-800">
-              {(ledger.accountability?.informed ?? []).map((x, i) => (
-                <li key={i}>{x}</li>
-              ))}
-              {(!ledger.accountability?.informed || ledger.accountability.informed.length === 0) ? <li>—</li> : null}
-            </ul>
-          </Card>
+          <div className="report-card dt-card report-raci-ledger">
+            <div className="report-raci-ledger__title">RACI Ledger</div>
+            <div className="report-raci-ledger__body">
+              <div className="report-raci-row">
+                <span className="report-raci-row__label" aria-label="Responsible">R</span>
+                <div className="report-raci-row__values">
+                  <span className="report-raci-pill">{ledger.accountability?.responsible ?? "—"}</span>
+                </div>
+              </div>
+              <div className="report-raci-row">
+                <span className="report-raci-row__label" aria-label="Accountable">A</span>
+                <div className="report-raci-row__values">
+                  <span className="report-raci-pill">{ledger.accountability?.accountable ?? "—"}</span>
+                </div>
+              </div>
+              <div className="report-raci-row">
+                <span className="report-raci-row__label" aria-label="Consulted">C</span>
+                <div className="report-raci-row__values">
+                  {(ledger.accountability?.consulted ?? []).length > 0
+                    ? (ledger.accountability?.consulted ?? []).map((x, i) => (
+                        <span key={i} className="report-raci-pill">{x}</span>
+                      ))
+                    : <span className="report-raci-pill">—</span>}
+                </div>
+              </div>
+              <div className="report-raci-row">
+                <span className="report-raci-row__label" aria-label="Informed">I</span>
+                <div className="report-raci-row__values">
+                  {(ledger.accountability?.informed ?? []).length > 0
+                    ? (ledger.accountability?.informed ?? []).map((x, i) => (
+                        <span key={i} className="report-raci-pill">{x}</span>
+                      ))
+                    : <span className="report-raci-pill">—</span>}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
