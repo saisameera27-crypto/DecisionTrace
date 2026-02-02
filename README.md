@@ -4,7 +4,7 @@
 
 **AI-powered decision audit trails with Google Gemini 3**
 
-Paste decision notes or upload documents—Decision Trace uses Gemini 3 to produce structured **Decision Ledgers**: audit-ready reports with outcomes, evidence, risks, assumptions, and RACI accountability. Built for compliance, governance, and AI transparency.
+Upload documents—Decision Trace uses Gemini 3 to produce structured **Decision Ledgers**: audit-ready reports with outcomes, evidence, risks, assumptions, and RACI accountability. Built for compliance, governance, and AI transparency.
 
 ---
 
@@ -64,7 +64,7 @@ Decision Trace turns unstructured decision content into structured **Decision Le
 
 ### 📝 QuickStart Flow
 
-- **Paste text** → **Save Text** → **Run Gemini 3 Analysis** → View report
+- **Upload text** → **Save Text** → **Run Gemini 3 Analysis** → View report
 - **6-tab report** – Overview, Decision Flow, Stakeholders, Evidence, Risks, Assumptions
 - **Demo mode** – "Load Sample Case" works without API key; no costs
 
@@ -111,7 +111,7 @@ npm run dev
 ```
 
 - **QuickStart:** [http://localhost:3000/quick](http://localhost:3000/quick)
-- **Home:** [http://localhost:3000](http://localhost:3000)
+- **Home:** [http://localhost:3000](https://decision-trace-chi.vercel.app/)
 
 ### QuickStart Workflow
 
