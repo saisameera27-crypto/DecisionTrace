@@ -56,29 +56,33 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
   );
 }
 
-function Table({ headers, rows }: { headers: string[]; rows: React.ReactNode[][] }) {
+function Table({
+  headers,
+  rows,
+  ledgerVariant,
+}: {
+  headers: string[];
+  rows: React.ReactNode[][];
+  ledgerVariant?: "evidence" | "risks" | "assumptions";
+}) {
   return (
-    <div className="overflow-x-auto rounded-[var(--dt-radius-card)] border-[var(--color-border-light)] border shadow-sm">
-      <table className="w-full min-w-[400px] text-[var(--dt-font-body)] border-collapse">
-        <thead className="bg-[var(--dt-bg-surface)]">
+    <div
+      className="report-ledger-table overflow-x-auto rounded-[var(--dt-radius-card)] border border-[var(--color-border-light)]"
+      data-ledger={ledgerVariant ?? undefined}
+    >
+      <table className="report-ledger-table__table">
+        <thead>
           <tr>
             {headers.map((h) => (
-              <th key={h} className="p-3 text-left dt-label border-b border-[var(--color-border-light)] normal-case">
-                {h}
-              </th>
+              <th key={h}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((r, idx) => (
-            <tr
-              key={idx}
-              className={`border-b border-[var(--color-border-light)] last:border-b-0 ${idx % 2 === 1 ? "bg-[var(--dt-bg-surface)]" : "bg-[var(--dt-bg-card)]"}`}
-            >
+            <tr key={idx}>
               {r.map((cell, j) => (
-                <td key={j} className="p-3 align-top break-words text-[var(--dt-text-body)]">
-                  {cell}
-                </td>
+                <td key={j}>{cell}</td>
               ))}
             </tr>
           ))}
@@ -247,8 +251,10 @@ export default function ReportPage() {
                 </Link>
               </div>
             </div>
-            <div className="report-card-header-score dt-pill" aria-label="Trace score">
-              Score <span className="report-card-header-score-value">{typeof score === "number" ? score : "—"}</span>/100
+            <div className="report-card-header-score report-score-card" aria-label="Trace score">
+              <span className="report-score-card-label">Score</span>
+              <span className="report-score-card-value">{typeof score === "number" ? score : "—"}</span>
+              <span className="report-score-card-max">/100</span>
             </div>
           </header>
 
@@ -395,10 +401,11 @@ export default function ReportPage() {
           ) : (
             <Card title="Evidence ledger">
               <Table
+                ledgerVariant="evidence"
                 headers={["Evidence", "Used", "Weight", "Confidence impact", "Reason"]}
                 rows={(ledger.evidenceLedger ?? []).map((e, i) => [
-                  e.evidence ?? "—",
-                  <Pill key={`used-${i}`}>{e.used ? "Yes" : "No"}</Pill>,
+                  <span key={`ev-${i}`} className="report-ledger-table__cell-text" title={String(e.evidence ?? "")}>{e.evidence ?? "—"}</span>,
+                  <span key={`used-${i}`} className={`dt-pill ${e.used ? "dt-pill--yes" : "dt-pill--no"}`} aria-label={e.used ? "Yes" : "No"}>{e.used ? "Yes" : "No"}</span>,
                   <Pill key={`weight-${i}`}>{e.weight ?? "—"}</Pill>,
                   String(e.confidenceImpact ?? "—"),
                   e.reason ?? "—",
@@ -419,14 +426,15 @@ export default function ReportPage() {
           ) : (
             <Card title="Risk ledger">
               <Table
+                ledgerVariant="risks"
                 headers={["Risk", "Identified", "Accepted", "Severity", "Accepted by", "Mitigation"]}
                 rows={(ledger.riskLedger ?? []).map((r, i) => [
-                  r.risk ?? "—",
-                  <Pill key={`id-${i}`}>{r.identified ? "Yes" : "No"}</Pill>,
-                  <Pill key={`acc-${i}`}>{r.accepted ? "Yes" : "No"}</Pill>,
+                  <span key={`risk-${i}`} className="report-ledger-table__cell-text" title={String(r.risk ?? "")}>{r.risk ?? "—"}</span>,
+                  <span key={`id-${i}`} className={`dt-pill ${r.identified ? "dt-pill--yes" : "dt-pill--no"}`} aria-label={r.identified ? "Yes" : "No"}>{r.identified ? "Yes" : "No"}</span>,
+                  <span key={`acc-${i}`} className={`dt-pill ${r.accepted ? "dt-pill--yes" : "dt-pill--no"}`} aria-label={r.accepted ? "Yes" : "No"}>{r.accepted ? "Yes" : "No"}</span>,
                   <Pill key={`sev-${i}`}>{r.severity ?? "—"}</Pill>,
                   r.acceptedBy ?? "—",
-                  r.mitigation ?? "—",
+                  <span key={`mit-${i}`} className="report-ledger-table__cell-text" title={String(r.mitigation ?? "")}>{r.mitigation ?? "—"}</span>,
                 ])}
               />
             </Card>
@@ -444,13 +452,14 @@ export default function ReportPage() {
           ) : (
             <Card title="Assumption ledger">
               <Table
+                ledgerVariant="assumptions"
                 headers={["Assumption", "Explicit", "Validated", "Owner", "Invalidation impact"]}
                 rows={(ledger.assumptionLedger ?? []).map((a, i) => [
-                  a.assumption ?? "—",
-                  <Pill key={`exp-${i}`}>{a.explicit ? "Yes" : "No"}</Pill>,
-                  <Pill key={`val-${i}`}>{a.validated ? "Yes" : "No"}</Pill>,
+                  <span key={`assum-${i}`} className="report-ledger-table__cell-text" title={String(a.assumption ?? "")}>{a.assumption ?? "—"}</span>,
+                  <span key={`exp-${i}`} className={`dt-pill ${a.explicit ? "dt-pill--yes" : "dt-pill--no"}`} aria-label={a.explicit ? "Yes" : "No"}>{a.explicit ? "Yes" : "No"}</span>,
+                  <span key={`val-${i}`} className={`dt-pill ${a.validated ? "dt-pill--yes" : "dt-pill--no"}`} aria-label={a.validated ? "Yes" : "No"}>{a.validated ? "Yes" : "No"}</span>,
                   a.owner ?? "—",
-                  a.invalidationImpact ?? "—",
+                  <span key={`inv-${i}`} className="report-ledger-table__cell-text" title={String(a.invalidationImpact ?? "")}>{a.invalidationImpact ?? "—"}</span>,
                 ])}
               />
             </Card>

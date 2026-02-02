@@ -322,22 +322,49 @@ button:focus-visible {
   color: var(--dt-text-body);
 }
 
-.report-card-header-score {
+/* Score card: compact metric badge with accent emphasis */
+.report-card-header-score.report-score-card {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.25rem;
+  gap: 0.35em;
   padding: var(--space-8) var(--space-12);
+  padding-left: var(--space-12);
   font-size: var(--dt-font-body);
   color: var(--dt-text-heading);
-  background-color: var(--color-background-secondary);
-  border: 1px solid var(--color-border-light);
+  background-color: var(--color-primary-light);
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-md);
   width: fit-content;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(74, 111, 165, 0.08);
 }
 
-.report-card-header-score strong,
-.report-card-header-score .report-card-header-score-value {
-  font-weight: 600;
+.report-score-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.report-score-card-label {
+  font-weight: 500;
+  color: var(--dt-text-heading);
+}
+
+.report-score-card-value {
+  font-size: 1.125em;
+  font-weight: 700;
+  color: var(--color-primary);
+  letter-spacing: -0.02em;
+}
+
+.report-score-card-max {
+  font-weight: 500;
+  color: var(--dt-text-muted);
 }
 
 .report-main {
@@ -572,6 +599,134 @@ button:focus-visible {
 
 .report-details-scroll {
   -webkit-overflow-scrolling: touch;
+}
+
+/* Ledger tables (Evidence, Risks, Assumptions): shared readable table style */
+.report-ledger-table {
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+
+.report-ledger-table__table {
+  width: 100%;
+  min-width: 480px;
+  border-collapse: collapse;
+  font-size: var(--dt-font-body);
+  line-height: 1.45;
+  color: #000;
+}
+
+.report-ledger-table__table thead tr {
+  background-color: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.report-ledger-table__table th {
+  padding: var(--space-12) var(--space-16);
+  text-align: left;
+  font-size: var(--dt-font-label);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  border-right: 1px solid var(--color-border-light);
+}
+
+.report-ledger-table__table th:last-child {
+  border-right: none;
+}
+
+.report-ledger-table__table tbody tr {
+  border-bottom: 1px solid var(--color-border-light);
+  transition: background-color var(--transition-fast);
+}
+
+.report-ledger-table__table tbody tr:nth-child(even) {
+  background-color: var(--color-background-secondary);
+}
+
+.report-ledger-table__table tbody tr:hover {
+  background-color: var(--color-background-tertiary);
+}
+
+.report-ledger-table__table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.report-ledger-table__table td {
+  padding: var(--space-8) var(--space-16);
+  vertical-align: top;
+  color: #000;
+  word-break: break-word;
+}
+
+/* Compact status/weight/severity chips inside ledger tables (not button-like) */
+.report-ledger-table .dt-badge,
+.report-ledger-table .dt-pill {
+  display: inline-flex;
+  padding: 0.125rem var(--space-8);
+  font-size: var(--dt-font-label);
+  font-weight: 500;
+  color: #000;
+  background-color: var(--color-pill-bg);
+  border: 1px solid var(--color-pill-border);
+  border-radius: var(--radius-md);
+  cursor: default;
+  box-shadow: none;
+}
+
+/* Long text: clamp to 2 lines, full text on hover via title */
+.report-ledger-table__cell-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* Column widths: description columns flexible, chip columns narrow */
+.report-ledger-table[data-ledger="evidence"] .report-ledger-table__table th:nth-child(1),
+.report-ledger-table[data-ledger="evidence"] .report-ledger-table__table td:nth-child(1) {
+  min-width: 140px;
+  max-width: 35%;
+}
+
+.report-ledger-table[data-ledger="evidence"] .report-ledger-table__table th:nth-child(2),
+.report-ledger-table[data-ledger="evidence"] .report-ledger-table__table th:nth-child(3),
+.report-ledger-table[data-ledger="evidence"] .report-ledger-table__table td:nth-child(2),
+.report-ledger-table[data-ledger="evidence"] .report-ledger-table__table td:nth-child(3) {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table th:nth-child(1),
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table td:nth-child(1) {
+  min-width: 120px;
+  max-width: 25%;
+}
+
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table th:nth-child(2),
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table th:nth-child(3),
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table th:nth-child(4),
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table td:nth-child(2),
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table td:nth-child(3),
+.report-ledger-table[data-ledger="risks"] .report-ledger-table__table td:nth-child(4) {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.report-ledger-table[data-ledger="assumptions"] .report-ledger-table__table th:nth-child(1),
+.report-ledger-table[data-ledger="assumptions"] .report-ledger-table__table td:nth-child(1) {
+  min-width: 140px;
+  max-width: 35%;
+}
+
+.report-ledger-table[data-ledger="assumptions"] .report-ledger-table__table th:nth-child(2),
+.report-ledger-table[data-ledger="assumptions"] .report-ledger-table__table th:nth-child(3),
+.report-ledger-table[data-ledger="assumptions"] .report-ledger-table__table td:nth-child(2),
+.report-ledger-table[data-ledger="assumptions"] .report-ledger-table__table td:nth-child(3) {
+  width: 1%;
+  white-space: nowrap;
 }
 
 /* Decision Flow: step card structure + modern scannable styling */
@@ -834,6 +989,20 @@ button:focus-visible {
   border: 1px solid var(--color-pill-border);
   border-radius: var(--radius-md);
   line-height: 1.35;
+  cursor: default;
+}
+
+/* Yes/No status pills: non-interactive, accessible */
+.dt-pill--yes {
+  background-color: #e8f5e9;
+  border-color: #c8e6c9;
+  color: #1b5e20;
+}
+
+.dt-pill--no {
+  background-color: var(--color-background-tertiary);
+  border-color: var(--color-pill-border);
+  color: var(--color-text-secondary);
 }
 
 .dt-btn {
